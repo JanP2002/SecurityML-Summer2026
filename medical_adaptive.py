@@ -11,10 +11,13 @@ from shared_functions import (
     clean_dataframe,
     apply_k_anonymity,
     apply_l_diversity,
+    apply_t_closeness,
     print_section,
     print_entropy_preview,
     verify_k_anonymity,
     verify_l_diversity,
+    verify_t_closeness,
+    print_t_closeness_preview,
     adaptive_search,
     print_adaptive_results,
     generalize_numeric_qcut,
@@ -72,8 +75,9 @@ print_section("3. ADAPTACYJNE WYSZUKIWANIE")
 K_VALUES       = [2, 3, 5, 10]
 L_VALUES       = [2, 3, 4]
 N_BINS_OPTIONS = [2, 3, 4, 5, 6]
+T_VALUES       = [0.1, 0.15, 0.2, 0.3, 0.4, 0.5]
 
-# Przestrzeń: 4 × 3 × 5² = 300 kombinacji (l > k pomijane) → ~180 efektywnie
+# Przestrzeń: 4 × 3 × 5² × 6 = 1800 kombinacji (l > k pomijane) → ~1080 efektywnie
 df_results = adaptive_search(
     df             = df,
     qi_categorical = QI_CATEGORICAL,
@@ -82,6 +86,7 @@ df_results = adaptive_search(
     k_values       = K_VALUES,
     l_values       = L_VALUES,
     n_bins_options = N_BINS_OPTIONS,
+    t_values       = T_VALUES,
     top_n          = 15,
 )
 
@@ -98,10 +103,11 @@ if not df_results.empty:
     best      = df_results.iloc[0]
     k_best    = int(best['k'])
     l_best    = int(best['l'])
+    t_best    = float(best['t'])
     age_bins  = int(best['age_bins'])
     bmi_bins  = int(best['bmi_bins'])
 
-    print(f"Parametry: k={k_best}, l={l_best}, age_bins={age_bins}, bmi_bins={bmi_bins}")
+    print(f"Parametry: k={k_best}, l={l_best}, t={t_best}, age_bins={age_bins}, bmi_bins={bmi_bins}")
 
     # Odtwórz generalizację z optymalnymi parametrami
     df['age_gen'] = generalize_numeric_qcut(df['age'], age_bins)
@@ -112,19 +118,25 @@ if not df_results.empty:
 
     df_k  = apply_k_anonymity(df_work, Q_best, k=k_best)
     df_kl = apply_l_diversity(df_k, Q_best, SENSITIVE, l=l_best)
+    df_klt = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
 
     print(f"\nRekordy przed                     : {len(df)}")
     print(f"Po k-anonimowości ({k_best})           : {len(df_k)}")
     print(f"Po l-różnorodności ({l_best})           : {len(df_kl)}")
+    print(f"Po t-bliskości ({t_best})            : {len(df_klt)}")
     print()
-    verify_k_anonymity(df_kl, Q_best, k_best)
+    verify_k_anonymity(df_klt, Q_best, k_best)
     print()
-    verify_l_diversity(df_kl, Q_best, SENSITIVE, l_best)
+    verify_l_diversity(df_klt, Q_best, SENSITIVE, l_best)
     print()
-    print_entropy_preview(df_kl, Q_best, SENSITIVE, n=5)
+    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best)
+    print()
+    print_entropy_preview(df_klt, Q_best, SENSITIVE, n=5)
+    print()
+    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5)
 
     print("\nPrzykładowe rekordy po anonimizacji:")
-    print(df_kl.head(10).to_string(index=False))
+    print(df_klt.head(10).to_string(index=False))
 
     # Pokaż jakie przedziały zostały wygenerowane przez qcut
     print("\nWygenerowane przedziały age:")
@@ -157,7 +169,8 @@ if not df_results.empty:
     for k_cmp, l_cmp in [(3, 2), (10, 2)]:
         dk = apply_k_anonymity(df_manual, Q_manual, k=k_cmp)
         dkl = apply_l_diversity(dk, Q_manual, SENSITIVE, l=l_cmp)
-        print(f"Ręczny  (k={k_cmp}, l={l_cmp}): {len(dkl):>5} rekordów ({len(dkl)/len(df)*100:.1f}%)")
+        dklt = apply_t_closeness(dkl, Q_manual, SENSITIVE, t=t_best)
+        print(f"Ręczny  (k={k_cmp}, l={l_cmp}, t={t_best}): {len(dklt):>5} rekordów ({len(dklt)/len(df)*100:.1f}%)")
 
     print()
-    print(f"Adaptacyjny (k={k_best}, l={l_best}): {len(df_kl):>5} rekordów ({len(df_kl)/len(df)*100:.1f}%)")
+    print(f"Adaptacyjny (k={k_best}, l={l_best}, t={t_best}): {len(df_klt):>5} rekordów ({len(df_klt)/len(df)*100:.1f}%)")

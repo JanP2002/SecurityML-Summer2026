@@ -215,6 +215,130 @@ def print_entropy_preview(df, quasi_identifiers, sensitive_attr, n=5):
 
 
 # -----------------------------------------------------------------------------
+# T-BLISKOŚĆ (t-closeness)
+# -----------------------------------------------------------------------------
+
+
+def compute_t_closeness_distance(group_values, global_values, method='auto'):
+    """
+    Oblicza dystans między rozkładem atrybutu wrażliwego w grupie
+    a rozkładem globalnym.
+
+    Metody:
+      'auto'        — EMD dla danych numerycznych, variational dla kategorycznych
+      'emd'         — Earth Mover's Distance (dla danych uporządkowanych)
+      'variational' — dystans wariacyjny (dla danych kategorycznych)
+    """
+    if method == 'auto':
+        if pd.api.types.is_numeric_dtype(global_values):
+            method = 'emd'
+        else:
+            method = 'variational'
+
+    if method == 'variational':
+        group_dist = group_values.value_counts(normalize=True)
+        global_dist = global_values.value_counts(normalize=True)
+        all_vals = set(group_dist.index) | set(global_dist.index)
+        return 0.5 * sum(
+            abs(group_dist.get(v, 0) - global_dist.get(v, 0))
+            for v in all_vals
+        )
+
+    if method == 'emd':
+        ordered = sorted(global_values.unique())
+        m = len(ordered)
+        if m <= 1:
+            return 0.0
+        group_hist = group_values.value_counts(normalize=True)
+        global_hist = global_values.value_counts(normalize=True)
+        cdf_g, cdf_gl, emd = 0.0, 0.0, 0.0
+        for v in ordered:
+            cdf_g += group_hist.get(v, 0)
+            cdf_gl += global_hist.get(v, 0)
+            emd += abs(cdf_g - cdf_gl)
+        return emd / (m - 1)
+
+    raise ValueError(f"Nieznana metoda: {method}")
+
+
+def apply_t_closeness(df, quasi_identifiers, sensitive_attr, t, method='auto'):
+    """
+    Stosuje t-bliskość przez supresję: usuwa klasy równoważności,
+    w których dystans rozkładu atrybutu wrażliwego od rozkładu globalnego
+    przekracza próg t.
+
+    Warunek: d(P(S|EC_i), P(S)) <= t
+
+    Zwraca przefiltrowany DataFrame.
+    """
+    global_values = df[sensitive_attr]
+
+    def _distance(group):
+        return compute_t_closeness_distance(
+            group[sensitive_attr], global_values, method
+        )
+
+    distances = (
+        df.groupby(quasi_identifiers, observed=True)
+        .apply(_distance, include_groups=False)
+        .reset_index(name='t_distance')
+    )
+
+    df_merged = pd.merge(df, distances, on=quasi_identifiers)
+    df_result = df_merged[df_merged['t_distance'] <= t].drop(columns=['t_distance'])
+    return df_result
+
+
+def print_t_closeness_summary(df_before, df_after, t):
+    """Drukuje podsumowanie t-bliskości."""
+    lost = len(df_before) - len(df_after)
+    print(f"Parametr t             : {t}")
+    print(f"Rekordy przed          : {len(df_before)}")
+    print(f"Rekordy po supresji    : {len(df_after)}")
+    print(f"Usunięto rekordów      : {lost} ({lost / len(df_before) * 100:.1f}%)")
+
+
+def verify_t_closeness(df, quasi_identifiers, sensitive_attr, t, method='auto'):
+    """Weryfikuje czy zbiór spełnia t-bliskość i drukuje wynik."""
+    global_values = df[sensitive_attr]
+
+    distances = df.groupby(quasi_identifiers, observed=True).apply(
+        lambda g: compute_t_closeness_distance(
+            g[sensitive_attr], global_values, method
+        ),
+        include_groups=False,
+    )
+    max_dist = distances.max()
+    satisfied = max_dist <= t
+    print(f"Maksymalny dystans w klasie : {max_dist:.4f}  (próg t = {t})")
+    if satisfied:
+        print(f"✓  Zbiór spełnia t-bliskość (t = {t})")
+    else:
+        print(f"✗  Zbiór NIE spełnia t-bliskości (t = {t})!")
+    return satisfied
+
+
+def print_t_closeness_preview(df, quasi_identifiers, sensitive_attr, n=5,
+                              method='auto'):
+    """Drukuje dystanse t-bliskości dla n klas z największym dystansem."""
+    global_values = df[sensitive_attr]
+    distances = (
+        df.groupby(quasi_identifiers, observed=True)
+        .apply(lambda g: pd.Series({
+            't_distance': compute_t_closeness_distance(
+                g[sensitive_attr], global_values, method
+            ),
+            'size': len(g),
+            'unique_values': g[sensitive_attr].nunique(),
+        }), include_groups=False)
+        .reset_index()
+        .sort_values('t_distance', ascending=False)
+    )
+    print(f"Klasy z największym dystansem t-bliskości (podgląd {n}):")
+    print(distances.head(n).to_string(index=False))
+
+
+# -----------------------------------------------------------------------------
 # ADAPTACYJNE WYSZUKIWANIE OPTYMALNYCH PARAMETRÓW
 # -----------------------------------------------------------------------------
 
@@ -236,7 +360,8 @@ def generalize_numeric_qcut(series, n_bins):
 
 
 def adaptive_search(df, qi_categorical, qi_numerical, sensitive_attr,
-                    k_values, l_values, n_bins_options, top_n=15):
+                    k_values, l_values, n_bins_options, t_values=None,
+                    top_n=15):
     """
     Przeszukuje przestrzeń parametrów (k, l, podziały kolumn numerycznych)
     szukając kombinacji która maksymalizuje liczbę zachowanych rekordów
@@ -261,10 +386,14 @@ def adaptive_search(df, qi_categorical, qi_numerical, sensitive_attr,
     # Wszystkie kombinacje liczby kubełków dla kolumn numerycznych
     bin_combinations = list(itertools.product(n_bins_options, repeat=len(num_cols)))
     total_combinations = len(k_values) * len(l_values) * len(bin_combinations)
+    if t_values is not None:
+        total_combinations *= len(t_values)
 
     print(f"Przestrzeń poszukiwań:")
     print(f"  k: {k_values}")
     print(f"  l: {l_values}")
+    if t_values is not None:
+        print(f"  t: {t_values}")
     print(f"  kubełki: {n_bins_options} dla każdej z {len(num_cols)} kolumn numerycznych")
     print(f"  łącznie kombinacji: {total_combinations}")
     print(f"\nPrzeszukiwanie...", end='', flush=True)
@@ -310,19 +439,34 @@ def adaptive_search(df, qi_categorical, qi_numerical, sensitive_attr,
 
                 # l-różnorodność
                 df_l = apply_l_diversity(df_k, Q, sensitive_attr, l)
-                retained = len(df_l)
 
-                row = {
-                    'k': k,
-                    'l': l,
-                    'retained': retained,
-                    'pct_retained': round(retained / total * 100, 1),
-                    'removed': total - retained,
-                }
-                for col, n in zip(num_cols, bin_combo):
-                    row[f'{col}_bins'] = n
-
-                results.append(row)
+                if t_values is not None:
+                    if len(df_l) == 0:
+                        continue
+                    for t_val in t_values:
+                        df_t = apply_t_closeness(df_l, Q, sensitive_attr, t_val)
+                        retained = len(df_t)
+                        row = {
+                            'k': k, 'l': l, 't': t_val,
+                            'retained': retained,
+                            'pct_retained': round(retained / total * 100, 1),
+                            'removed': total - retained,
+                        }
+                        for col, n in zip(num_cols, bin_combo):
+                            row[f'{col}_bins'] = n
+                        results.append(row)
+                else:
+                    retained = len(df_l)
+                    row = {
+                        'k': k,
+                        'l': l,
+                        'retained': retained,
+                        'pct_retained': round(retained / total * 100, 1),
+                        'removed': total - retained,
+                    }
+                    for col, n in zip(num_cols, bin_combo):
+                        row[f'{col}_bins'] = n
+                    results.append(row)
 
     print(f'\nSprawdzono {checked} kombinacji.\n')
 
@@ -330,9 +474,15 @@ def adaptive_search(df, qi_categorical, qi_numerical, sensitive_attr,
         print("Brak wyników — żadna kombinacja nie spełniła warunków.")
         return pd.DataFrame()
 
+    sort_cols = ['retained', 'k', 'l']
+    sort_asc = [False, False, False]
+    if t_values is not None:
+        sort_cols.append('t')
+        sort_asc.append(True)
+
     df_results = (
         pd.DataFrame(results)
-        .sort_values(['retained', 'k', 'l'], ascending=[False, False, False])
+        .sort_values(sort_cols, ascending=sort_asc)
         .reset_index(drop=True)
     )
 
@@ -352,6 +502,8 @@ def print_adaptive_results(df_results, top_n=15):
     print(f"OPTIMUM:")
     print(f"  k               = {best['k']}")
     print(f"  l               = {best['l']}")
+    if 't' in df_results.columns:
+        print(f"  t               = {best['t']}")
     for col in df_results.columns:
         if col.endswith('_bins'):
             print(f"  {col:<15} = {int(best[col])}")

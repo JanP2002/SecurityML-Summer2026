@@ -14,13 +14,17 @@ from shared_functions import (
     generate_equivalence_classes,
     apply_k_anonymity,
     apply_l_diversity,
+    apply_t_closeness,
     print_section,
     print_eq_class_preview,
     print_k_anonymity_summary,
     print_l_diversity_summary,
+    print_t_closeness_summary,
     print_entropy_preview,
     verify_k_anonymity,
     verify_l_diversity,
+    verify_t_closeness,
+    print_t_closeness_preview,
 )
 
 
@@ -180,3 +184,36 @@ verify_l_diversity(df_k3_l2, Q, SENSITIVE, l=L)
 
 print()
 print_entropy_preview(df_k3_l2, Q, SENSITIVE, n=5)
+
+
+# =============================================================================
+# 10. T-BLISKOŚĆ NA ZBIORZE k = 10, l = 2
+# =============================================================================
+
+print_section("10. T-BLISKOŚĆ  (k = 10, l = 2, t = 0.2)")
+
+T = 0.2
+df_k10_l2_t = apply_t_closeness(df_k10_l2, Q, SENSITIVE, t=T)
+
+print_t_closeness_summary(df_k10_l2, df_k10_l2_t, t=T)
+print()
+verify_t_closeness(df_k10_l2_t, Q, SENSITIVE, t=T)
+
+print()
+print_t_closeness_preview(df_k10_l2_t, Q, SENSITIVE, n=5)
+
+
+# =============================================================================
+# 11. T-BLISKOŚĆ NA ZBIORZE k = 3, l = 2
+# =============================================================================
+
+print_section("11. T-BLISKOŚĆ  (k = 3, l = 2, t = 0.2)")
+
+df_k3_l2_t = apply_t_closeness(df_k3_l2, Q, SENSITIVE, t=T)
+
+print_t_closeness_summary(df_k3_l2, df_k3_l2_t, t=T)
+print()
+verify_t_closeness(df_k3_l2_t, Q, SENSITIVE, t=T)
+
+print()
+print_t_closeness_preview(df_k3_l2_t, Q, SENSITIVE, n=5)
