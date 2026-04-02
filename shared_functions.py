@@ -1,6 +1,6 @@
 # =============================================================================
 # shared_functions.py
-# Wspólne funkcje dla pipeline'u k-anonimowości i l-różnorodności
+# Wspólne funkcje dla pipeline'u k-anonimowości
 # =============================================================================
 
 import uuid
@@ -43,7 +43,7 @@ def generate_equivalence_classes(df, quasi_identifiers):
       wartość -> DataFrame z rekordami tej klasy
     """
     classes = {}
-    for key, group in df.groupby(quasi_identifiers):
+    for key, group in df.groupby(quasi_identifiers, observed=True):
         classes[key] = group
     return classes
 
@@ -59,7 +59,7 @@ def apply_k_anonymity(df, quasi_identifiers, k):
 
     Zwraca przefiltrowany DataFrame.
     """
-    ec_sizes = df.groupby(quasi_identifiers).size().reset_index(name='ec_size')
+    ec_sizes = df.groupby(quasi_identifiers, observed=True).size().reset_index(name='ec_size')
     df_merged = pd.merge(df, ec_sizes, on=quasi_identifiers)
     df_result = df_merged[df_merged['ec_size'] >= k].copy()
     df_result = df_result.drop(columns=['ec_size'])
@@ -97,7 +97,7 @@ def print_k_anonymity_summary(df_before, df_after, k):
 
 def verify_k_anonymity(df, quasi_identifiers, k):
     """Weryfikuje czy zbiór spełnia k-anonimowość i drukuje wynik."""
-    min_ec = df.groupby(quasi_identifiers).size().min()
+    min_ec = df.groupby(quasi_identifiers, observed=True).size().min()
     satisfied = min_ec >= k
     print(f"Minimalna klasa równoważności: {min_ec} rekordów")
     if satisfied:
@@ -163,7 +163,7 @@ def apply_l_diversity(df, quasi_identifiers, sensitive_attr, l):
     log_l = np.log(l)
 
     ec_entropy = (
-        df.groupby(quasi_identifiers)
+        df.groupby(quasi_identifiers, observed=True)
         .apply(lambda g: compute_entropy(g, sensitive_attr), include_groups=False)
         .reset_index(name='entropy')
     )
@@ -185,7 +185,7 @@ def print_l_diversity_summary(df_before, df_after, l):
 def verify_l_diversity(df, quasi_identifiers, sensitive_attr, l):
     """Weryfikuje czy zbiór spełnia l-różnorodność i drukuje wynik."""
     log_l = np.log(l)
-    entropies = df.groupby(quasi_identifiers).apply(
+    entropies = df.groupby(quasi_identifiers, observed=True).apply(
         lambda g: compute_entropy(g, sensitive_attr), include_groups=False
     )
     min_entropy = entropies.min()
@@ -201,7 +201,7 @@ def verify_l_diversity(df, quasi_identifiers, sensitive_attr, l):
 def print_entropy_preview(df, quasi_identifiers, sensitive_attr, n=5):
     """Drukuje entropię dla n najmniejszych klas — przydatne do debugowania."""
     entropies = (
-        df.groupby(quasi_identifiers)
+        df.groupby(quasi_identifiers, observed=True)
         .apply(lambda g: pd.Series({
             'entropy': compute_entropy(g, sensitive_attr),
             'size': len(g),
@@ -212,3 +212,148 @@ def print_entropy_preview(df, quasi_identifiers, sensitive_attr, n=5):
     )
     print(f"Klasy z najniższą entropią (podgląd {n}):")
     print(entropies.head(n).to_string(index=False))
+
+
+# -----------------------------------------------------------------------------
+# ADAPTACYJNE WYSZUKIWANIE OPTYMALNYCH PARAMETRÓW
+# -----------------------------------------------------------------------------
+
+import itertools
+
+
+def generalize_numeric_qcut(series, n_bins):
+    """
+    Generalizuje kolumnę numeryczną do n_bins kwantylowych przedziałów.
+    Używa pd.qcut — każdy przedział zawiera podobną liczbę rekordów.
+    Zwraca Series z etykietami 'cat_1', 'cat_2', ... lub None jeśli się nie uda.
+    """
+    try:
+        labels = [f'cat_{i + 1}' for i in range(n_bins)]
+        return pd.qcut(series, q=n_bins, labels=labels, duplicates='drop')
+    except ValueError:
+        # Za mało unikalnych wartości żeby stworzyć n_bins przedziałów
+        return None
+
+
+def adaptive_search(df, qi_categorical, qi_numerical, sensitive_attr,
+                    k_values, l_values, n_bins_options, top_n=15):
+    """
+    Przeszukuje przestrzeń parametrów (k, l, podziały kolumn numerycznych)
+    szukając kombinacji która maksymalizuje liczbę zachowanych rekordów
+    przy spełnieniu k-anonimowości i l-różnorodności.
+
+    Parametry:
+      df             -- DataFrame z kolumną anon_ID i atrybutem wrażliwym
+      qi_categorical -- lista kolumn kategorycznych QI (bez generalizacji)
+      qi_numerical   -- słownik {nazwa_col: Series} dla kolumn numerycznych
+      sensitive_attr -- nazwa kolumny z atrybutem wrażliwym
+      k_values       -- lista wartości k do sprawdzenia, np. [2, 3, 5, 10]
+      l_values       -- lista wartości l do sprawdzenia, np. [2, 3, 4]
+      n_bins_options -- lista liczb kubełków do próbowania, np. [2, 3, 4, 5]
+      top_n          -- ile najlepszych wyników wydrukować
+
+    Zwraca DataFrame z wynikami posortowanymi od najlepszego.
+    """
+    total = len(df)
+    num_cols = list(qi_numerical.keys())
+    results = []
+
+    # Wszystkie kombinacje liczby kubełków dla kolumn numerycznych
+    bin_combinations = list(itertools.product(n_bins_options, repeat=len(num_cols)))
+    total_combinations = len(k_values) * len(l_values) * len(bin_combinations)
+
+    print(f"Przestrzeń poszukiwań:")
+    print(f"  k: {k_values}")
+    print(f"  l: {l_values}")
+    print(f"  kubełki: {n_bins_options} dla każdej z {len(num_cols)} kolumn numerycznych")
+    print(f"  łącznie kombinacji: {total_combinations}")
+    print(f"\nPrzeszukiwanie...", end='', flush=True)
+
+    checked = 0
+    for k in k_values:
+        for l in l_values:
+            # l > k jest teoretycznie bez sensu — przy l wartościach wrażliwych
+            # potrzebujesz co najmniej l rekordów, więc k >= l jest naturalne
+            if l > k:
+                continue
+
+            for bin_combo in bin_combinations:
+                checked += 1
+                if checked % 20 == 0:
+                    print('.', end='', flush=True)
+
+                # Generalizuj kolumny numeryczne
+                generalized_cols = {}
+                valid = True
+                for col, n_bins in zip(num_cols, bin_combo):
+                    gen = generalize_numeric_qcut(qi_numerical[col], n_bins)
+                    if gen is None:
+                        valid = False
+                        break
+                    generalized_cols[col] = gen
+
+                if not valid:
+                    continue
+
+                # Zbuduj roboczy DataFrame z wygeneralizowanymi kolumnami
+                cat_col_names = [f'{col}_g{n}' for col, n in zip(num_cols, bin_combo)]
+                df_work = df[['anon_ID'] + qi_categorical + [sensitive_attr]].copy()
+                for col, cat_name, gen_series in zip(num_cols, cat_col_names, generalized_cols.values()):
+                    df_work[cat_name] = gen_series.values
+
+                Q = qi_categorical + cat_col_names
+
+                # k-anonimowość
+                df_k = apply_k_anonymity(df_work, Q, k)
+                if len(df_k) == 0:
+                    continue
+
+                # l-różnorodność
+                df_l = apply_l_diversity(df_k, Q, sensitive_attr, l)
+                retained = len(df_l)
+
+                row = {
+                    'k': k,
+                    'l': l,
+                    'retained': retained,
+                    'pct_retained': round(retained / total * 100, 1),
+                    'removed': total - retained,
+                }
+                for col, n in zip(num_cols, bin_combo):
+                    row[f'{col}_bins'] = n
+
+                results.append(row)
+
+    print(f'\nSprawdzono {checked} kombinacji.\n')
+
+    if not results:
+        print("Brak wyników — żadna kombinacja nie spełniła warunków.")
+        return pd.DataFrame()
+
+    df_results = (
+        pd.DataFrame(results)
+        .sort_values(['retained', 'k', 'l'], ascending=[False, False, False])
+        .reset_index(drop=True)
+    )
+
+    return df_results
+
+
+def print_adaptive_results(df_results, top_n=15):
+    """Drukuje wyniki adaptacyjnego wyszukiwania."""
+    if df_results.empty:
+        return
+
+    print(f"Top {min(top_n, len(df_results))} kombinacji (posortowane wg zachowanych rekordów):")
+    print(df_results.head(top_n).to_string(index=False))
+
+    best = df_results.iloc[0]
+    print(f"\n{'=' * 50}")
+    print(f"OPTIMUM:")
+    print(f"  k               = {best['k']}")
+    print(f"  l               = {best['l']}")
+    for col in df_results.columns:
+        if col.endswith('_bins'):
+            print(f"  {col:<15} = {int(best[col])}")
+    print(f"  Zachowane rekordy: {int(best['retained'])} / {int(best['retained'] + best['removed'])} ({best['pct_retained']}%)")
+    print(f"{'=' * 50}")
