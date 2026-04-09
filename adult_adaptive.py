@@ -76,7 +76,7 @@ print_section("3. ADAPTACYJNE WYSZUKIWANIE")
 K_VALUES      = [2, 3, 5, 10, 15, 20]
 L_VALUES      = [2, 3, 4, 5]
 N_BINS_OPTIONS = [2, 3, 4, 5, 6, 8]
-T_VALUES      = [0.1, 0.15, 0.2, 0.3, 0.4, 0.5]
+T_VALUES      = [0.15, 0.2, 0.25, 0.3]
 
 # Przestrzeń: 6 × 4 × 6 × 6 = 864 kombinacje (l > k pomijane)
 df_results = adaptive_search(
@@ -119,7 +119,7 @@ if not df_results.empty:
 
     df_k = apply_k_anonymity(df_work, Q_best, k=k_best)
     df_kl = apply_l_diversity(df_k, Q_best, SENSITIVE, l=l_best)
-    df_klt = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
+    df_klt, gv = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
 
     print(f"\nRekordy przed : {len(df)}")
     print(f"Po k-anonimowości ({k_best}) : {len(df_k)}")
@@ -130,11 +130,11 @@ if not df_results.empty:
     print()
     verify_l_diversity(df_klt, Q_best, SENSITIVE, l_best)
     print()
-    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best)
+    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best, global_values=gv)
     print()
     print_entropy_preview(df_klt, Q_best, SENSITIVE, n=5)
     print()
-    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5)
+    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5, global_values=gv)
 
     print("\nPrzykładowe rekordy po anonimizacji:")
     print(df_klt.head(10).to_string(index=False))

@@ -56,7 +56,7 @@ print_section("2. PSEUDONIMIZACJA")
 
 df = add_anon_id(df)
 
-SENSITIVE       = 'credit_risk'
+SENSITIVE       = 'checking_status'
 QI_CATEGORICAL  = ['personal_status', 'housing', 'foreign_worker']
 
 # Kolumna numeryczna do adaptacyjnej generalizacji
@@ -118,7 +118,7 @@ if not df_results.empty:
 
     df_k  = apply_k_anonymity(df_work, Q_best, k=k_best)
     df_kl = apply_l_diversity(df_k, Q_best, SENSITIVE, l=l_best)
-    df_klt = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
+    df_klt, gv = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
 
     print(f"\nRekordy przed                     : {len(df)}")
     print(f"Po k-anonimowości ({k_best})           : {len(df_k)}")
@@ -129,11 +129,11 @@ if not df_results.empty:
     print()
     verify_l_diversity(df_klt, Q_best, SENSITIVE, l_best)
     print()
-    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best)
+    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best, global_values=gv)
     print()
     print_entropy_preview(df_klt, Q_best, SENSITIVE, n=5)
     print()
-    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5)
+    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5, global_values=gv)
 
     print("\nPrzykładowe rekordy po anonimizacji:")
     print(df_klt.head(10).to_string(index=False))
@@ -163,7 +163,7 @@ if not df_results.empty:
     for k_cmp, l_cmp, t_cmp in [(3, 2, 0.2), (3, 2, 0.3), (5, 2, 0.2), (5, 2, 0.3)]:
         dk = apply_k_anonymity(df_manual, Q_manual, k=k_cmp)
         dkl = apply_l_diversity(dk, Q_manual, SENSITIVE, l=l_cmp)
-        dklt = apply_t_closeness(dkl, Q_manual, SENSITIVE, t=t_cmp)
+        dklt, _ = apply_t_closeness(dkl, Q_manual, SENSITIVE, t=t_cmp)
         label = f"Ręczny  (k={k_cmp}, l={l_cmp}, t={t_cmp})"
         print(f"{label:<40} {len(dklt):>8} {len(dklt)/total*100:>6.1f}%")
 

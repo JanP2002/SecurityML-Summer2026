@@ -118,7 +118,7 @@ if not df_results.empty:
 
     df_k  = apply_k_anonymity(df_work, Q_best, k=k_best)
     df_kl = apply_l_diversity(df_k, Q_best, SENSITIVE, l=l_best)
-    df_klt = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
+    df_klt, gv = apply_t_closeness(df_kl, Q_best, SENSITIVE, t=t_best)
 
     print(f"\nRekordy przed                     : {len(df)}")
     print(f"Po k-anonimowości ({k_best})           : {len(df_k)}")
@@ -129,11 +129,11 @@ if not df_results.empty:
     print()
     verify_l_diversity(df_klt, Q_best, SENSITIVE, l_best)
     print()
-    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best)
+    verify_t_closeness(df_klt, Q_best, SENSITIVE, t_best, global_values=gv)
     print()
     print_entropy_preview(df_klt, Q_best, SENSITIVE, n=5)
     print()
-    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5)
+    print_t_closeness_preview(df_klt, Q_best, SENSITIVE, n=5, global_values=gv)
 
     print("\nPrzykładowe rekordy po anonimizacji:")
     print(df_klt.head(10).to_string(index=False))
@@ -169,7 +169,7 @@ if not df_results.empty:
     for k_cmp, l_cmp in [(3, 2), (10, 2)]:
         dk = apply_k_anonymity(df_manual, Q_manual, k=k_cmp)
         dkl = apply_l_diversity(dk, Q_manual, SENSITIVE, l=l_cmp)
-        dklt = apply_t_closeness(dkl, Q_manual, SENSITIVE, t=t_best)
+        dklt, _ = apply_t_closeness(dkl, Q_manual, SENSITIVE, t=t_best)
         print(f"Ręczny  (k={k_cmp}, l={l_cmp}, t={t_best}): {len(dklt):>5} rekordów ({len(dklt)/len(df)*100:.1f}%)")
 
     print()

@@ -269,9 +269,15 @@ def apply_t_closeness(df, quasi_identifiers, sensitive_attr, t, method='auto'):
 
     Warunek: d(P(S|EC_i), P(S)) <= t
 
-    Zwraca przefiltrowany DataFrame.
+    Dystans liczony jest względem rozkładu ORYGINALNEGO zbioru (przed supresją),
+    zgodnie ze standardową definicją t-bliskości.
+
+    Zwraca (df_result, global_values):
+      - df_result     — przefiltrowany DataFrame
+      - global_values  — Series z oryginalnymi wartościami atrybutu wrażliwego
+                         (do użycia w verify / preview)
     """
-    global_values = df[sensitive_attr]
+    global_values = df[sensitive_attr].copy()
 
     def _distance(group):
         return compute_t_closeness_distance(
@@ -286,7 +292,7 @@ def apply_t_closeness(df, quasi_identifiers, sensitive_attr, t, method='auto'):
 
     df_merged = pd.merge(df, distances, on=quasi_identifiers)
     df_result = df_merged[df_merged['t_distance'] <= t].drop(columns=['t_distance'])
-    return df_result
+    return df_result, global_values
 
 
 def print_t_closeness_summary(df_before, df_after, t):
@@ -298,9 +304,15 @@ def print_t_closeness_summary(df_before, df_after, t):
     print(f"Usunięto rekordów      : {lost} ({lost / len(df_before) * 100:.1f}%)")
 
 
-def verify_t_closeness(df, quasi_identifiers, sensitive_attr, t, method='auto'):
-    """Weryfikuje czy zbiór spełnia t-bliskość i drukuje wynik."""
-    global_values = df[sensitive_attr]
+def verify_t_closeness(df, quasi_identifiers, sensitive_attr, t,
+                       global_values=None, method='auto'):
+    """Weryfikuje czy zbiór spełnia t-bliskość i drukuje wynik.
+
+    Jeśli podano global_values, dystans mierzony jest względem tego rozkładu
+    (oryginalnego zbioru przed supresją). W przeciwnym razie używa bieżącego df.
+    """
+    if global_values is None:
+        global_values = df[sensitive_attr]
 
     distances = df.groupby(quasi_identifiers, observed=True).apply(
         lambda g: compute_t_closeness_distance(
@@ -319,9 +331,13 @@ def verify_t_closeness(df, quasi_identifiers, sensitive_attr, t, method='auto'):
 
 
 def print_t_closeness_preview(df, quasi_identifiers, sensitive_attr, n=5,
-                              method='auto'):
-    """Drukuje dystanse t-bliskości dla n klas z największym dystansem."""
-    global_values = df[sensitive_attr]
+                              global_values=None, method='auto'):
+    """Drukuje dystanse t-bliskości dla n klas z największym dystansem.
+
+    Jeśli podano global_values, dystans mierzony jest względem tego rozkładu.
+    """
+    if global_values is None:
+        global_values = df[sensitive_attr]
     distances = (
         df.groupby(quasi_identifiers, observed=True)
         .apply(lambda g: pd.Series({
@@ -444,7 +460,7 @@ def adaptive_search(df, qi_categorical, qi_numerical, sensitive_attr,
                     if len(df_l) == 0:
                         continue
                     for t_val in t_values:
-                        df_t = apply_t_closeness(df_l, Q, sensitive_attr, t_val)
+                        df_t, _ = apply_t_closeness(df_l, Q, sensitive_attr, t_val)
                         retained = len(df_t)
                         row = {
                             'k': k, 'l': l, 't': t_val,

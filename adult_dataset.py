@@ -190,30 +190,30 @@ print_entropy_preview(df_k3_l2, Q, SENSITIVE, n=5)
 # 10. T-BLISKOŚĆ NA ZBIORZE k = 10, l = 2
 # =============================================================================
 
-print_section("10. T-BLISKOŚĆ  (k = 10, l = 2, t = 0.2)")
+print_section("10. T-BLISKOŚĆ  (k = 10, l = 2, t = 0.3)")
 
-T = 0.2
-df_k10_l2_t = apply_t_closeness(df_k10_l2, Q, SENSITIVE, t=T)
+T = 0.3
+df_k10_l2_t, gv_k10 = apply_t_closeness(df_k10_l2, Q, SENSITIVE, t=T)
 
 print_t_closeness_summary(df_k10_l2, df_k10_l2_t, t=T)
 print()
-verify_t_closeness(df_k10_l2_t, Q, SENSITIVE, t=T)
+verify_t_closeness(df_k10_l2_t, Q, SENSITIVE, t=T, global_values=gv_k10)
 
 print()
-print_t_closeness_preview(df_k10_l2_t, Q, SENSITIVE, n=5)
+print_t_closeness_preview(df_k10_l2_t, Q, SENSITIVE, n=5, global_values=gv_k10)
 
 
 # =============================================================================
 # 11. T-BLISKOŚĆ NA ZBIORZE k = 3, l = 2
 # =============================================================================
 
-print_section("11. T-BLISKOŚĆ  (k = 3, l = 2, t = 0.2)")
+print_section("11. T-BLISKOŚĆ  (k = 3, l = 2, t = 0.3)")
 
-df_k3_l2_t = apply_t_closeness(df_k3_l2, Q, SENSITIVE, t=T)
+df_k3_l2_t, gv_k3 = apply_t_closeness(df_k3_l2, Q, SENSITIVE, t=T)
 
 print_t_closeness_summary(df_k3_l2, df_k3_l2_t, t=T)
 print()
-verify_t_closeness(df_k3_l2_t, Q, SENSITIVE, t=T)
+verify_t_closeness(df_k3_l2_t, Q, SENSITIVE, t=T, global_values=gv_k3)
 
 print()
-print_t_closeness_preview(df_k3_l2_t, Q, SENSITIVE, n=5)
+print_t_closeness_preview(df_k3_l2_t, Q, SENSITIVE, n=5, global_values=gv_k3)

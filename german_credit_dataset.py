@@ -134,8 +134,8 @@ print(f"Początkowa liczba rekordów: {len(df)}")
 print(f"Kolumny: {list(df.columns)}")
 print(df.head(3))
 print()
-print("Rozkład credit_risk:")
-print(df['credit_risk'].value_counts())
+print("Rozkład checking_status:")
+print(df['checking_status'].value_counts())
 print()
 print("Podstawowe statystyki:")
 print(df.describe())
@@ -157,7 +157,7 @@ df = clean_dataframe(df, int_cols=['age'])
 print_section("3. PSEUDONIMIZACJA I WYBÓR ATRYBUTÓW")
 
 Q         = ['age', 'personal_status', 'housing', 'foreign_worker']
-SENSITIVE = 'credit_risk'
+SENSITIVE = 'checking_status'
 
 df = add_anon_id(df)
 df_anon = df[['anon_ID'] + Q + [SENSITIVE]].copy()
@@ -284,14 +284,14 @@ print_entropy_preview(df_k3_l2, Q, SENSITIVE, n=5)
 print_section("10. T-BLISKOŚĆ  (k = 5, l = 2, t = 0.2)")
 
 T = 0.2
-df_k5_l2_t = apply_t_closeness(df_k5_l2, Q, SENSITIVE, t=T)
+df_k5_l2_t, gv_k5 = apply_t_closeness(df_k5_l2, Q, SENSITIVE, t=T)
 
 print_t_closeness_summary(df_k5_l2, df_k5_l2_t, t=T)
 print()
-verify_t_closeness(df_k5_l2_t, Q, SENSITIVE, t=T)
+verify_t_closeness(df_k5_l2_t, Q, SENSITIVE, t=T, global_values=gv_k5)
 
 print()
-print_t_closeness_preview(df_k5_l2_t, Q, SENSITIVE, n=5)
+print_t_closeness_preview(df_k5_l2_t, Q, SENSITIVE, n=5, global_values=gv_k5)
 
 
 # =============================================================================
@@ -300,14 +300,14 @@ print_t_closeness_preview(df_k5_l2_t, Q, SENSITIVE, n=5)
 
 print_section("11. T-BLISKOŚĆ  (k = 3, l = 2, t = 0.2)")
 
-df_k3_l2_t = apply_t_closeness(df_k3_l2, Q, SENSITIVE, t=T)
+df_k3_l2_t, gv_k3 = apply_t_closeness(df_k3_l2, Q, SENSITIVE, t=T)
 
 print_t_closeness_summary(df_k3_l2, df_k3_l2_t, t=T)
 print()
-verify_t_closeness(df_k3_l2_t, Q, SENSITIVE, t=T)
+verify_t_closeness(df_k3_l2_t, Q, SENSITIVE, t=T, global_values=gv_k3)
 
 print()
-print_t_closeness_preview(df_k3_l2_t, Q, SENSITIVE, n=5)
+print_t_closeness_preview(df_k3_l2_t, Q, SENSITIVE, n=5, global_values=gv_k3)
 
 
 # =============================================================================
