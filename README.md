@@ -1,17 +1,18 @@
 # SecurityML-Summer2026
 Podział prac:
-1. tydzień 
-Jan Poręba k-Anonimowość na 1 zbiorze danych (Adult Census Income) 
+CH1:
+Jan Poręba:
+k-Anonimowość na 1 zbiorze danych (Adult Census Income) 
+Implementacja oraz przebadanie ataku skośności na zbiorach danych 1 (Adult Census Income) oraz 2 (Adult Census Income)
 
-Piotr Zapała l-bliskość na 2 zbiorze danych ( Medical Cost Personal Datasets)
+Piotr Zapała:
+l-różnorodność na zbiorach danych 1 (Adult Census Income) oraz 2 (Adult Census Income)
+Implementacja adaptacyjnego wyszukwiania parametrów k dla k-Anonimowość oraz l dla l-różnorodności
 
-Maksymiliann Neumann t-różnorodność na 3 zbiorze danych (German Credit Data)
+Maksymiliann Neumann:
+k-Anonimowowść oraz l-różnorodność dla zbioru danych 3 (German Credit Data)
+Implementacja oraz przebadanie t-bliskości dla zbiorów danych 1, 2 oraz 3.
 
-2. tydzień:
-Każdy uzupełnia pozostałe parametry dla "swojego" zbioru danych
-
-3. tydzień:
-Wykresy
 
 
 
