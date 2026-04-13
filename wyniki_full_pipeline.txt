@@ -1,0 +1,1332 @@
+# Wyniki full_pipeline.py — 2026-04-13 10:55:14
+======================================================================
+
+Wyniki zapisywane do: wyniki_full_pipeline.txt
+
+======================================================================
+  DATASET 1/3 — ADULT (UCI id=2)
+======================================================================
+Usunięto wierszy z brakującymi wartościami : 1221
+Usunięto duplikatów                        : 29
+Rekordy po czyszczeniu                     : 47592
+Rekordów: 47592 | income: ['<=50K', '<=50K.', '>50K', '>50K.']
+
+======================================================================
+  1a. Adaptive search — k i l (bez t-bliskości)
+======================================================================
+Przestrzeń poszukiwań:
+  k: [2, 3, 5, 10, 15, 20]
+  l: [2, 3, 4, 5]
+  kubełki: [2, 3, 4, 5, 6, 8] dla każdej z 1 kolumn numerycznych
+  łącznie kombinacji: 144
+
+Przeszukiwanie........
+Sprawdzono 114 kombinacji.
+
+Top 5 kombinacji (posortowane wg zachowanych rekordów):
+ k  l  retained  pct_retained  removed  age_bins
+ 5  2     47563          99.9       29         2
+ 3  2     47563          99.9       29         2
+ 2  2     47563          99.9       29         2
+10  2     47547          99.9       45         2
+15  2     47523          99.9       69         2
+
+==================================================
+OPTIMUM:
+  k = 5.0
+  l = 2.0
+  age_bins        = 2
+  Zachowane rekordy: 47563 / 47592 (99.9%)
+==================================================
+
+======================================================================
+  1b. Adaptive search — k, l i t (z t-bliskością)
+======================================================================
+Przestrzeń poszukiwań:
+  k: [2, 3, 5, 10]
+  l: [2, 3]
+  t: [0.1, 0.15, 0.2, 0.3]
+  kubełki: [2, 3, 4, 5] dla każdej z 1 kolumn numerycznych
+  łącznie kombinacji: 128
+
+Przeszukiwanie....
+Sprawdzono 28 kombinacji.
+
+Top 5 kombinacji (posortowane wg zachowanych rekordów):
+ k  l   t  retained  pct_retained  removed  age_bins
+ 5  2 0.3     42421          89.1     5171         2
+ 3  2 0.3     42421          89.1     5171         2
+ 2  2 0.3     42421          89.1     5171         2
+10  2 0.3     42405          89.1     5187         2
+ 5  2 0.2     41264          86.7     6328         2
+
+==================================================
+OPTIMUM:
+  k = 5.0
+  l = 2.0
+  t = 0.3
+  age_bins        = 2
+  Zachowane rekordy: 42421 / 47592 (89.1%)
+==================================================
+
+Użyte parametry: k=5, l=2, t=0.3, age_bins=2
+
+======================================================================
+  1c. Analiza siatki (k, l) — atak skośności
+======================================================================
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 40
+Klas podatnych        : 28 (70.0%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5190
+  <=50K.               0.2386
+  >50K                 0.1647
+  >50K.                0.0777
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3064 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=5
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 40
+Klas podatnych        : 28 (70.0%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5190
+  <=50K.               0.2386
+  >50K                 0.1647
+  >50K.                0.0777
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3064 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=10
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 38
+Klas podatnych        : 26 (68.4%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5190
+  <=50K.               0.2386
+  >50K                 0.1647
+  >50K.                0.0777
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3065 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=20
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 34
+Klas podatnych        : 22 (64.7%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5191
+  <=50K.               0.2386
+  >50K                 0.1646
+  >50K.                0.0777
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3065 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=2, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 39
+Klas podatnych        : 27 (69.2%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5188
+  <=50K.               0.2386
+  >50K                 0.1648
+  >50K.                0.0778
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3063 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=5, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 39
+Klas podatnych        : 27 (69.2%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5188
+  <=50K.               0.2386
+  >50K                 0.1648
+  >50K.                0.0778
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3063 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=10, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 37
+Klas podatnych        : 25 (67.6%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5188
+  <=50K.               0.2386
+  >50K                 0.1647
+  >50K.                0.0778
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3064 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=20, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 33
+Klas podatnych        : 21 (63.6%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5190
+  <=50K.               0.2386
+  >50K                 0.1646
+  >50K.                0.0778
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3065 > tau=0.1  →  ATAK UDANY
+
+======================================================================
+  1d. Pipeline k → k+l → k+l+t z atakiem po każdym etapie
+======================================================================
+
+  Etap A — k=5: 47592 rekordów (100.0%)
+Minimalna klasa równoważności: 7 rekordów
+✓  Zbiór spełnia 5-anonimowość
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=5
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 40
+Klas podatnych        : 28 (70.0%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5190
+  <=50K.               0.2386
+  >50K                 0.1647
+  >50K.                0.0777
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3064 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_adult_k5.png
+
+  Etap B — k=5, l=2: 47563 rekordów (99.9%)
+Minimalna entropia w klasie : 0.7089  (log(2) = 0.6931)
+✓  Zbiór spełnia 2-różnorodność
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=5, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 39
+Klas podatnych        : 27 (69.2%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5188
+  <=50K.               0.2386
+  >50K                 0.1648
+  >50K.                0.0778
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: White
+  age_gen: cat_2
+  Rozmiar grupy : 4691 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.2132
+  <=50K.               0.0989
+  >50K                 0.4711 ← max odchylenie
+  >50K.                0.2168
+
+Maksymalne odchylenie : 0.3063 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_adult_k5_l2.png
+
+  Etap C — k=5, l=2, t=0.3: 42421 rekordów (89.1%)
+Maksymalny dystans w klasie : 0.2907  (próg t = 0.3)
+✓  Zbiór spełnia t-bliskość (t = 0.3)
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Adult | k=5, l=2, t=0.3
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 35
+Klas podatnych        : 19 (54.3%)
+
+Rozkład globalny P_G(s):
+  <=50K                0.5553
+  <=50K.               0.2552
+  >50K                 0.1282
+  >50K.                0.0613
+
+Najbardziej podatna klasa:
+  education_grp: Higher
+  sex: Male
+  race: Amer-Indian-Eskimo
+  age_gen: cat_2
+  Rozmiar grupy : 15 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <=50K                0.4667
+  >50K                 0.4000 ← max odchylenie
+  >50K.                0.1333
+
+Maksymalne odchylenie : 0.2718 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_adult_k5_l2_t0.3.png
+
+─────────────────────────────────────────────────────────────────
+  Podsumowanie pipeline — Adult
+─────────────────────────────────────────────────────────────────
+  Etap                       Rekordy%   Klas  Podatnych  Max odch.
+  ────────────────────────────────────────────────────────────
+  k-anonimowość                100.0%     40        28 ( 70.0%)    0.3064
+  k + l-różnorodność            99.9%     39        27 ( 69.2%)    0.3063
+  k + l + t-bliskość            89.1%     35        19 ( 54.3%)    0.2718
+
+Wykres zapisano: plots/full_analysis_adult.png
+
+======================================================================
+  DATASET 2/3 — MEDICAL COST (insurance.csv)
+======================================================================
+Usunięto wierszy z brakującymi wartościami : 0
+Usunięto duplikatów                        : 1
+Rekordy po czyszczeniu                     : 1337
+Rekordów: 1337 | charges_cat: ['Low', 'Medium', 'High', 'Very High']
+
+======================================================================
+  2a. Adaptive search — k i l (bez t-bliskości)
+======================================================================
+Przestrzeń poszukiwań:
+  k: [2, 3, 5, 10, 15, 20]
+  l: [2, 3, 4]
+  kubełki: [2, 3, 4, 5, 6] dla każdej z 2 kolumn numerycznych
+  łącznie kombinacji: 450
+
+Przeszukiwanie.....................
+Sprawdzono 375 kombinacji.
+
+Top 5 kombinacji (posortowane wg zachowanych rekordów):
+ k  l  retained  pct_retained  removed  age_bins  bmi_bins
+20  2      1337         100.0        0         2         2
+15  2      1337         100.0        0         2         2
+10  2      1337         100.0        0         2         2
+10  2      1337         100.0        0         2         3
+ 5  2      1337         100.0        0         2         2
+
+==================================================
+OPTIMUM:
+  k = 20.0
+  l = 2.0
+  age_bins        = 2
+  bmi_bins        = 2
+  Zachowane rekordy: 1337 / 1337 (100.0%)
+==================================================
+
+======================================================================
+  2b. Adaptive search — k, l i t (z t-bliskością)
+======================================================================
+Przestrzeń poszukiwań:
+  k: [2, 3, 5, 10]
+  l: [2, 3]
+  t: [0.1, 0.15, 0.2, 0.3]
+  kubełki: [2, 3, 4, 5] dla każdej z 2 kolumn numerycznych
+  łącznie kombinacji: 512
+
+Przeszukiwanie........
+Sprawdzono 112 kombinacji.
+
+Top 5 kombinacji (posortowane wg zachowanych rekordów):
+ k  l   t  retained  pct_retained  removed  age_bins  bmi_bins
+10  2 0.3       831          62.2      506         2         2
+ 5  2 0.3       831          62.2      506         2         2
+ 3  2 0.3       831          62.2      506         2         2
+ 2  2 0.3       831          62.2      506         2         2
+ 5  2 0.3       593          44.4      744         2         4
+
+==================================================
+OPTIMUM:
+  k = 10.0
+  l = 2.0
+  t = 0.3
+  age_bins        = 2
+  bmi_bins        = 2
+  Zachowane rekordy: 831 / 1337 (62.2%)
+==================================================
+
+Użyte parametry: k=10, l=2, t=0.3, age_bins=2, bmi_bins=2
+
+======================================================================
+  2c. Analiza siatki (k, l) — atak skośności
+======================================================================
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=5
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=10
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=20
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=2, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=5, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=10, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=20, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+======================================================================
+  2d. Pipeline k → k+l → k+l+t z atakiem po każdym etapie
+======================================================================
+
+  Etap A — k=10: 1337 rekordów (100.0%)
+Minimalna klasa równoważności: 25 rekordów
+✓  Zbiór spełnia 10-anonimowość
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=10
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_medical_cost_k10.png
+
+  Etap B — k=10, l=2: 1337 rekordów (100.0%)
+Minimalna entropia w klasie : 0.9179  (log(2) = 0.6931)
+✓  Zbiór spełnia 2-różnorodność
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=10, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 32
+Klas podatnych        : 32 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2506
+  Medium               0.2498
+  High                 0.2498
+  Very High            0.2498
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_2
+  bmi_gen: cat_2
+  Rozmiar grupy : 44 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.0000
+  Medium               0.2500
+  High                 0.6136 ← max odchylenie
+  Very High            0.1364
+
+Maksymalne odchylenie : 0.3638 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_medical_cost_k10_l2.png
+
+  Etap C — k=10, l=2, t=0.3: 831 rekordów (62.2%)
+Maksymalny dystans w klasie : 0.2898  (próg t = 0.3)
+✓  Zbiór spełnia t-bliskość (t = 0.3)
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — Medical Cost | k=10, l=2, t=0.3
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 19
+Klas podatnych        : 19 (100.0%)
+
+Rozkład globalny P_G(s):
+  Low                  0.2335
+  Medium               0.2792
+  High                 0.2310
+  Very High            0.2563
+
+Najbardziej podatna klasa:
+  sex: female
+  region: southwest
+  age_gen: cat_1
+  bmi_gen: cat_1
+  Rozmiar grupy : 50 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  Low                  0.5400 ← max odchylenie
+  Medium               0.2400
+  High                 0.0400
+  Very High            0.1800
+
+Maksymalne odchylenie : 0.3065 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_medical_cost_k10_l2_t0.3.png
+
+─────────────────────────────────────────────────────────────────
+  Podsumowanie pipeline — Medical Cost
+─────────────────────────────────────────────────────────────────
+  Etap                       Rekordy%   Klas  Podatnych  Max odch.
+  ────────────────────────────────────────────────────────────
+  k-anonimowość                100.0%     32        32 (100.0%)    0.3638
+  k + l-różnorodność           100.0%     32        32 (100.0%)    0.3638
+  k + l + t-bliskość            62.2%     19        19 (100.0%)    0.3065
+
+Wykres zapisano: plots/full_analysis_medical_cost.png
+
+======================================================================
+  DATASET 3/3 — GERMAN CREDIT (UCI id=144)
+======================================================================
+Usunięto wierszy z brakującymi wartościami : 0
+Usunięto duplikatów                        : 0
+Rekordy po czyszczeniu                     : 1000
+Rekordów: 1000 | checking_status: ['0-200 DM', '<0 DM', '>=200 DM', 'no account']
+
+======================================================================
+  3a. Adaptive search — k i l (bez t-bliskości)
+======================================================================
+Przestrzeń poszukiwań:
+  k: [2, 3, 5, 10, 15, 20]
+  l: [2, 3]
+  kubełki: [2, 3, 4, 5, 6] dla każdej z 1 kolumn numerycznych
+  łącznie kombinacji: 60
+
+Przeszukiwanie.....
+Sprawdzono 55 kombinacji.
+
+Top 5 kombinacji (posortowane wg zachowanych rekordów):
+ k  l  retained  pct_retained  removed  age_bins
+ 2  2       975          97.5       25         2
+ 2  2       974          97.4       26         3
+ 5  2       971          97.1       29         2
+ 3  2       971          97.1       29         2
+ 3  2       970          97.0       30         3
+
+==================================================
+OPTIMUM:
+  k = 2.0
+  l = 2.0
+  age_bins        = 2
+  Zachowane rekordy: 975 / 1000 (97.5%)
+==================================================
+
+======================================================================
+  3b. Adaptive search — k, l i t (z t-bliskością)
+======================================================================
+Przestrzeń poszukiwań:
+  k: [2, 3, 5, 10]
+  l: [2, 3]
+  t: [0.1, 0.15, 0.2, 0.3]
+  kubełki: [2, 3, 4, 5] dla każdej z 1 kolumn numerycznych
+  łącznie kombinacji: 128
+
+Przeszukiwanie....
+Sprawdzono 28 kombinacji.
+
+Top 5 kombinacji (posortowane wg zachowanych rekordów):
+ k  l   t  retained  pct_retained  removed  age_bins
+ 5  2 0.3       962          96.2       38         2
+ 3  2 0.3       962          96.2       38         2
+ 2  2 0.3       962          96.2       38         2
+ 3  2 0.3       956          95.6       44         3
+ 2  2 0.3       956          95.6       44         3
+
+==================================================
+OPTIMUM:
+  k = 5.0
+  l = 2.0
+  t = 0.3
+  age_bins        = 2
+  Zachowane rekordy: 962 / 1000 (96.2%)
+==================================================
+
+Użyte parametry: k=5, l=2, t=0.3, age_bins=2
+
+======================================================================
+  3c. Analiza siatki (k, l) — atak skośności
+======================================================================
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 27
+Klas podatnych        : 20 (74.1%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2696
+  <0 DM                0.2726
+  >=200 DM             0.0634
+  no account           0.3944
+
+Najbardziej podatna klasa:
+  personal_status: female div/married
+  housing: rent
+  foreign_worker: no
+  age_gen: cat_1
+  Rozmiar grupy : 2 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <0 DM                1.0000 ← max odchylenie
+
+Maksymalne odchylenie : 0.7274 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=5
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 20
+Klas podatnych        : 13 (65.0%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2705
+  <0 DM                0.2705
+  >=200 DM             0.0625
+  no account           0.3965
+
+Najbardziej podatna klasa:
+  personal_status: male single
+  housing: own
+  foreign_worker: no
+  age_gen: cat_2
+  Rozmiar grupy : 9 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <0 DM                0.4444
+  >=200 DM             0.2222
+  no account           0.3333
+
+Maksymalne odchylenie : 0.2705 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=10
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 16
+Klas podatnych        : 10 (62.5%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2750
+  <0 DM                0.2687
+  >=200 DM             0.0601
+  no account           0.3962
+
+Najbardziej podatna klasa:
+  personal_status: male married
+  housing: rent
+  foreign_worker: yes
+  age_gen: cat_1
+  Rozmiar grupy : 19 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  0-200 DM             0.4737 ← max odchylenie
+  <0 DM                0.1579
+  >=200 DM             0.0526
+  no account           0.3158
+
+Maksymalne odchylenie : 0.1987 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=20
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 10
+Klas podatnych        : 5 (50.0%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2655
+  <0 DM                0.2655
+  >=200 DM             0.0595
+  no account           0.4095
+
+Najbardziej podatna klasa:
+  personal_status: male single
+  housing: rent
+  foreign_worker: yes
+  age_gen: cat_2
+  Rozmiar grupy : 22 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  0-200 DM             0.2273
+  <0 DM                0.4545 ← max odchylenie
+  >=200 DM             0.0455
+  no account           0.2727
+
+Maksymalne odchylenie : 0.1891 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=2, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 21
+Klas podatnych        : 14 (66.7%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2708
+  <0 DM                0.2697
+  >=200 DM             0.0636
+  no account           0.3959
+
+Najbardziej podatna klasa:
+  personal_status: male divorced
+  housing: for free
+  foreign_worker: yes
+  age_gen: cat_2
+  Rozmiar grupy : 2 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  >=200 DM             0.5000 ← max odchylenie
+  no account           0.5000
+
+Maksymalne odchylenie : 0.4364 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=5, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 19
+Klas podatnych        : 12 (63.2%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2719
+  <0 DM                0.2698
+  >=200 DM             0.0628
+  no account           0.3955
+
+Najbardziej podatna klasa:
+  personal_status: male single
+  housing: own
+  foreign_worker: no
+  age_gen: cat_2
+  Rozmiar grupy : 9 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <0 DM                0.4444
+  >=200 DM             0.2222
+  no account           0.3333
+
+Maksymalne odchylenie : 0.2719 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=10, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 16
+Klas podatnych        : 10 (62.5%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2750
+  <0 DM                0.2687
+  >=200 DM             0.0601
+  no account           0.3962
+
+Najbardziej podatna klasa:
+  personal_status: male married
+  housing: rent
+  foreign_worker: yes
+  age_gen: cat_1
+  Rozmiar grupy : 19 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  0-200 DM             0.4737 ← max odchylenie
+  <0 DM                0.1579
+  >=200 DM             0.0526
+  no account           0.3158
+
+Maksymalne odchylenie : 0.1987 > tau=0.1  →  ATAK UDANY
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=20, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 10
+Klas podatnych        : 5 (50.0%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2655
+  <0 DM                0.2655
+  >=200 DM             0.0595
+  no account           0.4095
+
+Najbardziej podatna klasa:
+  personal_status: male single
+  housing: rent
+  foreign_worker: yes
+  age_gen: cat_2
+  Rozmiar grupy : 22 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  0-200 DM             0.2273
+  <0 DM                0.4545 ← max odchylenie
+  >=200 DM             0.0455
+  no account           0.2727
+
+Maksymalne odchylenie : 0.1891 > tau=0.1  →  ATAK UDANY
+
+======================================================================
+  3d. Pipeline k → k+l → k+l+t z atakiem po każdym etapie
+======================================================================
+
+  Etap A — k=5: 976 rekordów (97.6%)
+Minimalna klasa równoważności: 5 rekordów
+✓  Zbiór spełnia 5-anonimowość
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=5
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 20
+Klas podatnych        : 13 (65.0%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2705
+  <0 DM                0.2705
+  >=200 DM             0.0625
+  no account           0.3965
+
+Najbardziej podatna klasa:
+  personal_status: male single
+  housing: own
+  foreign_worker: no
+  age_gen: cat_2
+  Rozmiar grupy : 9 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <0 DM                0.4444
+  >=200 DM             0.2222
+  no account           0.3333
+
+Maksymalne odchylenie : 0.2705 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_german_credit_k5.png
+
+  Etap B — k=5, l=2: 971 rekordów (97.1%)
+Minimalna entropia w klasie : 1.0609  (log(2) = 0.6931)
+✓  Zbiór spełnia 2-różnorodność
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=5, l=2
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 19
+Klas podatnych        : 12 (63.2%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2719
+  <0 DM                0.2698
+  >=200 DM             0.0628
+  no account           0.3955
+
+Najbardziej podatna klasa:
+  personal_status: male single
+  housing: own
+  foreign_worker: no
+  age_gen: cat_2
+  Rozmiar grupy : 9 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  <0 DM                0.4444
+  >=200 DM             0.2222
+  no account           0.3333
+
+Maksymalne odchylenie : 0.2719 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_german_credit_k5_l2.png
+
+  Etap C — k=5, l=2, t=0.3: 962 rekordów (96.2%)
+Maksymalny dystans w klasie : 0.2018  (próg t = 0.3)
+✓  Zbiór spełnia t-bliskość (t = 0.3)
+
+────────────────────────────────────────────────────────────
+  ATAK SKOŚNOŚCI — German Credit | k=5, l=2, t=0.3
+────────────────────────────────────────────────────────────
+Próg tau              : 0.1
+Klas równoważności    : 18
+Klas podatnych        : 12 (66.7%)
+
+Rozkład globalny P_G(s):
+  0-200 DM             0.2744
+  <0 DM                0.2682
+  >=200 DM             0.0613
+  no account           0.3960
+
+Najbardziej podatna klasa:
+  personal_status: male married
+  housing: rent
+  foreign_worker: yes
+  age_gen: cat_1
+  Rozmiar grupy : 19 rekordów
+
+Rozkład lokalny P_i(s) w tej klasie:
+  0-200 DM             0.4737 ← max odchylenie
+  <0 DM                0.1579
+  >=200 DM             0.0526
+  no account           0.3158
+
+Maksymalne odchylenie : 0.1993 > tau=0.1  →  ATAK UDANY
+
+Wykres zapisano: attack_german_credit_k5_l2_t0.3.png
+
+─────────────────────────────────────────────────────────────────
+  Podsumowanie pipeline — German Credit
+─────────────────────────────────────────────────────────────────
+  Etap                       Rekordy%   Klas  Podatnych  Max odch.
+  ────────────────────────────────────────────────────────────
+  k-anonimowość                 97.6%     20        13 ( 65.0%)    0.2705
+  k + l-różnorodność            97.1%     19        12 ( 63.2%)    0.2719
+  k + l + t-bliskość            96.2%     18        12 ( 66.7%)    0.1993
+
+Wykres zapisano: plots/full_analysis_german_credit.png
+
+======================================================================
+  ZBIORCZA TABELA — WSZYSTKIE DATASETY I ETAPY PIPELINE
+======================================================================
+
+Dataset          Etap                       Rekordy%   Klas  Podatnych  %podatnych  Max odch.
+──────────────────────────────────────────────────────────────────────────────────────────
+Adult            k=5                          100.0%     40         28       70.0%     0.3064
+Adult            k=5, l=2                      99.9%     39         27       69.2%     0.3063
+Adult            k=5, l=2, t=0.3               89.1%     35         19       54.3%     0.2718
+Medical Cost     k=10                         100.0%     32         32      100.0%     0.3638
+Medical Cost     k=10, l=2                    100.0%     32         32      100.0%     0.3638
+Medical Cost     k=10, l=2, t=0.3              62.2%     19         19      100.0%     0.3065
+German Credit    k=5                           97.6%     20         13       65.0%     0.2705
+German Credit    k=5, l=2                      97.1%     19         12       63.2%     0.2719
+German Credit    k=5, l=2, t=0.3               96.2%     18         12       66.7%     0.1993
+──────────────────────────────────────────────────────────────────────────────────────────
+
+======================================================================
+  PRÓG t — PRZY JAKIM t ATAK SKOŚNOŚCI PRZESTAJE BYĆ SKUTECZNY?
+======================================================================
+
+Skanowanie t dla każdego datasetu (tau=0.1)...
+
+
+────────────────────────────────────────────────────────────
+  Adult  (k=5, l=2)
+────────────────────────────────────────────────────────────
+       t  Rekordy%   Klas  Podatnych  %podatnych  Max odch.
+  ───────────────────────────────────────────────────────
+    0.05      2.0%    2.0        0.0        0.0%     0.0330 ← atak niesk.
+    0.08      6.2%    6.0        0.0        0.0%     0.0713 ← atak niesk.
+    0.10     27.7%    8.0        0.0        0.0%     0.0829 ← atak niesk.
+    0.12     30.9%   11.0        2.0       18.2%     0.1521
+    0.15     62.9%   17.0        5.0       29.4%     0.1549
+    0.18     72.5%   24.0        8.0       33.3%     0.1604
+    0.20     86.7%   29.0       12.0       41.4%     0.1611
+    0.25     89.1%   34.0       18.0       52.9%     0.2553
+    0.30     89.1%   35.0       19.0       54.3%     0.2718
+    0.35     89.5%   36.0       20.0       55.6%     0.2734
+    0.40     89.6%   37.0       21.0       56.8%     0.3396
+
+  → t* = 0.05: atak nieskuteczny, zachowano 2.0% rekordów
+Wykres zapisano: plots/t_threshold_adult.png
+
+────────────────────────────────────────────────────────────
+  Medical Cost  (k=10, l=2)
+────────────────────────────────────────────────────────────
+       t  Rekordy%   Klas  Podatnych  %podatnych  Max odch.
+  ───────────────────────────────────────────────────────
+    0.05      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.08      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.10      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.12      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.15      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.18      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.20      0.0%    0.0        0.0        nan%        nan ← atak niesk.
+    0.25     11.7%    3.0        0.0        0.0%     0.0518 ← atak niesk.
+    0.30     62.2%   19.0       19.0      100.0%     0.3065
+    0.35     83.5%   26.0       26.0      100.0%     0.3676
+    0.40    100.0%   32.0       32.0      100.0%     0.3638
+
+  → t* = 0.25: atak nieskuteczny, zachowano 11.7% rekordów
+Wykres zapisano: plots/t_threshold_medical_cost.png
+
+────────────────────────────────────────────────────────────
+  German Credit  (k=5, l=2)
+────────────────────────────────────────────────────────────
+       t  Rekordy%   Klas  Podatnych  %podatnych  Max odch.
+  ───────────────────────────────────────────────────────
+    0.05     28.7%    2.0        0.0        0.0%     0.0119 ← atak niesk.
+    0.08     34.4%    5.0        0.0        0.0%     0.0626 ← atak niesk.
+    0.10     36.3%    6.0        0.0        0.0%     0.0984 ← atak niesk.
+    0.12     45.0%    8.0        2.0       25.0%     0.1133
+    0.15     82.4%   12.0        6.0       50.0%     0.1498
+    0.18     92.1%   16.0       10.0       62.5%     0.1784
+    0.20     94.3%   17.0       10.0       58.8%     0.1841
+    0.25     96.2%   18.0       12.0       66.7%     0.1993
+    0.30     96.2%   18.0       12.0       66.7%     0.1993
+    0.35     97.1%   19.0       12.0       63.2%     0.2719
+    0.40     97.1%   19.0       12.0       63.2%     0.2719
+
+  → t* = 0.05: atak nieskuteczny, zachowano 28.7% rekordów
+Wykres zapisano: plots/t_threshold_german_credit.png
+
+======================================================================
+  PODSUMOWANIE PROGÓW t*
+======================================================================
+
+  Dataset             k    l         t*   Rekordy% przy t*
+  ────────────────────────────────────────────────────────
+  Adult               5    2       0.05               2.0%
+  Medical Cost       10    2       0.25              11.7%
+  German Credit       5    2       0.05              28.7%
+  ────────────────────────────────────────────────────────
+
+  Wniosek: t-bliskość eliminuje atak gdy t* ≤ tau=0.1.
