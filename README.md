@@ -7,7 +7,8 @@ Implementacja oraz przebadanie ataku skośności na zbiorach danych 1 (Adult Cen
 
 Piotr Zapała:
 l-różnorodność na zbiorach danych 1 (Adult Census Income) oraz 2 (Adult Census Income)
-Implementacja adaptacyjnego wyszukwiania parametrów k dla k-Anonimowość oraz l dla l-różnorodności
+Implementacja adaptacyjnego wyszukwiania parametrów k dla k-Anonimowość oraz l dla l-różnorodności.
+Przeprowadzenie testów sprawdzających wpływ parametru t na podatność zbiorów na atak skośności.
 
 Maksymiliann Neumann:
 k-Anonimowowść oraz l-różnorodność dla zbioru danych 3 (German Credit Data)
