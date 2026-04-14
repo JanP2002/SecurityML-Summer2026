@@ -3,10 +3,10 @@ Podział prac:
 CH1:
 Jan Poręba:
 k-Anonimowość na 1 zbiorze danych (Adult Census Income) 
-Implementacja oraz przebadanie ataku skośności na zbiorach danych 1 (Adult Census Income) oraz 2 (Adult Census Income)
+Implementacja oraz przebadanie ataku skośności na zbiorach danych 1 (Adult Census Income) oraz 2 (Medical Cost Personal)
 
 Piotr Zapała:
-l-różnorodność na zbiorach danych 1 (Adult Census Income) oraz 2 (Adult Census Income)
+l-różnorodność na zbiorach danych 1 (Adult Census Income) oraz 2 (Medical Cost Personal)
 Implementacja adaptacyjnego wyszukwiania parametrów k dla k-Anonimowość oraz l dla l-różnorodności.
 Przeprowadzenie testów sprawdzających wpływ parametru t na podatność zbiorów na atak skośności.
 
