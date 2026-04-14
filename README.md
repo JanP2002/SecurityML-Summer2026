@@ -15,8 +15,7 @@ k-Anonimowowść oraz l-różnorodność dla zbioru danych 3 (German Credit Data
 Implementacja oraz przebadanie t-bliskości dla zbiorów danych 1, 2 oraz 3.
 
 
-
-
+<!--
 Projekt Etykietowanie:
 Idea: Przekształcanie typów przy etykietowaniu
 Szukamy odwzorowania takiego, żeby można było etykietować bez eksperta.
@@ -26,3 +25,6 @@ Każdy bada inny algorytm (odwzorowanie) na tym samym zbiorze danych
 
 2 pomysł:
 Badamy tą samą metodę odwzorowania przy etykietowaniu na innym zbiorze danych
+-->
+
+
