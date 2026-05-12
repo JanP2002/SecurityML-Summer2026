@@ -52,6 +52,7 @@ from lib import (
     load_pythia_data,
     check_pythia_available,
     split_train_test,
+    make_dataloader,
     visualize_samples,
     AnomalyCNN,
     train_model,
@@ -64,7 +65,7 @@ from attacks.contamination import make_gaussian_attack, make_ood_attack
 # ---------------------------------------------------------------------------
 # Hyperparameters
 # ---------------------------------------------------------------------------
-BATCH_SIZE = 64
+BATCH_SIZE = 256
 NUM_EPOCHS = 15
 PATIENCE = 3
 
@@ -212,8 +213,9 @@ def main() -> None:
 
     model_pythia = AnomalyCNN(input_size=70)  # flatten_size = 8×8×64 = 4096
 
-    # BCELoss is shared — it has no learnable parameters
-    criterion = nn.BCELoss()
+    # BCEWithLogitsLoss fuses sigmoid + BCE in a numerically stable way
+    # and is safe for AMP mixed-precision training.
+    criterion = nn.BCEWithLogitsLoss()
     optimizer_mnist = optim.Adam(model_mnist.parameters(), lr=0.001)
     optimizer_pythia = optim.Adam(model_pythia.parameters(), lr=0.001)
 
@@ -223,10 +225,10 @@ def main() -> None:
     print("\n--- KOMÓRKA 8: TRENING (BASELINE) ---")
 
     # DataLoaders — shuffle=True for train to prevent ordering artefacts
-    train_loader_mnist = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    val_loader_mnist = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    train_loader_pythia = DataLoader(pythia_train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    val_loader_pythia = DataLoader(pythia_val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    train_loader_mnist  = make_dataloader(train_dataset,        BATCH_SIZE, shuffle=True)
+    val_loader_mnist    = make_dataloader(val_dataset,          BATCH_SIZE)
+    train_loader_pythia = make_dataloader(pythia_train_dataset, BATCH_SIZE, shuffle=True)
+    val_loader_pythia   = make_dataloader(pythia_val_dataset,   BATCH_SIZE)
 
     print("\n>>> TRENING: MNIST (Clean + Attack_A) <<<")
     model_mnist = train_model(
@@ -245,8 +247,8 @@ def main() -> None:
     # -----------------------------------------------------------------------
     print("\n--- KOMÓRKA 9: EWALUACJA — TEST_A (ZNANY ATAK) ---")
 
-    test_a_loader_mnist = DataLoader(test_a_dataset, batch_size=BATCH_SIZE)
-    test_a_loader_pythia = DataLoader(pythia_test_a_dataset, batch_size=BATCH_SIZE)
+    test_a_loader_mnist  = make_dataloader(test_a_dataset,        BATCH_SIZE)
+    test_a_loader_pythia = make_dataloader(pythia_test_a_dataset, BATCH_SIZE)
 
     print("\n>>> EWALUACJA MNIST (Test_A) <<<")
     res_mnist_a = evaluate_model(model_mnist, test_a_loader_mnist)
@@ -259,8 +261,8 @@ def main() -> None:
     # -----------------------------------------------------------------------
     print("\n--- KOMÓRKA 10: EWALUACJA — TEST_B (NIEZNANY ATAK) ---")
 
-    test_b_loader_mnist = DataLoader(test_b_dataset, batch_size=BATCH_SIZE)
-    test_b_loader_pythia = DataLoader(pythia_test_b_dataset, batch_size=BATCH_SIZE)
+    test_b_loader_mnist  = make_dataloader(test_b_dataset,        BATCH_SIZE)
+    test_b_loader_pythia = make_dataloader(pythia_test_b_dataset, BATCH_SIZE)
 
     print("\n>>> EWALUACJA MNIST (Test_B: OOD) <<<")
     res_mnist_b = evaluate_model(model_mnist, test_b_loader_mnist)

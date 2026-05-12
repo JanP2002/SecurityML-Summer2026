@@ -12,6 +12,9 @@ Both step1.py and step2.py import from this module.  It contains:
     Visualisation
         visualize_samples    — render a row of labelled image samples
 
+    DataLoader
+        make_dataloader      — create a DataLoader with GPU-optimised settings
+
     Model
         AnomalyCNN           — 3-block CNN binary anomaly classifier
 
@@ -240,6 +243,50 @@ def check_pythia_available(data_dir: Path | str = Path("./pythia")) -> None:
         sys.exit(1)
 
 
+def make_dataloader(
+    dataset,
+    batch_size: int,
+    shuffle: bool = False,
+) -> DataLoader:
+    """Create a DataLoader with GPU-optimised settings.
+
+    When CUDA is available, enables ``pin_memory`` (allows async DMA
+    transfers to GPU) and ``non_blocking`` transfers.  Uses
+    ``num_workers=4`` for background prefetching and
+    ``persistent_workers=True`` to avoid re-spawning between epochs.
+    Falls back to ``num_workers=0`` when CUDA is not present (CPU-only
+    inference is rarely bottlenecked by data loading).
+
+    Parameters
+    ----------
+    dataset : Dataset
+        Any PyTorch Dataset.
+    batch_size : int
+        Number of samples per batch.
+    shuffle : bool
+        Whether to shuffle on each epoch (default ``False``).
+
+    Returns
+    -------
+    DataLoader
+        Optimised DataLoader ready for training or evaluation.
+    """
+    cuda = torch.cuda.is_available()
+    # On Windows (spawn start method) num_workers > 0 causes worker crashes
+    # with complex in-memory dataset chains. Data is already in RAM so there
+    # is no I/O bottleneck; the GPU compute path benefits from pin_memory alone.
+    import os as _os
+    num_workers = 0 if _os.name == "nt" else 4
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        pin_memory=cuda,
+        num_workers=num_workers,
+        persistent_workers=num_workers > 0,
+    )
+
+
 def split_train_test(
     dataset,
     train_ratio: float = 0.8,
@@ -332,10 +379,13 @@ class AnomalyCNN(nn.Module):
 
     followed by a two-layer classification head::
 
-        Linear(flatten_size → 128) → ReLU → Linear(128 → 1) → Sigmoid
+        Linear(flatten_size → 128) → ReLU → Linear(128 → 1)  [raw logit]
 
-    The Sigmoid output :math:`\\hat{y} \\in (0, 1)` represents the
-    probability that the input is an anomaly (class 1).
+    The model outputs a **raw logit** :math:`z \in \mathbb{R}`.  Pass it to
+    ``torch.nn.BCEWithLogitsLoss`` during training and apply
+    ``torch.sigmoid`` in evaluation to convert to a probability in
+    :math:`(0, 1)`.  This avoids numerical instability and is safe for
+    AMP mixed-precision training on Tensor Core hardware.
 
     Flatten size is inferred automatically at construction time via a
     dummy forward pass, so the model handles any square input:
@@ -405,7 +455,7 @@ class AnomalyCNN(nn.Module):
         x = self.pool(F.relu(self.conv3(x)))   # (B, 64, H/8, W/8)
         x = x.view(-1, self.flatten_size)
         x = F.relu(self.fc1(x))
-        return torch.sigmoid(self.fc2(x))      # (B, 1)
+        return self.fc2(x)                     # (B, 1)  raw logit
 
 
 # ===========================================================================
@@ -460,7 +510,7 @@ def train_model(
     Notes
     -----
     Labels are reshaped via ``.view(-1, 1).float()`` so their shape
-    (B, 1) matches the model's sigmoid output for BCELoss compatibility.
+    (B, 1) matches the model's raw logit output for ``BCEWithLogitsLoss``.
     """
     best_wts = copy.deepcopy(model.state_dict())
     best_val_loss = float("inf")
@@ -468,7 +518,9 @@ def train_model(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    print(f"  [Device: {device}]")
+    use_amp = device.type == "cuda"
+    scaler = torch.amp.GradScaler(device.type, enabled=use_amp)
+    print(f"  [Device: {device} | AMP: {use_amp}]")
 
     for epoch in range(num_epochs):
         # ------------------------------------------------------------------
@@ -478,15 +530,17 @@ def train_model(
         running_loss = 0.0
 
         for inputs, labels in train_loader:
-            inputs = inputs.to(device)
+            inputs = inputs.to(device, non_blocking=True)
             # BCELoss: targets must be float with shape (B, 1) matching outputs
-            labels = labels.to(device).view(-1, 1).float()
+            labels = labels.to(device, non_blocking=True).view(-1, 1).float()
 
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+            with torch.amp.autocast(device.type, enabled=use_amp):
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
             running_loss += loss.item() * inputs.size(0)
 
@@ -500,10 +554,11 @@ def train_model(
 
         with torch.no_grad():
             for inputs, labels in val_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device).view(-1, 1).float()
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
+                inputs = inputs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True).view(-1, 1).float()
+                with torch.amp.autocast(device.type, enabled=use_amp):
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
                 val_loss += loss.item() * inputs.size(0)
 
         epoch_val_loss = val_loss / len(val_loader.dataset)
@@ -580,19 +635,23 @@ def evaluate_model(
 
     all_labels: list = []
     all_probs: list = []
+    use_amp = device.type == "cuda"
 
     with torch.no_grad():
         for inputs, labels in test_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device).float()
+            inputs = inputs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True).float()
 
-            outputs = model(inputs).squeeze()
+            with torch.amp.autocast(device.type, enabled=use_amp):
+                logits = model(inputs).squeeze()
 
             # Guard: if batch_size == 1, squeeze collapses to scalar
-            if outputs.dim() == 0:
-                outputs = outputs.unsqueeze(0)
+            if logits.dim() == 0:
+                logits = logits.unsqueeze(0)
 
-            all_probs.extend(outputs.cpu().numpy())
+            # Convert raw logits → probabilities in FP32 for metric computation
+            probs = torch.sigmoid(logits.float())
+            all_probs.extend(probs.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
     all_labels = np.array(all_labels)

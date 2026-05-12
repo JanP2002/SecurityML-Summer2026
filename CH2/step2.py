@@ -66,6 +66,7 @@ from lib import (
     check_pythia_available,
     evaluate_model,
     load_pythia_data,
+    make_dataloader,
     prepare_clean_data,
     save_results,
     split_train_test,
@@ -82,7 +83,7 @@ from attacks.contamination import (
 # ---------------------------------------------------------------------------
 # Global hyperparameters
 # ---------------------------------------------------------------------------
-BATCH_SIZE = 64
+BATCH_SIZE = 256
 NUM_EPOCHS = 15
 PATIENCE = 3
 
@@ -217,16 +218,16 @@ def run_progressive_training(
         # ------------------------------------------------------------------
         # DataLoaders
         # ------------------------------------------------------------------
-        train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
-        val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False)
-        test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
+        train_loader = make_dataloader(train_ds, BATCH_SIZE, shuffle=True)
+        val_loader   = make_dataloader(val_ds,   BATCH_SIZE)
+        test_loader  = make_dataloader(test_ds,  BATCH_SIZE)
 
         # ------------------------------------------------------------------
         # Fresh model + optimiser for each round
         # (models trained on n attacks are independent experiments)
         # ------------------------------------------------------------------
         model = AnomalyCNN(input_size=input_size)
-        criterion = nn.BCELoss()
+        criterion = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
         from lib import train_model  # local import to keep namespace clean
