@@ -1,0 +1,7 @@
+# Python environment files
+*/venv
+**/__pycache__
+
+# CH2 dataset
+CH2/pythia
+CH2/data
