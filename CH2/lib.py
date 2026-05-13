@@ -51,6 +51,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from PIL import Image
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -58,8 +59,10 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import ConcatDataset, DataLoader, TensorDataset, random_split
-from torchvision import datasets, transforms
+from torchvision import datasets, models, transforms
+import torchvision.transforms.functional as TF
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend — never opens a window
 import matplotlib.pyplot as plt
@@ -155,8 +158,9 @@ def load_pythia_data(
 
     Labelling:  ``'clean'`` → 0,  any other partition name → 1 (attack).
 
-    If the folder is missing, 1 000 synthetic noise samples are returned
-    so that the rest of the pipeline remains runnable without the archive.
+    If the folder is missing, ``FileNotFoundError`` is raised with a message
+    pointing to the download URL.  Call ``check_pythia_available()`` first
+    to get a clean diagnostic before any partition is loaded.
 
     Parameters
     ----------
@@ -251,11 +255,11 @@ def make_dataloader(
     """Create a DataLoader with GPU-optimised settings.
 
     When CUDA is available, enables ``pin_memory`` (allows async DMA
-    transfers to GPU) and ``non_blocking`` transfers.  Uses
-    ``num_workers=4`` for background prefetching and
-    ``persistent_workers=True`` to avoid re-spawning between epochs.
-    Falls back to ``num_workers=0`` when CUDA is not present (CPU-only
-    inference is rarely bottlenecked by data loading).
+    transfers to GPU).  Uses ``num_workers=4`` with
+    ``persistent_workers=True`` on Linux/macOS for background prefetching.
+    Always uses ``num_workers=0`` on Windows (``os.name == 'nt'``) because
+    the spawn-based multiprocessing start method crashes with in-memory
+    dataset chains (``ConcatDataset``, ``Subset``, etc.).
 
     Parameters
     ----------
@@ -364,78 +368,122 @@ def visualize_samples(
 
 
 # ===========================================================================
+# AUGMENTATION
+# ===========================================================================
+
+
+class AugmentedDataset(torch.utils.data.Dataset):
+    """Thin wrapper that applies random on-the-fly augmentation to a dataset.
+
+    Only augments the training split.  Pass ``augment=False`` for val/test
+    to get deterministic evaluation.
+
+    Augmentations applied when ``augment=True``:
+    - Random horizontal flip (p = 0.5)
+    - Random vertical flip   (p = 0.5)
+
+    Parameters
+    ----------
+    base_dataset : Dataset
+        Any dataset whose ``__getitem__`` returns ``(image_tensor, label)``.
+    augment : bool
+        Whether to apply random transforms.  Default False.
+    """
+
+    def __init__(
+        self,
+        base_dataset: torch.utils.data.Dataset,
+        augment: bool = False,
+    ) -> None:
+        self.ds = base_dataset
+        self.augment = augment
+
+    def __len__(self) -> int:
+        return len(self.ds)
+
+    def __getitem__(self, idx: int):
+        img, lbl = self.ds[idx]
+        if self.augment:
+            if torch.rand(1).item() < 0.5:
+                img = TF.hflip(img)
+            if torch.rand(1).item() < 0.5:
+                img = TF.vflip(img)
+        return img, lbl
+
+
+# ===========================================================================
 # MODEL
 # ===========================================================================
 
 
-class AnomalyCNN(nn.Module):
-    """Binary anomaly detection CNN with dynamic input-size support.
+# ===========================================================================
+# PYTHIA DETECTOR  (transfer-learning, ResNet18-based)
+# ===========================================================================
 
-    Architecture
-    ------------
-    Three convolutional blocks, each::
 
-        Conv2d(C_in → C_out, 3×3, padding=1) → ReLU → MaxPool2d(2, 2)
+class PythiaResNet(nn.Module):
+    """Transfer-learning binary anomaly detector for small 1-channel datasets.
 
-    followed by a two-layer classification head::
+    Wraps pretrained ResNet18.  Key design choices for the Pythia 70×70
+    grayscale dataset:
 
-        Linear(flatten_size → 128) → ReLU → Linear(128 → 1)  [raw logit]
+    1. **1-channel adaptation**: The first Conv2d is replaced with a
+       single-channel version whose weights are the channel-wise average of
+       the pretrained 3-channel filters.  This preserves the learned edge /
+       texture detectors without the scale-doubling bias of channel replication.
 
-    The model outputs a **raw logit** :math:`z \in \mathbb{R}`.  Pass it to
-    ``torch.nn.BCEWithLogitsLoss`` during training and apply
-    ``torch.sigmoid`` in evaluation to convert to a probability in
-    :math:`(0, 1)`.  This avoids numerical instability and is safe for
-    AMP mixed-precision training on Tensor Core hardware.
+    2. **Frozen shallow layers, fine-tuned deep layers**: ``layer1``–``layer3``
+       are frozen (pretrained low/mid-level features rarely need adjustment).
+       ``layer4`` and the classification head are fine-tuned with a small LR
+       (``2e-5`` for the backbone, ``2e-4`` for the head).
 
-    Flatten size is inferred automatically at construction time via a
-    dummy forward pass, so the model handles any square input:
-
-    +-----------+------------------+-------------------+
-    | H (input) | H' (after 3×pool)| flatten_size      |
-    +===========+==================+===================+
-    | 28 (MNIST)| 3                | 3 × 3 × 64 = 576  |
-    +-----------+------------------+-------------------+
-    | 70 (Pythia| 8                | 8 × 8 × 64 = 4096 |
-    +-----------+------------------+-------------------+
+    3. **Lightweight head**: ``Flatten → Dropout(0.3) → Linear(512, 1)``.
+       A single linear layer on top of ResNet18’s global-average-pooled
+       features avoids adding new parameters that would overfit on ~1 000
+       training samples.
 
     Parameters
     ----------
-    input_size : int
-        Spatial dimension H of the square input image.
+    freeze_shallow : bool
+        If True (default), freeze layer1–layer3 and only fine-tune layer4
+        plus the head.  Set False to fine-tune the whole network.
     """
 
-    def __init__(self, input_size: int = 28):
+    def __init__(self, freeze_shallow: bool = True) -> None:
         super().__init__()
 
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        base = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 
-        self.flatten_size = self._get_flatten_size(input_size)
+        # --- Adapt first conv to single-channel input -------------------
+        # Average the 3 pretrained input filters along the channel axis so
+        # the model starts with valid, meaningful edge/texture detectors.
+        old_w = base.conv1.weight.data          # (64, 3, 7, 7)
+        new_conv = nn.Conv2d(
+            1, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
+        new_conv.weight.data = old_w.mean(dim=1, keepdim=True)
+        base.conv1 = new_conv
 
-        self.fc1 = nn.Linear(self.flatten_size, 128)
-        self.fc2 = nn.Linear(128, 1)
+        # --- Build backbone (everything except the final FC layer) -------
+        # children(): conv1, bn1, relu, maxpool, layer1–layer4, avgpool, fc
+        backbone_layers = list(base.children())[:-1]   # drop the FC
+        self.backbone = nn.Sequential(*backbone_layers)  # → (B, 512, 1, 1)
 
-    def _get_flatten_size(self, input_size: int) -> int:
-        """Infer flattened feature count by running a dummy tensor through
-        the convolutional stack.
+        # --- Freeze shallow layers if requested -------------------------
+        if freeze_shallow:
+            # layer1 = index 4, layer2 = 5, layer3 = 6 in the sequential
+            freeze_up_to = 7  # freeze conv1..layer3 (indices 0–6)
+            for i, child in enumerate(self.backbone.children()):
+                if i < freeze_up_to:
+                    for p in child.parameters():
+                        p.requires_grad_(False)
 
-        Parameters
-        ----------
-        input_size : int
-            Spatial side length of the square input.
-
-        Returns
-        -------
-        int
-            Total number of scalar features after the last pool layer.
-        """
-        dummy = torch.zeros(1, 1, input_size, input_size)
-        x = self.pool(F.relu(self.conv1(dummy)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        return x.numel()
+        # --- Classification head -----------------------------------------
+        self.head = nn.Sequential(
+            nn.Flatten(),      # (B, 512)
+            nn.Dropout(p=0.3),
+            nn.Linear(512, 1), # raw logit
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -443,23 +491,106 @@ class AnomalyCNN(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Mini-batch of images, shape (B, 1, H, W).
+            Grayscale image batch, shape (B, 1, H, W).
 
         Returns
         -------
         torch.Tensor
-            Anomaly probabilities, shape (B, 1), values in (0, 1).
+            Raw logit, shape (B, 1).
         """
-        x = self.pool(F.relu(self.conv1(x)))   # (B, 16, H/2, W/2)
-        x = self.pool(F.relu(self.conv2(x)))   # (B, 32, H/4, W/4)
-        x = self.pool(F.relu(self.conv3(x)))   # (B, 64, H/8, W/8)
-        x = x.view(-1, self.flatten_size)
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)                     # (B, 1)  raw logit
+        return self.head(self.backbone(x))        # (B, 1)
+
+    def trainable_param_groups(
+        self,
+        backbone_lr: float = 2e-5,
+        head_lr: float = 2e-4,
+    ) -> list[dict]:
+        """Return optimizer parameter groups with differential learning rates.
+
+        Parameters
+        ----------
+        backbone_lr : float
+            LR for the unfrozen backbone layers (layer4 by default).
+        head_lr : float
+            LR for the classification head.
+
+        Returns
+        -------
+        list[dict]
+            Pass directly to ``torch.optim.Adam(param_groups)``.
+        """
+        backbone_params = [
+            p for p in self.backbone.parameters() if p.requires_grad
+        ]
+        head_params = list(self.head.parameters())
+        return [
+            {"params": backbone_params, "lr": backbone_lr},
+            {"params": head_params,     "lr": head_lr},
+        ]
 
 
 # ===========================================================================
-# TRAINING
+# MODEL  (AnomalyCNN — matches notebook ch2_step1_v2.ipynb exactly)
+# ===========================================================================
+
+
+class AnomalyCNN(nn.Module):
+    """Binary anomaly detection CNN with dynamic input-size support.
+
+    Exactly matches the architecture from the reference notebook:
+
+    Three convolutional blocks, each::
+
+        Conv2d → ReLU → MaxPool2d(2, 2)
+
+    Followed by Flatten and two Dense layers::
+
+        Linear(flatten_size → 128) → ReLU → Linear(128 → 1) → Sigmoid
+
+    The model outputs a **probability** in [0, 1] — use ``BCELoss`` for
+    training (not BCEWithLogitsLoss, as sigmoid is already applied).
+
+    Parameters
+    ----------
+    input_size : int
+        Spatial side-length H of the square input (28 for MNIST, 70 for Pythia).
+    """
+
+    def __init__(self, input_size: int = 28):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(in_channels=1,  out_channels=16, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.pool  = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Dynamically infer the flattened feature size so the same class
+        # works for both 28×28 (MNIST) and 70×70 (Pythia) without manual maths.
+        self.flatten_size = self._get_flatten_size(input_size)
+
+        self.fc1 = nn.Linear(self.flatten_size, 128)
+        self.fc2 = nn.Linear(128, 1)
+
+    def _get_flatten_size(self, input_size: int) -> int:
+        """Pass a dummy tensor through the conv stack to infer flatten size."""
+        dummy = torch.zeros(1, 1, input_size, input_size)
+        x = self.pool(F.relu(self.conv1(dummy)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        return x.numel()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        x = x.view(-1, self.flatten_size)      # flatten
+        x = F.relu(self.fc1(x))
+        x = torch.sigmoid(self.fc2(x))         # probability in [0, 1]
+        return x
+
+
+# ===========================================================================
+# TRAINING  (matches notebook ch2_step1_v2.ipynb exactly)
 # ===========================================================================
 
 
@@ -472,55 +603,38 @@ def train_model(
     num_epochs: int = 20,
     patience: int = 3,
 ) -> nn.Module:
-    """Train a binary classifier with early stopping on validation BCE loss.
+    """Train a binary classifier with early stopping on validation loss.
 
-    Algorithm
-    ---------
-    For each epoch:
-      1. **Train phase** — forward pass, BCELoss, back-prop, Adam update.
-      2. **Validation phase** — forward only (no_grad), record val loss.
-      3. **Early stopping** — if val loss did not improve for ``patience``
-         consecutive epochs, restore best weights and halt.
-
-    Best weights are saved via ``copy.deepcopy(state_dict())`` so that
-    subsequent epochs cannot corrupt the checkpoint.
+    Exactly matches the training loop from the reference notebook.
+    Model is moved to GPU automatically if available.
+    Best weights (lowest val loss) are restored before returning.
 
     Parameters
     ----------
     model : nn.Module
-        Model to train (moved to CUDA automatically if available).
-    train_loader : DataLoader
-        Batched training data.
-    val_loader : DataLoader
-        Batched validation data.
+        Model to train.
+    train_loader, val_loader : DataLoader
+        Batched training and validation data.
     criterion : nn.Module
-        Loss function — expected ``nn.BCELoss()``.
+        Loss function — ``nn.BCELoss()`` (model must output probabilities).
     optimizer : Optimizer
-        Update rule — expected ``Adam(lr=0.001)``.
+        ``torch.optim.Adam``.
     num_epochs : int
-        Maximum epochs (default 20).
+        Maximum training epochs.
     patience : int
-        Epochs without val-loss improvement before early stopping (default 3).
+        Epochs without val-loss improvement before early stopping.
 
     Returns
     -------
     nn.Module
-        Model with weights restored to the best-val-loss checkpoint.
-
-    Notes
-    -----
-    Labels are reshaped via ``.view(-1, 1).float()`` so their shape
-    (B, 1) matches the model's raw logit output for ``BCEWithLogitsLoss``.
+        Model with best-val-loss weights restored.
     """
-    best_wts = copy.deepcopy(model.state_dict())
+    best_model_wts = copy.deepcopy(model.state_dict())
     best_val_loss = float("inf")
     epochs_no_improve = 0
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
-    use_amp = device.type == "cuda"
-    scaler = torch.amp.GradScaler(device.type, enabled=use_amp)
-    print(f"  [Device: {device} | AMP: {use_amp}]")
 
     for epoch in range(num_epochs):
         # ------------------------------------------------------------------
@@ -530,17 +644,14 @@ def train_model(
         running_loss = 0.0
 
         for inputs, labels in train_loader:
-            inputs = inputs.to(device, non_blocking=True)
-            # BCELoss: targets must be float with shape (B, 1) matching outputs
-            labels = labels.to(device, non_blocking=True).view(-1, 1).float()
+            inputs = inputs.to(device)
+            labels = labels.to(device).view(-1, 1).float()
 
-            optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast(device.type, enabled=use_amp):
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
             running_loss += loss.item() * inputs.size(0)
 
@@ -554,11 +665,10 @@ def train_model(
 
         with torch.no_grad():
             for inputs, labels in val_loader:
-                inputs = inputs.to(device, non_blocking=True)
-                labels = labels.to(device, non_blocking=True).view(-1, 1).float()
-                with torch.amp.autocast(device.type, enabled=use_amp):
-                    outputs = model(inputs)
-                    loss = criterion(outputs, labels)
+                inputs = inputs.to(device)
+                labels = labels.to(device).view(-1, 1).float()
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
                 val_loss += loss.item() * inputs.size(0)
 
         epoch_val_loss = val_loss / len(val_loader.dataset)
@@ -566,32 +676,32 @@ def train_model(
         print(
             f"Epoka {epoch + 1:02d}/{num_epochs:02d} | "
             f"Strata (Train): {epoch_train_loss:.4f} | "
-            f"Strata (Val):   {epoch_val_loss:.4f}"
+            f"Strata (Val): {epoch_val_loss:.4f}"
         )
 
         # ------------------------------------------------------------------
-        # Early stopping check
+        # Early stopping
         # ------------------------------------------------------------------
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
-            best_wts = copy.deepcopy(model.state_dict())
+            best_model_wts = copy.deepcopy(model.state_dict())
             epochs_no_improve = 0
         else:
             epochs_no_improve += 1
             if epochs_no_improve >= patience:
                 print(
                     f" -> Early Stopping! Brak poprawy od {patience} epok. "
-                    "Przywracam najlepsze wagi."
+                    "Przerywam trening."
                 )
                 break
 
-    print(f"Najlepsza strata walidacyjna: {best_val_loss:.4f}")
-    model.load_state_dict(best_wts)
+    print(f"Najlepsza strata walidacyjna (Val Loss): {best_val_loss:.4f}")
+    model.load_state_dict(best_model_wts)
     return model
 
 
 # ===========================================================================
-# EVALUATION
+# EVALUATION  (matches notebook ch2_step1_v2.ipynb exactly)
 # ===========================================================================
 
 
@@ -602,72 +712,257 @@ def evaluate_model(
 ) -> tuple[float, float, float, float, float]:
     """Evaluate a trained binary classifier and print all metrics.
 
-    Metrics computed
-    ----------------
-    .. math::
-        \\text{Accuracy}  &= \\frac{TP + TN}{TP + TN + FP + FN} \\\\
-        \\text{Precision} &= \\frac{TP}{TP + FP} \\\\
-        \\text{Recall}    &= \\frac{TP}{TP + FN} \\\\
-        \\text{F1}        &= \\frac{2 \\cdot P \\cdot R}{P + R} \\\\
-        \\text{AUC-ROC}   &= \\int_0^1 TPR(FPR^{-1}(t))\\, dt
-
-    AUC-ROC is threshold-independent (uses raw probabilities).
-
-    Parameters
-    ----------
-    model : nn.Module
-        Trained binary classifier.
-    test_loader : DataLoader
-        Labelled test data.
-    threshold : float
-        Decision threshold τ: predict anomaly if :math:`\\hat{y} \\geq \\tau`
-        (default 0.5).
+    Expects the model to output probabilities (sigmoid already applied).
+    Matches the evaluate_model function from the reference notebook.
 
     Returns
     -------
     acc, prec, rec, f1, auc : float
-        Metric values.  ``auc`` is ``float('nan')`` when the test set
-        contains only one class (degenerate edge case).
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     model.eval()
 
     all_labels: list = []
-    all_probs: list = []
-    use_amp = device.type == "cuda"
+    all_preds_probs: list = []
 
     with torch.no_grad():
         for inputs, labels in test_loader:
-            inputs = inputs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True).float()
+            inputs = inputs.to(device)
+            labels = labels.to(device).float()
 
-            with torch.amp.autocast(device.type, enabled=use_amp):
-                logits = model(inputs).squeeze()
+            outputs = model(inputs).squeeze()
 
-            # Guard: if batch_size == 1, squeeze collapses to scalar
-            if logits.dim() == 0:
-                logits = logits.unsqueeze(0)
+            # Guard: batch of exactly 1 collapses squeeze to scalar
+            if outputs.dim() == 0:
+                outputs = outputs.unsqueeze(0)
 
-            # Convert raw logits → probabilities in FP32 for metric computation
-            probs = torch.sigmoid(logits.float())
-            all_probs.extend(probs.cpu().numpy())
+            all_preds_probs.extend(outputs.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
     all_labels = np.array(all_labels)
-    all_probs = np.array(all_probs)
-    all_preds = (all_probs >= threshold).astype(int)
+    all_preds_probs = np.array(all_preds_probs)
+    all_preds_classes = (all_preds_probs >= threshold).astype(int)
 
-    acc = accuracy_score(all_labels, all_preds)
-    prec = precision_score(all_labels, all_preds, zero_division=0)
-    rec = recall_score(all_labels, all_preds, zero_division=0)
-    f1 = f1_score(all_labels, all_preds, zero_division=0)
+    acc  = accuracy_score(all_labels, all_preds_classes)
+    prec = precision_score(all_labels, all_preds_classes, zero_division=0)
+    rec  = recall_score(all_labels, all_preds_classes, zero_division=0)
+    f1   = f1_score(all_labels, all_preds_classes, zero_division=0)
 
     try:
-        auc = roc_auc_score(all_labels, all_probs)
+        auc = roc_auc_score(all_labels, all_preds_probs)
     except ValueError:
         auc = float("nan")
 
+    print(f"  Accuracy:  {acc:.4f} (Dokładność ogólna)")
+    print(f"  Precision: {prec:.4f} (Jak często wytypowana anomalia faktycznie nią była)")
+    print(f"  Recall:    {rec:.4f} (Jaką część wszystkich prawdziwych anomalii udało się wykryć)")
+    print(f"  F1-Score:  {f1:.4f} (Średnia harmoniczna precyzji i czułości)")
+    print(f"  AUC-ROC:   {auc:.4f} (Zdolność modelu do rozróżniania klas)")
+
+    return acc, prec, rec, f1, auc
+
+
+# ===========================================================================
+# PYTHIA LINEAR DETECTOR  (Cohen's d pixel selection + Logistic Regression)
+# ===========================================================================
+
+
+class PythiaLinearDetector:
+    """Pixel-selection linear detector for binary anomaly classification.
+
+    Design rationale
+    ----------------
+    Neural networks trained from scratch on only ~1 000 labelled samples
+    often fail to discover subtle, spatially-localised attack signals because
+    they search the whole 4 900-pixel space simultaneously.  This detector
+    takes a different approach:
+
+    1. **Effect-size ranking**: compute Cohen's |d| for every pixel using
+       ONLY the training split.  Large |d| means the attack consistently
+       shifts that pixel's distribution relative to clean images.
+    2. **Top-K feature selection**: retain the K pixels with the highest
+       discriminative power (K=500 by default).
+    3. **Regularised logistic regression**: train a linear classifier on the
+       selected features with strong L2 regularisation (C=0.01) to prevent
+       overfitting on the small dataset.
+
+    All three steps use only training data, so the evaluation on the val and
+    test sets is fully unbiased.
+
+    Parameters
+    ----------
+    top_k : int
+        Number of most discriminative pixels to keep (default 500).
+    C : float
+        Inverse regularisation strength for LogisticRegression (smaller →
+        stronger regularisation; default 0.01).
+    """
+
+    def __init__(self, top_k: int = 500, C: float = 0.01) -> None:
+        self.top_k = top_k
+        self.C = C
+        self._pixel_mask: np.ndarray | None = None   # selected flat indices
+        self._scaler:     StandardScaler    | None = None
+        self._clf:        LogisticRegression | None = None
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _dataset_to_arrays(
+        dataset,
+        batch_size: int = 512,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Convert a torch Dataset into flat NumPy arrays (X, y).
+
+        Parameters
+        ----------
+        dataset : torch.utils.data.Dataset
+            Must yield (image_tensor, label_tensor) pairs.
+        batch_size : int
+            Batch size for the temporary DataLoader.
+
+        Returns
+        -------
+        X : ndarray of shape (N, H*W)
+            Flattened pixel features.
+        y : ndarray of shape (N,)
+            Integer class labels (0 = clean, 1 = attack).
+        """
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+        X_parts, y_parts = [], []
+        for imgs, labels in loader:
+            X_parts.append(imgs.numpy().reshape(len(imgs), -1))
+            y_parts.append(labels.numpy().ravel().astype(int))
+        return np.vstack(X_parts), np.concatenate(y_parts)
+
+    @staticmethod
+    def _cohens_d(X_clean: np.ndarray, X_attack: np.ndarray) -> np.ndarray:
+        """Compute per-column Cohen's |d| between two groups.
+
+        Parameters
+        ----------
+        X_clean, X_attack : ndarray of shape (N_c, F), (N_a, F)
+            Feature matrices for clean and attack samples.
+
+        Returns
+        -------
+        ndarray of shape (F,)
+            Absolute Cohen's d effect size for each feature.
+        """
+        mu_c, mu_a = X_clean.mean(0), X_attack.mean(0)
+        var_pooled  = (X_clean.var(0) + X_attack.var(0)) / 2 + 1e-8
+        return np.abs(mu_a - mu_c) / np.sqrt(var_pooled)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def fit(self, train_dataset) -> "PythiaLinearDetector":
+        """Fit the detector on labelled training data.
+
+        Steps:
+        1. Separate clean (y=0) and attack (y=1) samples.
+        2. Compute Cohen's |d| per pixel.
+        3. Select top-K pixels by effect size.
+        4. Fit StandardScaler + LogisticRegression on selected pixels.
+
+        Parameters
+        ----------
+        train_dataset : torch.utils.data.Dataset
+            Balanced training dataset yielding (image, label) pairs.
+
+        Returns
+        -------
+        self
+        """
+        X, y = self._dataset_to_arrays(train_dataset)
+        X_clean  = X[y == 0]
+        X_attack = X[y == 1]
+
+        # Step 1: effect-size ranking (training data only — no leakage)
+        d = self._cohens_d(X_clean, X_attack)
+        self._pixel_mask = np.argsort(d)[-self.top_k:]
+
+        # Step 2: scale & fit
+        X_sel = X[:, self._pixel_mask]
+        self._scaler = StandardScaler()
+        X_scaled = self._scaler.fit_transform(X_sel)
+
+        self._clf = LogisticRegression(C=self.C, max_iter=2000, solver="lbfgs")
+        self._clf.fit(X_scaled, y)
+
+        # Report fitted statistics
+        d_selected = d[self._pixel_mask]
+        print(
+            f"[PythiaLinearDetector] Top-{self.top_k} pixels selected | "
+            f"max |d|={d_selected.max():.3f}  "
+            f"mean |d|={d_selected.mean():.3f}"
+        )
+        train_proba = self._clf.predict_proba(X_scaled)[:, 1]
+        train_auc   = roc_auc_score(y, train_proba)
+        print(f"[PythiaLinearDetector] Train AUC: {train_auc:.4f}")
+
+        return self
+
+    def predict_proba(self, dataset) -> np.ndarray:
+        """Return probability of the attack class (label=1).
+
+        Parameters
+        ----------
+        dataset : torch.utils.data.Dataset
+            Dataset yielding (image, label) pairs.
+
+        Returns
+        -------
+        ndarray of shape (N,)
+            Predicted probability of attack (sigmoid output).
+        """
+        if self._pixel_mask is None or self._clf is None:
+            raise RuntimeError("Call .fit() before .predict_proba()")
+        X, _ = self._dataset_to_arrays(dataset)
+        X_sel    = X[:, self._pixel_mask]
+        X_scaled = self._scaler.transform(X_sel)
+        return self._clf.predict_proba(X_scaled)[:, 1]
+
+
+def evaluate_linear_detector(
+    detector: PythiaLinearDetector,
+    test_dataset,
+    label: str = "",
+) -> tuple[float, float, float, float, float]:
+    """Evaluate a fitted PythiaLinearDetector on a labelled test dataset.
+
+    Parameters
+    ----------
+    detector : PythiaLinearDetector
+        A fitted detector.
+    test_dataset : torch.utils.data.Dataset
+        Dataset yielding (image, label) pairs.
+    label : str
+        Optional name printed in the summary line.
+
+    Returns
+    -------
+    tuple
+        ``(accuracy, precision, recall, f1, auc_roc)`` — same layout as
+        :func:`evaluate_model` for drop-in compatibility with
+        :func:`parse_results`.
+    """
+    _, y_true = PythiaLinearDetector._dataset_to_arrays(test_dataset)
+    proba     = detector.predict_proba(test_dataset)
+    y_pred    = (proba >= 0.5).astype(int)
+
+    acc  = accuracy_score(y_true, y_pred)
+    prec = precision_score(y_true, y_pred, zero_division=0)
+    rec  = recall_score(y_true, y_pred, zero_division=0)
+    f1   = f1_score(y_true, y_pred, zero_division=0)
+    auc  = roc_auc_score(y_true, proba)
+
+    tag = f" [{label}]" if label else ""
+    print(f"Ewaluacja{tag}:")
     print(f"  Accuracy:  {acc:.4f}")
     print(f"  Precision: {prec:.4f}")
     print(f"  Recall:    {rec:.4f}")

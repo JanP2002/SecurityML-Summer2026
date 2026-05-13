@@ -14,7 +14,9 @@ Pipeline
 2.  Generate attack_a: Gaussian noise σ=0.4  (KNOWN attack, label 1).
 3.  Generate attack_b: OOD Fashion-MNIST      (UNKNOWN attack, label 1).
 4.  Split into 80/20 train/val from [clean ∪ attack_a], plus Test_A and Test_B.
-5.  Mirror steps 1-4 for the hidden Pythia dataset (70×70 px grayscale).
+5.  Load the hidden Pythia dataset (70×70 px grayscale PNGs) directly from
+    pre-existing partition folders: ``clean``, ``attack_a``, ``attack_b``.
+    Split each partition 80/20 and assemble train/val/Test_A/Test_B sets.
 6.  Train AnomalyCNN for each dataset with early stopping.
 7.  Evaluate on Test_A (known attack) → expected near-perfect metrics.
 8.  Evaluate on Test_B (unknown attack) → expected significant degradation.
@@ -63,11 +65,11 @@ from lib import (
 from attacks.contamination import make_gaussian_attack, make_ood_attack
 
 # ---------------------------------------------------------------------------
-# Hyperparameters
+# Hyperparameters — identical to notebook ch2_step1_v2.ipynb
 # ---------------------------------------------------------------------------
-BATCH_SIZE = 256
+BATCH_SIZE = 64    # notebook uses 64 for both MNIST and Pythia
 NUM_EPOCHS = 15
-PATIENCE = 3
+PATIENCE   = 3
 
 
 def main() -> None:
@@ -204,78 +206,104 @@ def main() -> None:
     print(f"  Pythia Test_B: {len(pythia_test_b_dataset)} samples  ⚠ 5:1 imbalance\n")
 
     # -----------------------------------------------------------------------
-    # Cell 7 — Model initialisation
+    # Cell 7 — Model initialisation (identical to notebook)
     # -----------------------------------------------------------------------
-    print("--- KOMÓRKA 7: ARCHITEKTURA MODELU (CNN) ---")
+    print("--- KOMÓRKA 7: FAZA 3 - ARCHITEKTURA MODELU (CNN) ---")
 
-    model_mnist = AnomalyCNN(input_size=28)   # flatten_size = 3×3×64 = 576
+    print("Inicjalizacja modelu dla MNIST (wejście 28x28)...")
+    model_mnist  = AnomalyCNN(input_size=28)
     print(model_mnist)
 
-    model_pythia = AnomalyCNN(input_size=70)  # flatten_size = 8×8×64 = 4096
+    print("\nInicjalizacja modelu dla Pythia (wejście 70x70)...")
+    model_pythia = AnomalyCNN(input_size=70)
 
-    # BCEWithLogitsLoss fuses sigmoid + BCE in a numerically stable way
-    # and is safe for AMP mixed-precision training.
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer_mnist = optim.Adam(model_mnist.parameters(), lr=0.001)
+    # BCELoss — model outputs probabilities (sigmoid in forward), matches notebook
+    criterion        = nn.BCELoss()
+    optimizer_mnist  = optim.Adam(model_mnist.parameters(),  lr=0.001)
     optimizer_pythia = optim.Adam(model_pythia.parameters(), lr=0.001)
 
-    # -----------------------------------------------------------------------
-    # Cell 8 — Training
-    # -----------------------------------------------------------------------
-    print("\n--- KOMÓRKA 8: TRENING (BASELINE) ---")
+    print("\nKonfiguracja modelu zakończona sukcesem!")
+    print(" - Architektura: 3x Conv2d + MaxPooling -> Flatten -> 2x Dense (Sigmoid)")
+    print(" - Funkcja straty: Binary Crossentropy (BCELoss)")
+    print(" - Optymalizator: Adam (Learning Rate = 0.001)")
 
-    # DataLoaders — shuffle=True for train to prevent ordering artefacts
+    # -----------------------------------------------------------------------
+    # Cell 8 — Training (identical to notebook)
+    # -----------------------------------------------------------------------
+    print("\n--- KOMÓRKA 8: FAZA 4 - TRENOWANIE MODELU (BASELINE) ---")
+
+    print("Tworzenie DataLoaderów dla danych referencyjnych (MNIST)...")
     train_loader_mnist  = make_dataloader(train_dataset,        BATCH_SIZE, shuffle=True)
     val_loader_mnist    = make_dataloader(val_dataset,          BATCH_SIZE)
+
+    print("Tworzenie DataLoaderów dla danych ukrytych (Pythia)...")
     train_loader_pythia = make_dataloader(pythia_train_dataset, BATCH_SIZE, shuffle=True)
     val_loader_pythia   = make_dataloader(pythia_val_dataset,   BATCH_SIZE)
 
-    print("\n>>> TRENING: MNIST (Clean + Attack_A) <<<")
+    print("\n>>> ROZPOCZĘCIE TRENINGU: ZBIÓR MNIST (Clean + Attack_A) <<<")
     model_mnist = train_model(
-        model_mnist, train_loader_mnist, val_loader_mnist,
-        criterion, optimizer_mnist, num_epochs=NUM_EPOCHS, patience=PATIENCE,
+        model=model_mnist,
+        train_loader=train_loader_mnist,
+        val_loader=val_loader_mnist,
+        criterion=criterion,
+        optimizer=optimizer_mnist,
+        num_epochs=NUM_EPOCHS,
+        patience=PATIENCE,
     )
 
-    print("\n>>> TRENING: PYTHIA (Clean + Attack_A) <<<")
+    print("\n>>> ROZPOCZĘCIE TRENINGU: ZBIÓR PYTHIA (Clean + Attack_A) <<<")
     model_pythia = train_model(
-        model_pythia, train_loader_pythia, val_loader_pythia,
-        criterion, optimizer_pythia, num_epochs=NUM_EPOCHS, patience=PATIENCE,
+        model=model_pythia,
+        train_loader=train_loader_pythia,
+        val_loader=val_loader_pythia,
+        criterion=criterion,
+        optimizer=optimizer_pythia,
+        num_epochs=NUM_EPOCHS,
+        patience=PATIENCE,
     )
+
+    print("\nGratulacje! Faza 4 zakończona.")
+    print("Obydwa modele bazowe (Baseline) zostały wytrenowane wyłącznie z użyciem znanego ataku_a!")
 
     # -----------------------------------------------------------------------
     # Cell 9 — Evaluation on Test_A (known attack)
     # -----------------------------------------------------------------------
-    print("\n--- KOMÓRKA 9: EWALUACJA — TEST_A (ZNANY ATAK) ---")
+    print("\n--- KOMÓRKA 9: FAZA 5 - EWALUACJA NA ZNANYM ATAKU (TEST_A) ---")
 
+    print("Przygotowanie DataLoaderów testowych (Test_A)...")
     test_a_loader_mnist  = make_dataloader(test_a_dataset,        BATCH_SIZE)
     test_a_loader_pythia = make_dataloader(pythia_test_a_dataset, BATCH_SIZE)
 
-    print("\n>>> EWALUACJA MNIST (Test_A) <<<")
+    print("\n>>> EWALUACJA MNIST (Test_A: Clean + Attack_A) <<<")
     res_mnist_a = evaluate_model(model_mnist, test_a_loader_mnist)
 
-    print("\n>>> EWALUACJA PYTHIA (Test_A) <<<")
+    print("\n>>> EWALUACJA PYTHIA (Test_A: Clean + Attack_A) <<<")
     res_pythia_a = evaluate_model(model_pythia, test_a_loader_pythia)
+
+    print("\n[WNIOSEK KROKU 1]: Jeśli metryki są bardzo wysokie (np. blisko 1.0/100%),")
+    print("oznacza to, że nasz bazowy model skutecznie nauczył się rozpoznawać ataki,")
+    print("które demonstrowaliśmy mu podczas sesji treningowej.")
 
     # -----------------------------------------------------------------------
     # Cell 10 — Evaluation on Test_B (unknown attack)
     # -----------------------------------------------------------------------
-    print("\n--- KOMÓRKA 10: EWALUACJA — TEST_B (NIEZNANY ATAK) ---")
+    print("\n--- KOMÓRKA 10: FAZA 5 - EWALUACJA NA NIEZNANYM ATAKU (TEST_B) ---")
 
+    print("Przygotowanie DataLoaderów testowych (Test_B)...")
     test_b_loader_mnist  = make_dataloader(test_b_dataset,        BATCH_SIZE)
     test_b_loader_pythia = make_dataloader(pythia_test_b_dataset, BATCH_SIZE)
 
-    print("\n>>> EWALUACJA MNIST (Test_B: OOD) <<<")
+    print("\n>>> EWALUACJA MNIST (Test_B: Clean + Attack_B / OOD) <<<")
     res_mnist_b = evaluate_model(model_mnist, test_b_loader_mnist)
 
-    print("\n>>> EWALUACJA PYTHIA (Test_B) <<<")
+    print("\n>>> EWALUACJA PYTHIA (Test_B: Clean + Attack_B) <<<")
     res_pythia_b = evaluate_model(model_pythia, test_b_loader_pythia)
 
-    print(
-        "\n[Closed-world assumption failure]: The supervised classifier learned "
-        "attack-specific features of attack_a and cannot generalise to the "
-        "structurally different attack_b — recall and AUC-ROC on Test_B "
-        "will be significantly lower than on Test_A."
-    )
+    print("\n[ANALIZA KROKU 2 - DRASTYCZNY SPADEK SKUTECZNOŚCI]:")
+    print("Zapewne zauważyłeś drastyczny spadek skuteczności (szczególnie Recall, F1 i AUC)")
+    print("na zbiorze Test_B w porównaniu do wyników ze zbioru Test_A.")
+    print("Klasyfikator nadzorowany nauczył się specyficznych cech Ataku A.")
+    print("Nie zbudował jednak pojęcia 'czym jest obraz normalny'.")
 
     # -----------------------------------------------------------------------
     # Cell 11 — Save results

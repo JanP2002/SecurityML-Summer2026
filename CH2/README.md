@@ -27,12 +27,17 @@ CH2/
 ├── attacks/
 │   ├── __init__.py          # public API — re-exports all contamination functions
 │   └── contamination.py     # shared library: all 5+1 contamination methods
+├── plots/
+│   ├── step1/               # Step 1 output figures
+│   └── step2/               # Step 2 output figures (5 PNGs)
 ├── lib.py                   # shared utilities: data loaders, AnomalyCNN, train/eval
 ├── step1.py                 # Step 1 — supervised baseline (closed-world)
 ├── step2.py                 # Step 2 — generalisation via multi-attack training
 ├── requirements.txt         # Python dependencies
 ├── ch2_step1_v2.ipynb       # original notebook (reference)
-├── ch2_step1_audit.md       # detailed audit of the notebook
+├── faza1_wyniki_eksperymentu.json  # Step 1 results
+├── faza2_wyniki_generalizacji.json # Step 2 results
+├── STEP2_REPORT.md          # Step 2 analysis report
 └── README.md                # this file
 ```
 
@@ -78,7 +83,11 @@ python step2.py
 |------|-------------|---------|
 | `faza1_wyniki_eksperymentu.json` | `step1.py` | Step 1 metrics (Test_A and Test_B) |
 | `faza2_wyniki_generalizacji.json` | `step2.py` | Per-round progressive metrics |
-| `step2_generalization.png` | `step2.py` | Line plot: metric vs. n attack types |
+| `plots/step2/step2_generalization.png` | `step2.py` | All 5 metrics vs. n, both datasets |
+| `plots/step2/per_metric_curves.png` | `step2.py` | 2×3 grid: each metric separately |
+| `plots/step2/metric_heatmap.png` | `step2.py` | Heatmap: metric × round |
+| `plots/step2/order_sensitivity_mnist.png` | `step2.py` | Order sensitivity, MNIST |
+| `plots/step2/order_sensitivity_pythia.png` | `step2.py` | Order sensitivity, Pythia |
 
 ---
 
@@ -206,10 +215,10 @@ For each round $n = 1, 2, \ldots, K-1$:
 | A5 | `A5_backdoor` | Backdoor trigger | 5×5 px |
 | A6 | `A6_ood` | OOD (Fashion-MNIST) | — |
 
-**Pythia** uses all 8 labelled partitions (`attack_1` … `attack_8`), 7 rounds total.
+**Pythia** uses all 8 labelled partitions (`attack_a` … `attack_h`), 7 rounds total.
 
-**Output:** `step2_generalization.png` shows Accuracy, F1-Score and AUC-ROC
-as a function of $n$ for both datasets.
+**Output:** `plots/step2/` contains five figures showing all 5 metrics
+(Accuracy, Precision, Recall, F1-Score, AUC-ROC) as a function of $n$ for both datasets.
 
 ---
 

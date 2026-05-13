@@ -70,6 +70,7 @@ from lib import (
     prepare_clean_data,
     save_results,
     split_train_test,
+    visualize_samples,
 )
 from attacks.contamination import (
     make_backdoor_attack,
@@ -81,11 +82,16 @@ from attacks.contamination import (
 )
 
 # ---------------------------------------------------------------------------
-# Global hyperparameters
+# Global hyperparameters — identical to notebook ch2_step1_v2.ipynb
 # ---------------------------------------------------------------------------
-BATCH_SIZE = 256
+BATCH_SIZE = 64
 NUM_EPOCHS = 15
 PATIENCE = 3
+# Cap MNIST clean-class training samples for Step 2.  The full 60 000 samples
+# per class make the order-sensitivity experiment
+# impractically slow.  10 000 per class keeps class balance, gives strong
+# generalisation signal, and reduces per-round training time ~6×.
+MNIST_STEP2_SAMPLES = 10_000
 
 
 # ===========================================================================
@@ -227,7 +233,7 @@ def run_progressive_training(
         # (models trained on n attacks are independent experiments)
         # ------------------------------------------------------------------
         model = AnomalyCNN(input_size=input_size)
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.BCELoss()  # model outputs probabilities via sigmoid
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
         from lib import train_model  # local import to keep namespace clean
@@ -286,17 +292,21 @@ def plot_generalization_results(
     output_path : Path | str
         File path for the saved PNG figure (default ``Path('step2_generalization.png')``).
     """
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(18, 7))
     fig.suptitle(
-        "Step 2: Generalisation — Metric vs. Number of Training Attack Types",
+        "Step 2: Generalisation — All Metrics vs. Number of Training Attack Types",
         fontsize=13,
         fontweight="bold",
     )
 
+    # (metric_key, colour, marker, y-annotation offset in points)
+    # Offsets staggered so labels don't overlap when lines are close.
     metric_specs = [
-        ("Accuracy", "steelblue", "o"),
-        ("F1_Score", "darkorange", "s"),
-        ("AUC_ROC", "green", "^"),
+        ("Accuracy",  "steelblue",   "o",  +14),
+        ("Precision", "darkorange",  "s",  +7),
+        ("Recall",    "crimson",     "^",  -12),
+        ("F1_Score",  "forestgreen", "D",  +21),
+        ("AUC_ROC",   "purple",      "v",  -19),
     ]
 
     for ax, results, title in zip(
@@ -311,17 +321,16 @@ def plot_generalization_results(
         ns = [r["n_training_attacks"] for r in results]
         held_out = [r["test_attack"] for r in results]
 
-        for metric, color, marker in metric_specs:
+        for metric, color, marker, y_offset in metric_specs:
             values = [r[metric] if r[metric] is not None else float("nan") for r in results]
-            ax.plot(ns, values, marker=marker, label=metric, color=color, linewidth=2)
-            # Annotate each point with its value
+            ax.plot(ns, values, marker=marker, label=_METRIC_LABELS[metric], color=color, linewidth=2)
             for x, y in zip(ns, values):
                 if y == y:  # not NaN
                     ax.annotate(
                         f"{y:.2f}",
                         (x, y),
                         textcoords="offset points",
-                        xytext=(0, 6),
+                        xytext=(0, y_offset),
                         ha="center",
                         fontsize=7,
                         color=color,
@@ -410,11 +419,11 @@ def plot_per_metric(
     pythia_results: list[dict],
     plots_dir: Path | str,
 ) -> None:
-    """One subplot per metric showing MNIST vs. Pythia generalisation curves.
+    """2×3 grid of per-metric generalisation curves with value annotations.
 
-    Five panels (Accuracy, Precision, Recall, F1, AUC-ROC) laid out in a
-    single wide figure.  Both datasets are shown on each panel so that the
-    reader can compare them for each metric independently.
+    Five metric panels (Accuracy, Precision, Recall, F1, AUC-ROC) in a 2×3
+    layout; both datasets per panel with exact-value labels offset left/right
+    so they don't collide.  The sixth panel holds the shared legend.
 
     Parameters
     ----------
@@ -424,30 +433,57 @@ def plot_per_metric(
         Output directory.  File will be ``per_metric_curves.png``.
     """
     plots_dir = Path(plots_dir)
-    fig, axes = plt.subplots(1, 5, figsize=(22, 4))
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     fig.suptitle(
-        "Step 2 — Per-Metric Generalisation Curves (MNIST vs. Pythia)",
-        fontsize=13, fontweight="bold",
+        "Step 2 — Generalisation Curves per Metric (MNIST vs. Pythia)",
+        fontsize=14, fontweight="bold",
     )
-    any_res = mnist_results or pythia_results
-    all_ns = sorted(set(_ns(any_res))) if any_res else []
+    axes_flat = axes.flatten()
 
-    for ax, metric in zip(axes, METRICS):
+    for idx, metric in enumerate(METRICS):
+        ax = axes_flat[idx]
+        color_m, color_p = "steelblue", "darkorange"
         if mnist_results:
-            ax.plot(_ns(mnist_results), _mvals(mnist_results, metric),
-                    "o-", label="MNIST", color="steelblue", linewidth=2)
+            ns_m, vals_m = _ns(mnist_results), _mvals(mnist_results, metric)
+            ax.plot(ns_m, vals_m, "o-", label="MNIST", color=color_m,
+                    linewidth=2.5, markersize=7)
+            for x, y in zip(ns_m, vals_m):
+                if y == y:
+                    ax.annotate(f"{y:.3f}", (x, y), textcoords="offset points",
+                                xytext=(-14, 5), ha="center", fontsize=8.5,
+                                color=color_m)
         if pythia_results:
-            ax.plot(_ns(pythia_results), _mvals(pythia_results, metric),
-                    "s--", label="Pythia", color="darkorange", linewidth=2)
-        ax.set_title(_METRIC_LABELS[metric], fontsize=11)
-        ax.set_xlabel("n (training attack types)", fontsize=9)
+            ns_p, vals_p = _ns(pythia_results), _mvals(pythia_results, metric)
+            ax.plot(ns_p, vals_p, "s--", label="Pythia", color=color_p,
+                    linewidth=2.5, markersize=7)
+            for x, y in zip(ns_p, vals_p):
+                if y == y:
+                    ax.annotate(f"{y:.3f}", (x, y), textcoords="offset points",
+                                xytext=(14, 5), ha="center", fontsize=8.5,
+                                color=color_p)
+        ax.set_title(_METRIC_LABELS[metric], fontsize=13, fontweight="bold")
+        ax.set_xlabel("n (attack types in training)", fontsize=10)
+        ax.set_ylabel("Metric value", fontsize=10)
         ax.set_ylim(-0.05, 1.10)
-        ax.legend(fontsize=8)
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.9)
         ax.grid(True, alpha=0.3, linestyle="--")
-        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
-        if all_ns:
-            ax.set_xticks(all_ns)
-    axes[0].set_ylabel("Metric value", fontsize=9)
+        ref = mnist_results or pythia_results
+        if ref:
+            ax.set_xticks(_ns(ref))
+
+    # Sixth panel: shared legend at readable size
+    ax_leg = axes_flat[5]
+    ax_leg.axis("off")
+    handles = [
+        plt.Line2D([0], [0], color="steelblue",  marker="o", linewidth=2.5,
+                   markersize=9, label="MNIST"),
+        plt.Line2D([0], [0], color="darkorange", marker="s", linewidth=2.5,
+                   markersize=9, linestyle="--", label="Pythia"),
+        plt.Line2D([0], [0], color="gray", linewidth=0.9, linestyle=":",
+                   label="chance (0.5)"),
+    ]
+    ax_leg.legend(handles=handles, loc="center", fontsize=13, frameon=False,
+                  title="Dataset", title_fontsize=13)
 
     plt.tight_layout()
     out = plots_dir / "per_metric_curves.png"
@@ -475,7 +511,7 @@ def plot_heatmap(
         Output directory.  File will be ``metric_heatmap.png``.
     """
     plots_dir = Path(plots_dir)
-    fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(20, 5))
     fig.suptitle(
         "Step 2 — Metric Heatmap (metric × round)",
         fontsize=13, fontweight="bold",
@@ -497,18 +533,22 @@ def plot_heatmap(
         ).T
 
         im = ax.imshow(data, aspect="auto", cmap="YlOrRd", vmin=0, vmax=1)
+        held_out = [r["test_attack"] for r in results]
         ax.set_xticks(range(len(ns)))
-        ax.set_xticklabels([f"n={n}" for n in ns], fontsize=8, rotation=30)
+        ax.set_xticklabels(
+            [f"n={n}\n↳{ho}" for n, ho in zip(ns, held_out)],
+            fontsize=7, rotation=45, ha="right",
+        )
         ax.set_yticks(range(len(METRICS)))
-        ax.set_yticklabels([_METRIC_LABELS[m] for m in METRICS], fontsize=9)
-        ax.set_title(title, fontsize=11)
+        ax.set_yticklabels([_METRIC_LABELS[m] for m in METRICS], fontsize=10)
+        ax.set_title(title, fontsize=12)
 
         for i in range(len(METRICS)):
             for j in range(len(ns)):
                 v = data[i, j]
                 if not np.isnan(v):
                     ax.text(j, i, f"{v:.2f}", ha="center", va="center",
-                            fontsize=7, color="white" if v > 0.65 else "black")
+                            fontsize=8, color="white" if v > 0.65 else "black")
 
         plt.colorbar(im, ax=ax, fraction=0.03, pad=0.04)
 
@@ -520,199 +560,116 @@ def plot_heatmap(
     print(f"  [plot] Saved → {out}")
 
 
-def plot_metric_deltas(
-    mnist_results: list[dict],
-    pythia_results: list[dict],
-    plots_dir: Path | str,
-) -> None:
-    """Bar chart of per-round metric improvement Δ = metric[n] − metric[n−1].
 
-    Positive bars (blue/orange) indicate improvement; negative bars are shown
-    in light-coral to flag regressions.  MNIST and Pythia bars are side-by-side
-    at each round n.
-
-    Parameters
-    ----------
-    mnist_results, pythia_results : list[dict]
-        Per-round result dicts (need at least 2 rounds to compute deltas).
-    plots_dir : Path | str
-        Output directory.  File will be ``metric_deltas.png``.
-    """
-    plots_dir = Path(plots_dir)
-    fig, axes = plt.subplots(1, 5, figsize=(22, 4))
-    fig.suptitle(
-        "Step 2 — Per-Round Metric Improvement Δ (metric[n] − metric[n−1])",
-        fontsize=12, fontweight="bold",
-    )
-    width = 0.35
-
-    def _deltas(results: list[dict], metric: str) -> tuple[list[int], list[float]]:
-        vals = _mvals(results, metric)
-        ns = _ns(results)
-        return ns[1:], [vals[i] - vals[i - 1] for i in range(1, len(vals))]
-
-    for ax, metric in zip(axes, METRICS):
-        color = _METRIC_COLORS[metric]
-        if mnist_results and len(mnist_results) > 1:
-            ns_m, d_m = _deltas(mnist_results, metric)
-            ax.bar(
-                [n - width / 2 for n in ns_m], d_m, width=width, label="MNIST",
-                color=[color if v >= 0 else "lightcoral" for v in d_m], alpha=0.85,
-            )
-        if pythia_results and len(pythia_results) > 1:
-            ns_p, d_p = _deltas(pythia_results, metric)
-            ax.bar(
-                [n + width / 2 for n in ns_p], d_p, width=width, label="Pythia",
-                color=["#ff7f0e" if v >= 0 else "lightcoral" for v in d_p], alpha=0.65,
-            )
-        ax.axhline(0, color="black", linewidth=0.8)
-        ax.set_title(_METRIC_LABELS[metric], fontsize=10)
-        ax.set_xlabel("n", fontsize=9)
-        ax.legend(fontsize=7)
-        ax.grid(True, axis="y", alpha=0.3, linestyle="--")
-
-    axes[0].set_ylabel("Δ metric", fontsize=9)
-    plt.tight_layout()
-    out = plots_dir / "metric_deltas.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  [plot] Saved → {out}")
-
-
-def plot_radar(
-    results: list[dict],
-    dataset_name: str,
-    plots_dir: Path | str,
-) -> None:
-    """Radar (spider) chart: one coloured polygon per progressive round.
-
-    Each polygon represents the full five-metric profile at a given value of n.
-    Rounds progress from dark-purple (n=1) to yellow (n=K-1) via the viridis
-    colour map so that generalisation improvement is immediately visible.
-
-    Parameters
-    ----------
-    results : list[dict]
-        Per-round result dicts.
-    dataset_name : str
-        ``'MNIST'`` or ``'Pythia'`` — used in the title and filename.
-    plots_dir : Path | str
-        Output directory.  File will be ``radar_{dataset_name}.png``.
-    """
-    if not results:
-        return
-    plots_dir = Path(plots_dir)
-    categories = [_METRIC_LABELS[m] for m in METRICS]
-    N = len(categories)
-    angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
-    angles += angles[:1]  # close the polygon
-
-    cmap = plt.cm.viridis
-    colors = [cmap(i / max(len(results) - 1, 1)) for i in range(len(results))]
-
-    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw={"polar": True})
-
-    for r, color in zip(results, colors):
-        vals = [r[m] if r[m] is not None else 0.0 for m in METRICS]
-        vals += vals[:1]
-        ax.plot(angles, vals, "o-", linewidth=1.5, color=color,
-                label=f"n={r['n_training_attacks']} → test:{r['test_attack']}")
-        ax.fill(angles, vals, alpha=0.07, color=color)
-
-    ax.set_thetagrids(np.degrees(angles[:-1]), categories, fontsize=10)
-    ax.set_ylim(0, 1)
-    ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
-    ax.set_yticklabels(["0.2", "0.4", "0.6", "0.8", "1.0"], fontsize=7, color="grey")
-    ax.set_title(
-        f"{dataset_name} — Metric Profile per Round",
-        fontsize=12, fontweight="bold", pad=20,
-    )
-    ax.legend(loc="upper right", bbox_to_anchor=(1.35, 1.15), fontsize=7)
-    ax.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    out = plots_dir / f"radar_{dataset_name.lower()}.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  [plot] Saved → {out}")
 
 
 def plot_order_sensitivity(
     orderings_results: dict[str, list[dict]],
-    metric: str,
     dataset_name: str,
     plots_dir: Path | str,
 ) -> None:
-    """Line plot comparing a metric across multiple attack orderings.
+    """2×3 grid: all five metrics across multiple attack orderings.
 
-    The ``'original'`` ordering is drawn as a thick solid line; alternative
-    orderings are drawn as thinner semi-transparent lines.  A black dashed
-    mean line and a grey ±1 std band are overlaid to summarise the spread.
-
-    A narrow std band means the result is robust to ordering; a wide band
-    flags ordering as a confound that should be controlled in future work.
+    Each metric panel shows every ordering as a line.  ``'original'`` is a
+    thick blue line; ``'reversed'`` is red; random permutations are greyscale
+    shades.  A black dashed mean and a grey ±1 std band summarise the spread —
+    a narrow band means the result is robust to curriculum order.
 
     Parameters
     ----------
     orderings_results : dict[str, list[dict]]
         Mapping from ordering name to per-round result dicts, as returned
         by :func:`run_order_sensitivity`.
-    metric : str
-        Key from the result dicts, e.g. ``'F1_Score'``.
     dataset_name : str
-        Used in title and filename.
+        ``'MNIST'`` or ``'Pythia'`` — used in title and filename.
     plots_dir : Path | str
-        Output directory.  File will be
-        ``order_sensitivity_{dataset}_{metric}.png``.
+        Output directory.  File will be ``order_sensitivity_{dataset}.png``.
     """
     plots_dir = Path(plots_dir)
-    fig, ax = plt.subplots(figsize=(9, 5))
+    perm_names = [k for k in orderings_results if k.startswith("perm_")]
+    n_perms = len(perm_names)
+    grey_cmap = plt.cm.Greys
 
-    all_vals_by_n: dict[int, list[float]] = {}
-    styles = ["o-", "s--", "^:", "D-."]
+    def _style(name: str) -> tuple:
+        if name == "original":
+            return "steelblue", 2.8, 1.0, "o-"
+        if name == "reversed":
+            return "crimson", 1.6, 0.75, "s--"
+        p_idx = perm_names.index(name)
+        frac = p_idx / max(n_perms - 1, 1) if n_perms > 1 else 0.5
+        color = grey_cmap(0.35 + 0.45 * frac)
+        ls = ["^:", "D-.", "P:", "X-."][p_idx % 4]
+        return color, 1.2, 0.55, ls
 
-    for idx, (ordering_name, results) in enumerate(orderings_results.items()):
-        if not results:
-            continue
-        ns = _ns(results)
-        vals = _mvals(results, metric)
-        is_orig = ordering_name == "original"
-        ax.plot(ns, vals, styles[idx % len(styles)],
-                linewidth=2.5 if is_orig else 1.2,
-                alpha=1.0 if is_orig else 0.6,
-                label=ordering_name,
-                zorder=5 if is_orig else 2)
-        for n, v in zip(ns, vals):
-            all_vals_by_n.setdefault(n, []).append(v)
-
-    ns_all = sorted(all_vals_by_n)
-    means = [np.nanmean(all_vals_by_n[n]) for n in ns_all]
-    stds  = [np.nanstd(all_vals_by_n[n])  for n in ns_all]
-
-    ax.plot(ns_all, means, "k--", linewidth=2, label="mean (all orderings)", zorder=6)
-    ax.fill_between(
-        ns_all,
-        [m - s for m, s in zip(means, stds)],
-        [m + s for m, s in zip(means, stds)],
-        alpha=0.15, color="gray", label="±1 std",
+    fig, axes = plt.subplots(2, 3, figsize=(20, 11))
+    fig.suptitle(
+        f"Order Sensitivity — {dataset_name}\n"
+        "(Does the curriculum order of attack types affect generalisation?)",
+        fontsize=14, fontweight="bold",
     )
+    axes_flat = axes.flatten()
 
-    ax.set_title(
-        f"Order Sensitivity — {_METRIC_LABELS[metric]} — {dataset_name}",
-        fontsize=12, fontweight="bold",
-    )
-    ax.set_xlabel("n (training attack types)", fontsize=10)
-    ax.set_ylabel(_METRIC_LABELS[metric], fontsize=10)
-    ax.set_ylim(-0.05, 1.10)
-    ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
-    ax.legend(fontsize=8, loc="lower right")
-    ax.grid(True, alpha=0.3, linestyle="--")
+    for m_idx, metric in enumerate(METRICS):
+        ax = axes_flat[m_idx]
+        all_vals_by_n: dict[int, list[float]] = {}
+
+        for ordering_name, results in orderings_results.items():
+            if not results:
+                continue
+            color, lw, alpha, ls = _style(ordering_name)
+            ns = _ns(results)
+            vals = _mvals(results, metric)
+            is_orig = ordering_name == "original"
+            ax.plot(ns, vals, ls, color=color, linewidth=lw, alpha=alpha,
+                    label=ordering_name, zorder=5 if is_orig else 2,
+                    markersize=6 if is_orig else 4)
+            for n, v in zip(ns, vals):
+                all_vals_by_n.setdefault(n, []).append(v)
+
+        if all_vals_by_n:
+            ns_all = sorted(all_vals_by_n)
+            means = [np.nanmean(all_vals_by_n[n]) for n in ns_all]
+            stds  = [np.nanstd(all_vals_by_n[n])  for n in ns_all]
+            ax.plot(ns_all, means, "k--", linewidth=2, label="mean", zorder=6)
+            ax.fill_between(
+                ns_all,
+                [m - s for m, s in zip(means, stds)],
+                [m + s for m, s in zip(means, stds)],
+                alpha=0.12, color="gray", label="±1 std",
+            )
+            ax.set_xticks(ns_all)
+
+        ax.set_title(_METRIC_LABELS[metric], fontsize=12, fontweight="bold")
+        ax.set_xlabel("n (attack types in training)", fontsize=10)
+        ax.set_ylabel(_METRIC_LABELS[metric], fontsize=10)
+        ax.set_ylim(-0.05, 1.10)
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.9)
+        ax.grid(True, alpha=0.3, linestyle="--")
+
+    # Sixth panel: shared legend
+    ax_leg = axes_flat[5]
+    ax_leg.axis("off")
+    handles = []
+    for ordering_name in orderings_results:
+        color, lw, alpha, ls = _style(ordering_name)
+        marker = ls[0] if ls[0] in "osDPX^h" else None
+        linestyle_str = ls[1:] if len(ls) > 1 else "-"
+        handles.append(
+            plt.Line2D([0], [0], color=color, linewidth=lw,
+                       alpha=max(alpha, 0.6), linestyle=linestyle_str,
+                       marker=marker if marker else "None",
+                       markersize=7, label=ordering_name)
+        )
+    handles += [
+        plt.Line2D([0], [0], color="black", linewidth=2, linestyle="--",
+                   label="mean"),
+        plt.Rectangle((0, 0), 1, 1, fc="gray", alpha=0.25, label="±1 std"),
+    ]
+    ax_leg.legend(handles=handles, loc="center", fontsize=10, frameon=False,
+                  title="Ordering", title_fontsize=11)
 
     plt.tight_layout()
-    metric_slug = metric.lower().replace("_", "")
-    out = plots_dir / f"order_sensitivity_{dataset_name.lower()}_{metric_slug}.png"
+    out = plots_dir / f"order_sensitivity_{dataset_name.lower()}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -822,6 +779,8 @@ def main() -> None:
     7 progressive rounds (n = 1 … 7).
     """
 
+    PLOTS_DIR = Path("plots") / "step2"
+
     # =======================================================================
     # PHASE 1: MNIST
     # =======================================================================
@@ -870,10 +829,27 @@ def main() -> None:
     print(f"\nReady: {len(mnist_attack_names)} attack types: {mnist_attack_names}")
 
     # ------------------------------------------------------------------
+    # Visualise MNIST clean + all 6 attack types
+    # ------------------------------------------------------------------
+    print("\nGenerating sample visualisations for MNIST partitions...")
+    visualize_samples(clean_train_mnist, save_path=PLOTS_DIR / "mnist_clean.png",    title_prefix="MNIST Clean, ")
+    for name, ds in zip(mnist_attack_names, mnist_attack_train):
+        visualize_samples(ds, save_path=PLOTS_DIR / f"mnist_{name}.png", title_prefix=f"MNIST {name}, ")
+
+    # ------------------------------------------------------------------
+    # Subsample MNIST clean_train to keep step2 experiments fast
+    # ------------------------------------------------------------------
+    if len(clean_train_mnist) > MNIST_STEP2_SAMPLES:
+        sub_idx = torch.randperm(len(clean_train_mnist))[:MNIST_STEP2_SAMPLES].tolist()
+        clean_train_mnist_sub = Subset(clean_train_mnist, sub_idx)
+    else:
+        clean_train_mnist_sub = clean_train_mnist
+
+    # ------------------------------------------------------------------
     # Progressive training — MNIST
     # ------------------------------------------------------------------
     mnist_results = run_progressive_training(
-        clean_train=clean_train_mnist,
+        clean_train=clean_train_mnist_sub,
         clean_test=clean_test_mnist,
         attack_train_datasets=mnist_attack_train,
         attack_test_datasets=mnist_attack_test,
@@ -912,6 +888,18 @@ def main() -> None:
     print(f"\nReady: {len(pythia_attack_names)} Pythia attack partitions")
 
     # ------------------------------------------------------------------
+    # Visualise all Pythia partitions (clean + attack_a … attack_h)
+    # ------------------------------------------------------------------
+    print("\nGenerating sample visualisations for all Pythia partitions...")
+    visualize_samples(pythia_clean, save_path=PLOTS_DIR / "pythia_clean.png", title_prefix="Pythia Clean, ")
+    for partition, ds_train in zip(pythia_partitions, pythia_attack_train):
+        visualize_samples(
+            ds_train,
+            save_path=PLOTS_DIR / f"pythia_{partition}.png",
+            title_prefix=f"Pythia {partition}, ",
+        )
+
+    # ------------------------------------------------------------------
     # Progressive training — Pythia
     # ------------------------------------------------------------------
     pythia_results = run_progressive_training(
@@ -927,7 +915,6 @@ def main() -> None:
     # =======================================================================
     # RESULTS — summary tables, all plots, order sensitivity, JSON
     # =======================================================================
-    PLOTS_DIR = Path("plots") / "step2"
 
     print_summary_table(mnist_results, "MNIST")
     print_summary_table(pythia_results, "Pythia")
@@ -941,9 +928,6 @@ def main() -> None:
     )
     plot_per_metric(mnist_results, pythia_results, PLOTS_DIR)
     plot_heatmap(mnist_results, pythia_results, PLOTS_DIR)
-    plot_metric_deltas(mnist_results, pythia_results, PLOTS_DIR)
-    plot_radar(mnist_results, "MNIST", PLOTS_DIR)
-    plot_radar(pythia_results, "Pythia", PLOTS_DIR)
 
     # --- Order sensitivity analysis ---
     print("\n" + "=" * 65)
@@ -952,20 +936,19 @@ def main() -> None:
     print("=" * 65)
 
     mnist_order_results = run_order_sensitivity(
-        clean_train_mnist, clean_test_mnist,
+        clean_train_mnist_sub, clean_test_mnist,
         mnist_attack_train, mnist_attack_test, mnist_attack_names,
-        input_size=28, dataset_name="MNIST", n_random_perms=2,
+        input_size=28, dataset_name="MNIST", n_random_perms=15,
     )
     pythia_order_results = run_order_sensitivity(
         pythia_clean_train_base, pythia_clean_test,
         pythia_attack_train, pythia_attack_test, pythia_attack_names,
-        input_size=70, dataset_name="Pythia", n_random_perms=2,
+        input_size=70, dataset_name="Pythia", n_random_perms=15,
     )
 
     print("\nGenerating order-sensitivity plots...")
-    for metric in ["F1_Score", "AUC_ROC", "Recall"]:
-        plot_order_sensitivity(mnist_order_results,   metric, "MNIST",  PLOTS_DIR)
-        plot_order_sensitivity(pythia_order_results,  metric, "Pythia", PLOTS_DIR)
+    plot_order_sensitivity(mnist_order_results,  "MNIST",  PLOTS_DIR)
+    plot_order_sensitivity(pythia_order_results, "Pythia", PLOTS_DIR)
 
     # --- Save all results ---
     output = {
