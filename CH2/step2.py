@@ -938,12 +938,12 @@ def main() -> None:
     mnist_order_results = run_order_sensitivity(
         clean_train_mnist_sub, clean_test_mnist,
         mnist_attack_train, mnist_attack_test, mnist_attack_names,
-        input_size=28, dataset_name="MNIST", n_random_perms=15,
+        input_size=28, dataset_name="MNIST", n_random_perms=25,
     )
     pythia_order_results = run_order_sensitivity(
         pythia_clean_train_base, pythia_clean_test,
         pythia_attack_train, pythia_attack_test, pythia_attack_names,
-        input_size=70, dataset_name="Pythia", n_random_perms=15,
+        input_size=70, dataset_name="Pythia", n_random_perms=25,
     )
 
     print("\nGenerating order-sensitivity plots...")
