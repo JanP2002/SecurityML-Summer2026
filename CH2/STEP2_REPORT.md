@@ -352,3 +352,6 @@ Seven orderings tested: original, reversed, and 5 random permutations (perm_seed
 | `plots/step2/mnist_A1_gaussian.png` … `mnist_A6_ood.png` | 5 samples per MNIST attack type |
 | `plots/step2/pythia_clean.png` | 5 sample clean Pythia images |
 | `plots/step2/pythia_attack_a.png` … `pythia_attack_h.png` | 5 samples per Pythia attack |
+
+
+TODO: RETRY the cummulative thing on the same attach ifferent instance, trigger, in a different corrner, geometric distortion in a different direction, blended attack with a different pattern, etc. to see if the same pattern of results holds.
