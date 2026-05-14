@@ -354,4 +354,29 @@ Seven orderings tested: original, reversed, and 5 random permutations (perm_seed
 | `plots/step2/pythia_attack_a.png` … `pythia_attack_h.png` | 5 samples per Pythia attack |
 
 
-TODO: RETRY the cummulative thing on the same attach ifferent instance, trigger, in a different corrner, geometric distortion in a different direction, blended attack with a different pattern, etc. to see if the same pattern of results holds.
+---
+
+## 11. Robustness Check — Same Attack Family, Different Instance
+
+**Question:** Do the findings depend on specific parameter choices, or do the same success/failure patterns emerge with differently-parameterised instances of the same attack types?
+
+To answer this, `step2.py` runs an identical progressive training protocol with six **variant** attack configurations:
+
+| Original | Variant | Change |
+|---|---|---|
+| A1 Gaussian σ=0.4 | **BV1** Gaussian σ=0.2 | Lighter noise |
+| A2 Salt & pepper p=0.15 | **BV2** Salt & pepper p=0.30 | Denser corruption |
+| A3 Geometric 5 px | **BV3** Geometric 8 px | Stronger warp |
+| A4 Blended α=0.30 | **BV4** Blended α=0.50 + new pattern | Heavier blend, different texture |
+| A5 Backdoor bottom-right | **BV5** Backdoor top-left | Trigger relocated |
+| A6 OOD Fashion-MNIST | **BV6** OOD Fashion-MNIST | Unchanged |
+
+**Expected outcome if findings are robust:** The same alternating success/failure pattern should emerge — specifically, the geometric and backdoor variants (BV3, BV5) should remain the hardest attacks to generalise to regardless of the warp magnitude or trigger position.
+
+**Output plots:**
+- `plots/step2/step2_generalization_variants.png` — Original MNIST vs. Variants side-by-side
+- `plots/step2/per_metric_curves_variants.png` — Per-metric comparison
+- `plots/step2/metric_heatmap_variants.png` — Heatmap for original and variant rounds
+- `plots/step2/order_sensitivity_mnist_variants.png` — Order sensitivity for variants
+
+Results will be saved to `faza2_wyniki_generalizacji.json` under the key `MNIST_variants_progressive_results`.

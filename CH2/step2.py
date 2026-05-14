@@ -273,6 +273,7 @@ def plot_generalization_results(
     mnist_results: list[dict],
     pythia_results: list[dict],
     output_path: Path | str = Path("step2_generalization.png"),
+    labels: tuple[str, str] = ("MNIST (28×28)", "Pythia (70×70)"),
 ) -> None:
     """Plot F1-Score and AUC-ROC vs. number of training attack types.
 
@@ -312,7 +313,7 @@ def plot_generalization_results(
     for ax, results, title in zip(
         axes,
         [mnist_results, pythia_results],
-        ["MNIST (28×28)", "Pythia (70×70)"],
+        list(labels),
     ):
         if not results:
             ax.set_title(f"{title}\n(no results)")
@@ -418,6 +419,8 @@ def plot_per_metric(
     mnist_results: list[dict],
     pythia_results: list[dict],
     plots_dir: Path | str,
+    labels: tuple[str, str] = ("MNIST", "Pythia"),
+    suffix: str = "",
 ) -> None:
     """2×3 grid of per-metric generalisation curves with value annotations.
 
@@ -430,12 +433,16 @@ def plot_per_metric(
     mnist_results, pythia_results : list[dict]
         Per-round result dicts from :func:`run_progressive_training`.
     plots_dir : Path | str
-        Output directory.  File will be ``per_metric_curves.png``.
+        Output directory.  File will be ``per_metric_curves{suffix}.png``.
+    labels : tuple[str, str]
+        Display names for the two datasets (default: ``('MNIST', 'Pythia')``).
+    suffix : str
+        Optional filename suffix, e.g. ``'_variants'``.
     """
     plots_dir = Path(plots_dir)
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     fig.suptitle(
-        "Step 2 — Generalisation Curves per Metric (MNIST vs. Pythia)",
+        f"Step 2 — Generalisation Curves per Metric ({labels[0]} vs. {labels[1]})",
         fontsize=14, fontweight="bold",
     )
     axes_flat = axes.flatten()
@@ -445,7 +452,7 @@ def plot_per_metric(
         color_m, color_p = "steelblue", "darkorange"
         if mnist_results:
             ns_m, vals_m = _ns(mnist_results), _mvals(mnist_results, metric)
-            ax.plot(ns_m, vals_m, "o-", label="MNIST", color=color_m,
+            ax.plot(ns_m, vals_m, "o-", label=labels[0], color=color_m,
                     linewidth=2.5, markersize=7)
             for x, y in zip(ns_m, vals_m):
                 if y == y:
@@ -454,7 +461,7 @@ def plot_per_metric(
                                 color=color_m)
         if pythia_results:
             ns_p, vals_p = _ns(pythia_results), _mvals(pythia_results, metric)
-            ax.plot(ns_p, vals_p, "s--", label="Pythia", color=color_p,
+            ax.plot(ns_p, vals_p, "s--", label=labels[1], color=color_p,
                     linewidth=2.5, markersize=7)
             for x, y in zip(ns_p, vals_p):
                 if y == y:
@@ -476,9 +483,9 @@ def plot_per_metric(
     ax_leg.axis("off")
     handles = [
         plt.Line2D([0], [0], color="steelblue",  marker="o", linewidth=2.5,
-                   markersize=9, label="MNIST"),
+                   markersize=9, label=labels[0]),
         plt.Line2D([0], [0], color="darkorange", marker="s", linewidth=2.5,
-                   markersize=9, linestyle="--", label="Pythia"),
+                   markersize=9, linestyle="--", label=labels[1]),
         plt.Line2D([0], [0], color="gray", linewidth=0.9, linestyle=":",
                    label="chance (0.5)"),
     ]
@@ -486,7 +493,7 @@ def plot_per_metric(
                   title="Dataset", title_fontsize=13)
 
     plt.tight_layout()
-    out = plots_dir / "per_metric_curves.png"
+    out = plots_dir / f"per_metric_curves{suffix}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -497,6 +504,8 @@ def plot_heatmap(
     mnist_results: list[dict],
     pythia_results: list[dict],
     plots_dir: Path | str,
+    labels: tuple[str, str] = ("MNIST (28×28)", "Pythia (70×70)"),
+    suffix: str = "",
 ) -> None:
     """Metric × round heatmap (YlOrRd colour scale, darker = higher).
 
@@ -508,7 +517,11 @@ def plot_heatmap(
     mnist_results, pythia_results : list[dict]
         Per-round result dicts.
     plots_dir : Path | str
-        Output directory.  File will be ``metric_heatmap.png``.
+        Output directory.  File will be ``metric_heatmap{suffix}.png``.
+    labels : tuple[str, str]
+        Display names for the two panels.
+    suffix : str
+        Optional filename suffix, e.g. ``'_variants'``.
     """
     plots_dir = Path(plots_dir)
     fig, axes = plt.subplots(1, 2, figsize=(20, 5))
@@ -518,7 +531,7 @@ def plot_heatmap(
     )
 
     for ax, results, title in zip(
-        axes, [mnist_results, pythia_results], ["MNIST (28×28)", "Pythia (70×70)"]
+        axes, [mnist_results, pythia_results], list(labels)
     ):
         if not results:
             ax.set_title(f"{title}\n(no data)")
@@ -553,7 +566,7 @@ def plot_heatmap(
         plt.colorbar(im, ax=ax, fraction=0.03, pad=0.04)
 
     plt.tight_layout()
-    out = plots_dir / "metric_heatmap.png"
+    out = plots_dir / f"metric_heatmap{suffix}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -950,6 +963,109 @@ def main() -> None:
     plot_order_sensitivity(mnist_order_results,  "MNIST",  PLOTS_DIR)
     plot_order_sensitivity(pythia_order_results, "Pythia", PLOTS_DIR)
 
+    # =======================================================================
+    # PHASE 3: MNIST VARIANTS — same attack families, different parameters
+    # =======================================================================
+    # Research question: does the alternating success/failure pattern hold
+    # when we use differently parameterised instances of the same attack types?
+    # Variants:
+    #   BV1 Gaussian      σ=0.2   (lighter than original σ=0.4)
+    #   BV2 Salt & pepper p=0.30  (denser than original p=0.15)
+    #   BV3 Geometric     max_displacement=8px (stronger warp)
+    #   BV4 Blended       α=0.50, new random pattern (heavier blend)
+    #   BV5 Backdoor      trigger at top-left corner (not bottom-right)
+    #   BV6 OOD           Fashion-MNIST (same source — no alternate available)
+    print("\n" + "=" * 65)
+    print("  PHASE 3 — MNIST VARIANTS (same types, different parameters)")
+    print("=" * 65)
+
+    blend_pattern_v = torch.rand(1, 1, 28, 28, dtype=torch.float32)
+
+    variant_configs = [
+        ("BV1_gaussian",    make_gaussian_attack,    {"std": 0.2}),
+        ("BV2_salt_pepper", make_salt_pepper_attack, {"prob": 0.30}),
+        ("BV3_geometric",   make_geometric_attack,   {"max_displacement": 8.0}),
+        ("BV4_blended",     make_blended_attack,     {"alpha": 0.50, "pattern": blend_pattern_v}),
+        ("BV5_backdoor",    make_backdoor_attack,    {"trigger_size": 5, "position": "top_left"}),
+    ]
+
+    variant_attack_names: list[str] = []
+    variant_attack_train: list = []
+    variant_attack_test: list = []
+
+    print("\nGenerating 6 variant attack types for MNIST...")
+    for name, factory_fn, kwargs in variant_configs:
+        variant_attack_train.append(factory_fn(raw_train_mnist, **kwargs))
+        variant_attack_test.append(factory_fn(raw_test_mnist, **kwargs))
+        variant_attack_names.append(name)
+
+    # BV6: OOD — same Fashion-MNIST source
+    print("  Generating BV6_ood (Fashion-MNIST OOD)...")
+    variant_attack_train.append(make_ood_attack(raw_train_fmnist))
+    variant_attack_test.append(make_ood_attack(raw_test_fmnist))
+    variant_attack_names.append("BV6_ood")
+
+    print(f"\nReady: {len(variant_attack_names)} variant attack types: {variant_attack_names}")
+
+    # Sub-sample clean train to same MNIST_STEP2_SAMPLES cap
+    if len(clean_train_mnist) > MNIST_STEP2_SAMPLES:
+        sub_idx_v = torch.randperm(len(clean_train_mnist))[:MNIST_STEP2_SAMPLES].tolist()
+        clean_train_mnist_sub_v = Subset(clean_train_mnist, sub_idx_v)
+    else:
+        clean_train_mnist_sub_v = clean_train_mnist
+
+    # Visualise variant attack samples
+    print("\nGenerating sample visualisations for MNIST variant partitions...")
+    for name, ds in zip(variant_attack_names, variant_attack_train):
+        visualize_samples(ds, save_path=PLOTS_DIR / f"mnist_{name}.png",
+                          title_prefix=f"MNIST {name}, ")
+
+    # Progressive training — variants
+    variants_results = run_progressive_training(
+        clean_train=clean_train_mnist_sub_v,
+        clean_test=clean_test_mnist,
+        attack_train_datasets=variant_attack_train,
+        attack_test_datasets=variant_attack_test,
+        attack_names=variant_attack_names,
+        input_size=28,
+        experiment_name="MNIST Variants",
+    )
+
+    print_summary_table(variants_results, "MNIST Variants")
+
+    # Plots: compare original MNIST vs. variants side-by-side
+    print("\nGenerating variant comparison plots...")
+    plot_generalization_results(
+        mnist_results,
+        variants_results,
+        output_path=PLOTS_DIR / "step2_generalization_variants.png",
+        labels=("Original MNIST", "MNIST Variants"),
+    )
+    plot_per_metric(
+        mnist_results, variants_results, PLOTS_DIR,
+        labels=("Original", "Variants"),
+        suffix="_variants",
+    )
+    plot_heatmap(
+        mnist_results, variants_results, PLOTS_DIR,
+        labels=("Original MNIST", "MNIST Variants"),
+        suffix="_variants",
+    )
+
+    # Order sensitivity — variants
+    print("\n" + "=" * 65)
+    print("  ORDER SENSITIVITY — MNIST VARIANTS")
+    print("=" * 65)
+
+    variants_order_results = run_order_sensitivity(
+        clean_train_mnist_sub_v, clean_test_mnist,
+        variant_attack_train, variant_attack_test, variant_attack_names,
+        input_size=28, dataset_name="MNIST_variants", n_random_perms=25,
+    )
+
+    print("\nGenerating variant order-sensitivity plot...")
+    plot_order_sensitivity(variants_order_results, "MNIST_variants", PLOTS_DIR)
+
     # --- Save all results ---
     output = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -958,6 +1074,8 @@ def main() -> None:
         "Pythia_progressive_results": pythia_results,
         "MNIST_order_sensitivity": mnist_order_results,
         "Pythia_order_sensitivity": pythia_order_results,
+        "MNIST_variants_progressive_results": variants_results,
+        "MNIST_variants_order_sensitivity": variants_order_results,
     }
     save_results(output, "faza2_wyniki_generalizacji.json")
 
