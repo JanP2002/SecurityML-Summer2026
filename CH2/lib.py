@@ -2,7 +2,7 @@
 lib.py — Shared data, model, training, and evaluation utilities.
 ================================================================
 
-Both step1.py and step2.py import from this module.  It contains:
+step1.py, step2.py and step3.py all import from this module.  It contains:
 
     Data loaders
         prepare_clean_data   — download MNIST / Fashion-MNIST as clean class
@@ -15,14 +15,19 @@ Both step1.py and step2.py import from this module.  It contains:
     DataLoader
         make_dataloader      — create a DataLoader with GPU-optimised settings
 
-    Model
-        AnomalyCNN           — 3-block CNN binary anomaly classifier
+    Models
+        AnomalyCNN           — 3-block CNN binary anomaly classifier (Step 1/2)
+        ConvAutoencoder      — "3+2" convolutional autoencoder (Step 3)
 
     Training
-        train_model          — training loop with early stopping
+        train_model          — supervised training loop with early stopping
+        train_autoencoder    — unsupervised reconstruction training loop
 
     Evaluation
-        evaluate_model       — compute Acc, Prec, Rec, F1, AUC-ROC
+        evaluate_model       — compute Acc, Prec, Rec, F1, AUC-ROC (classifier)
+        reconstruction_scores — per-sample reconstruction-error anomaly scores
+        select_threshold     — pick anomaly threshold from clean-only scores
+        evaluate_autoencoder — compute Acc, Prec, Rec, F1, AUC-ROC (autoencoder)
 
     Result I/O
         parse_results        — convert metric tuple to dict
@@ -759,6 +764,452 @@ def evaluate_model(
     print(f"  Recall:    {rec:.4f} (Jaką część wszystkich prawdziwych anomalii udało się wykryć)")
     print(f"  F1-Score:  {f1:.4f} (Średnia harmoniczna precyzji i czułości)")
     print(f"  AUC-ROC:   {auc:.4f} (Zdolność modelu do rozróżniania klas)")
+
+    return acc, prec, rec, f1, auc
+
+
+# ===========================================================================
+# AUTOENCODER  (Step 3 — unsupervised anomaly detection)
+# ===========================================================================
+
+
+class ConvAutoencoder(nn.Module):
+    """Convolutional autoencoder for unsupervised anomaly detection.
+
+    The encoder follows the instructor-suggested **"3+2" topology** — three
+    convolutional blocks followed by two fully-connected layers — and keeps
+    the same channel progression as :class:`AnomalyCNN` (1->16->32->64, then
+    a 128-unit hidden layer), so the trained encoder can be reused as a
+    feature extractor by the Step 4 hybrid system.
+
+    **Batch normalisation + LeakyReLU.** Each convolutional and hidden
+    fully-connected layer is followed by batch normalisation, and every
+    activation is a LeakyReLU.  This is a deliberate, necessary departure
+    from a plain ReLU stack: without normalisation the decoder collapses on
+    sparse, low-intensity data such as MNIST (mean pixel value ~0.13, ~87%
+    of pixels black).  In that regime the output sigmoids saturate at zero,
+    the gradient vanishes, and the network freezes while emitting an all-
+    black image for every input — a reconstruction loss stuck at the data's
+    mean square ``E[x^2]`` (~0.112 for MNIST).  Batch normalisation keeps
+    activations in a healthy range and LeakyReLU keeps a gradient flowing
+    through otherwise-dead units, which together prevent the collapse.
+    Adding these layers does not affect Step 4 reuse — the encoder is simply
+    reused together with its normalisation layers.
+
+    Encoder ``g``  (3 conv blocks + 2 FC)::
+
+        Conv2d(1->16,  k3, p1) -> BatchNorm -> LeakyReLU -> MaxPool(2)
+        Conv2d(16->32, k3, p1) -> BatchNorm -> LeakyReLU -> MaxPool(2)
+        Conv2d(32->64, k3, p1) -> BatchNorm -> LeakyReLU -> MaxPool(2)
+        Flatten
+        Linear(flatten -> 128) -> BatchNorm -> LeakyReLU
+        Linear(128 -> latent_dim)              # bottleneck (latent code)
+
+    Decoder ``f``  (2 FC + 3 up-conv blocks — mirror of the encoder)::
+
+        Linear(latent_dim -> 128) -> BatchNorm -> LeakyReLU
+        Linear(128 -> flatten)    -> BatchNorm -> LeakyReLU
+        reshape -> (64, h, w)
+        Upsample x2 -> Conv2d(64->32, k3, p1) -> BatchNorm -> LeakyReLU
+        Upsample x2 -> Conv2d(32->16, k3, p1) -> BatchNorm -> LeakyReLU
+        Upsample x2 -> Conv2d(16->8,  k3, p1) -> BatchNorm -> LeakyReLU
+        interpolate -> (input_size, input_size)
+        Conv2d(8->1, k3, p1) -> Sigmoid        # reconstruction in [0, 1]
+
+    The decoder ends with an explicit ``F.interpolate`` to the exact input
+    resolution because three 2x up-samplings of the encoder's spatial size
+    do not in general land back on the original H (e.g. 3->6->12->24 != 28
+    for MNIST, 8->16->32->64 != 70 for Pythia).  The final interpolation
+    makes the same class work for any square input size.
+
+    Trained with ``nn.MSELoss`` to minimise the reconstruction error on
+    **clean images only**.  At inference the per-sample reconstruction error
+    ``||x - f(g(x))||^2`` is the anomaly score (see
+    :func:`reconstruction_scores`): the model reconstructs the clean manifold
+    accurately but reconstructs anomalies poorly, so a high error flags an
+    anomaly.
+
+    Parameters
+    ----------
+    input_size : int
+        Spatial side-length H of the square input (28 for MNIST,
+        70 for Pythia).
+    latent_dim : int
+        Dimensionality of the bottleneck code (default 32).  A tight
+        bottleneck is intentional — it forces the model to learn a compact
+        representation of normality and prevents it from trivially copying
+        arbitrary (anomalous) inputs through to the output.
+
+    Notes
+    -----
+    Because the model contains batch-normalisation layers it must be run with
+    a batch size of at least 2 while in training mode.  :func:`train_autoencoder`
+    enforces this by skipping any final batch of size 1.  Inference utilities
+    (:func:`reconstruction_scores`, :func:`evaluate_autoencoder`) call
+    ``model.eval()``, where batch normalisation uses its stored running
+    statistics and any batch size is safe.
+    """
+
+    # Negative slope for every LeakyReLU activation in the network.
+    LEAK = 0.01
+
+    def __init__(self, input_size: int = 28, latent_dim: int = 32) -> None:
+        super().__init__()
+        self.input_size = input_size
+        self.latent_dim = latent_dim
+
+        # ---- Encoder convolutional stack -------------------------------
+        self.enc_conv1 = nn.Conv2d(1,  16, kernel_size=3, padding=1)
+        self.enc_conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+        self.enc_conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        # Infer spatial size after the 3 pooling layers via a dummy forward.
+        # Only conv + pool are used here — batch normalisation does not
+        # change spatial dimensions, so it can be safely ignored for this
+        # shape calculation (and a dummy batch of 1 cannot pass through a
+        # BatchNorm layer in training mode anyway).
+        self.enc_h, self.enc_w = self._encoder_spatial(input_size)
+        self.enc_channels = 64
+        self.flatten_size = self.enc_channels * self.enc_h * self.enc_w
+
+        # ---- Encoder batch-norm + fully-connected head -----------------
+        self.enc_bn1 = nn.BatchNorm2d(16)
+        self.enc_bn2 = nn.BatchNorm2d(32)
+        self.enc_bn3 = nn.BatchNorm2d(64)
+        self.enc_fc1 = nn.Linear(self.flatten_size, 128)
+        self.enc_bn_fc1 = nn.BatchNorm1d(128)
+        self.enc_fc2 = nn.Linear(128, latent_dim)        # latent: no BN
+
+        # ---- Decoder fully-connected head ------------------------------
+        self.dec_fc1 = nn.Linear(latent_dim, 128)
+        self.dec_bn_fc1 = nn.BatchNorm1d(128)
+        self.dec_fc2 = nn.Linear(128, self.flatten_size)
+        self.dec_bn_fc2 = nn.BatchNorm1d(self.flatten_size)
+
+        # ---- Decoder up-convolution stack ------------------------------
+        self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False)
+        self.dec_conv1 = nn.Conv2d(64, 32, kernel_size=3, padding=1)
+        self.dec_bn1 = nn.BatchNorm2d(32)
+        self.dec_conv2 = nn.Conv2d(32, 16, kernel_size=3, padding=1)
+        self.dec_bn2 = nn.BatchNorm2d(16)
+        self.dec_conv3 = nn.Conv2d(16,  8, kernel_size=3, padding=1)
+        self.dec_bn3 = nn.BatchNorm2d(8)
+        self.dec_conv_out = nn.Conv2d(8, 1, kernel_size=3, padding=1)  # output: no BN
+
+    def _encoder_spatial(self, input_size: int) -> tuple[int, int]:
+        """Return (H, W) of the feature map after the 3 conv/pool blocks.
+
+        Uses only the convolution and pooling layers; activations and batch
+        normalisation leave the spatial dimensions unchanged and are omitted.
+        """
+        with torch.no_grad():
+            dummy = torch.zeros(1, 1, input_size, input_size)
+            x = self.pool(self.enc_conv1(dummy))
+            x = self.pool(self.enc_conv2(x))
+            x = self.pool(self.enc_conv3(x))
+        return x.shape[2], x.shape[3]
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """Map an image batch to its latent code.
+
+        Exposed separately so the trained encoder can be reused as a frozen
+        feature extractor by the Step 4 hybrid system.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Image batch, shape (B, 1, H, W).
+
+        Returns
+        -------
+        torch.Tensor
+            Latent codes, shape (B, latent_dim).
+        """
+        x = self.pool(F.leaky_relu(self.enc_bn1(self.enc_conv1(x)), self.LEAK))
+        x = self.pool(F.leaky_relu(self.enc_bn2(self.enc_conv2(x)), self.LEAK))
+        x = self.pool(F.leaky_relu(self.enc_bn3(self.enc_conv3(x)), self.LEAK))
+        x = x.view(x.size(0), -1)
+        x = F.leaky_relu(self.enc_bn_fc1(self.enc_fc1(x)), self.LEAK)
+        return self.enc_fc2(x)
+
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        """Reconstruct an image batch from latent codes.
+
+        Parameters
+        ----------
+        z : torch.Tensor
+            Latent codes, shape (B, latent_dim).
+
+        Returns
+        -------
+        torch.Tensor
+            Reconstructed images, shape (B, 1, input_size, input_size),
+            values in [0, 1].
+        """
+        x = F.leaky_relu(self.dec_bn_fc1(self.dec_fc1(z)), self.LEAK)
+        x = F.leaky_relu(self.dec_bn_fc2(self.dec_fc2(x)), self.LEAK)
+        x = x.view(x.size(0), self.enc_channels, self.enc_h, self.enc_w)
+        x = F.leaky_relu(self.dec_bn1(self.dec_conv1(self.up(x))), self.LEAK)
+        x = F.leaky_relu(self.dec_bn2(self.dec_conv2(self.up(x))), self.LEAK)
+        x = F.leaky_relu(self.dec_bn3(self.dec_conv3(self.up(x))), self.LEAK)
+        x = F.interpolate(
+            x, size=(self.input_size, self.input_size),
+            mode="bilinear", align_corners=False,
+        )
+        return torch.sigmoid(self.dec_conv_out(x))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Full encode -> decode pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Image batch, shape (B, 1, H, W).
+
+        Returns
+        -------
+        torch.Tensor
+            Reconstructed batch, same shape as ``x``.
+        """
+        return self.decode(self.encode(x))
+
+
+def train_autoencoder(
+    model: nn.Module,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    criterion: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    num_epochs: int = 30,
+    patience: int = 5,
+) -> nn.Module:
+    """Train an autoencoder with early stopping on validation reconstruction loss.
+
+    **Unsupervised:** the class labels yielded by the loaders are ignored
+    entirely.  For every batch the reconstruction target is the input image
+    itself, so when the caller passes clean-only loaders (as Step 3 does) the
+    model only ever sees normal data and never learns anything attack-specific.
+
+    Mirrors :func:`train_model` (device handling, early stopping, best-weight
+    restoration) so the two training utilities behave consistently.
+
+    Parameters
+    ----------
+    model : nn.Module
+        A :class:`ConvAutoencoder` (or any module mapping image -> image).
+    train_loader, val_loader : DataLoader
+        Batched data.  Each batch is ``(image, label)``; the label is unused.
+    criterion : nn.Module
+        Reconstruction loss, typically ``nn.MSELoss()``.
+    optimizer : Optimizer
+        e.g. ``torch.optim.Adam``.
+    num_epochs : int
+        Maximum number of training epochs (default 30).
+    patience : int
+        Epochs without validation-loss improvement before stopping (default 5).
+
+    Returns
+    -------
+    nn.Module
+        The model with best-validation-loss weights restored.
+    """
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_val_loss = float("inf")
+    epochs_no_improve = 0
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+
+    for epoch in range(num_epochs):
+        # ---- Training phase --------------------------------------------
+        model.train()
+        running_loss = 0.0
+        seen = 0
+        for inputs, _ in train_loader:          # labels deliberately ignored
+            # Batch normalisation cannot process a single-sample batch in
+            # training mode; skip a stray final batch of size 1 (harmless,
+            # at most one image per epoch).
+            if inputs.size(0) < 2:
+                continue
+            inputs = inputs.to(device)
+            seen += inputs.size(0)
+            optimizer.zero_grad()
+            reconstruction = model(inputs)
+            loss = criterion(reconstruction, inputs)   # target = input
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * inputs.size(0)
+        epoch_train_loss = running_loss / max(seen, 1)
+
+        # ---- Validation phase ------------------------------------------
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for inputs, _ in val_loader:
+                inputs = inputs.to(device)
+                reconstruction = model(inputs)
+                loss = criterion(reconstruction, inputs)
+                val_loss += loss.item() * inputs.size(0)
+        epoch_val_loss = val_loss / len(val_loader.dataset)
+
+        print(
+            f"Epoka {epoch + 1:02d}/{num_epochs:02d} | "
+            f"Strata rekonstrukcji (Train): {epoch_train_loss:.6f} | "
+            f"Strata rekonstrukcji (Val): {epoch_val_loss:.6f}"
+        )
+
+        # ---- Early stopping --------------------------------------------
+        if epoch_val_loss < best_val_loss:
+            best_val_loss = epoch_val_loss
+            best_model_wts = copy.deepcopy(model.state_dict())
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(
+                    f" -> Early Stopping! Brak poprawy od {patience} epok. "
+                    "Przerywam trening."
+                )
+                break
+
+    print(f"Najlepsza strata walidacyjna (Val Loss): {best_val_loss:.6f}")
+    model.load_state_dict(best_model_wts)
+    return model
+
+
+def reconstruction_scores(
+    model: nn.Module,
+    loader: DataLoader,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute per-sample reconstruction-error anomaly scores.
+
+    The anomaly score for an image ``x`` is the reconstruction error
+
+    .. math::
+        s(x) = \\tfrac{1}{C H W} \\sum \\bigl(x - f(g(x))\\bigr)^2
+
+    i.e. the **mean** squared error over all pixels.  This is a strictly
+    monotonic rescaling of the textbook score ``||x - f(g(x))||^2`` (they
+    differ only by the constant factor C*H*W), so every ranking-based metric
+    — AUC-ROC in particular — is identical for the two forms.  The mean form
+    is used because it is resolution-independent (directly comparable between
+    28x28 MNIST and 70x70 Pythia) and numerically better behaved.
+
+    A higher score means a worse reconstruction, i.e. a more anomalous image.
+
+    Parameters
+    ----------
+    model : nn.Module
+        A trained autoencoder.
+    loader : DataLoader
+        Yields ``(image, label)`` batches.
+
+    Returns
+    -------
+    scores : np.ndarray, shape (N,)
+        Per-sample reconstruction error.
+    labels : np.ndarray, shape (N,)
+        Ground-truth labels (0 = clean, 1 = attack), passed through unchanged
+        for convenience when computing metrics.
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    model.eval()
+
+    all_scores: list = []
+    all_labels: list = []
+    with torch.no_grad():
+        for inputs, labels in loader:
+            inputs = inputs.to(device)
+            reconstruction = model(inputs)
+            err = (reconstruction - inputs) ** 2
+            # mean over channel + spatial dims -> one score per image
+            err = err.flatten(start_dim=1).mean(dim=1)
+            all_scores.extend(err.cpu().numpy())
+            all_labels.extend(labels.numpy())
+
+    return np.array(all_scores), np.array(all_labels)
+
+
+def select_threshold(
+    clean_scores: np.ndarray,
+    percentile: float = 95.0,
+) -> float:
+    """Pick an anomaly-score threshold from clean reconstruction errors.
+
+    The threshold is the given percentile of the reconstruction errors
+    measured on a **clean-only** validation split.  An image whose score
+    exceeds the threshold is flagged as an anomaly.
+
+    Choosing the 95th percentile means the detector accepts a ~5 % false-
+    positive rate on clean data by construction.  Crucially the threshold is
+    derived **without ever looking at attack samples**, so the method remains
+    fully unsupervised with respect to the anomaly class.
+
+    Parameters
+    ----------
+    clean_scores : np.ndarray
+        Reconstruction errors on clean validation images.
+    percentile : float
+        Percentile in (0, 100) used as the cut-off (default 95.0).
+
+    Returns
+    -------
+    float
+        The anomaly-score threshold.
+    """
+    return float(np.percentile(clean_scores, percentile))
+
+
+def evaluate_autoencoder(
+    model: nn.Module,
+    test_loader: DataLoader,
+    threshold: float,
+) -> tuple[float, float, float, float, float]:
+    """Evaluate an autoencoder anomaly detector and print all metrics.
+
+    An image is predicted "attack" when its reconstruction error is greater
+    than or equal to ``threshold``.  AUC-ROC is computed from the raw
+    (continuous) reconstruction errors and is therefore threshold-free, which
+    makes it the fairest metric for comparing the autoencoder against the
+    supervised classifier of Step 1.
+
+    The return signature matches :func:`evaluate_model` and
+    :func:`evaluate_linear_detector` exactly, so the result tuple can be fed
+    straight into :func:`parse_results`.
+
+    Parameters
+    ----------
+    model : nn.Module
+        A trained autoencoder.
+    test_loader : DataLoader
+        Yields ``(image, label)`` batches; labels 0 = clean, 1 = attack.
+    threshold : float
+        Anomaly-score cut-off, typically from :func:`select_threshold`.
+
+    Returns
+    -------
+    acc, prec, rec, f1, auc : float
+    """
+    scores, labels = reconstruction_scores(model, test_loader)
+    preds = (scores >= threshold).astype(int)
+
+    acc  = accuracy_score(labels, preds)
+    prec = precision_score(labels, preds, zero_division=0)
+    rec  = recall_score(labels, preds, zero_division=0)
+    f1   = f1_score(labels, preds, zero_division=0)
+    try:
+        auc = roc_auc_score(labels, scores)
+    except ValueError:
+        auc = float("nan")
+
+    print(f"  Threshold: {threshold:.6f} (próg błędu rekonstrukcji)")
+    print(f"  Accuracy:  {acc:.4f} (Dokładność ogólna)")
+    print(f"  Precision: {prec:.4f} (Jak często wytypowana anomalia faktycznie nią była)")
+    print(f"  Recall:    {rec:.4f} (Jaką część prawdziwych anomalii udało się wykryć)")
+    print(f"  F1-Score:  {f1:.4f} (Średnia harmoniczna precyzji i czułości)")
+    print(f"  AUC-ROC:   {auc:.4f} (Zdolność rozróżniania klas, niezależna od progu)")
 
     return acc, prec, rec, f1, auc
 
