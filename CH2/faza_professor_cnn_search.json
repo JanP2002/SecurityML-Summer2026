@@ -1,0 +1,628 @@
+{
+    "timestamp": "2026-05-25 18:52:03",
+    "experiment": "ProfessorCNN staged hyperparameter search (Pythia)",
+    "search_config": {
+        "dataset": "Pythia (70x70 px)",
+        "num_experiments": 15,
+        "epochs": 15,
+        "patience": 3,
+        "batch_size": 64,
+        "random_seed": 42,
+        "selection_metric": "val_AUC_ROC"
+    },
+    "best_config": {
+        "kernel_size": [
+            4,
+            5
+        ],
+        "activation": "swish",
+        "dropout": 0.2,
+        "dense_head": [
+            128,
+            64
+        ],
+        "pooling": "global_average"
+    },
+    "best_val_metrics": {
+        "Accuracy": 0.46875,
+        "Precision": 0.0,
+        "Recall": 0.0,
+        "F1_Score": 0.0,
+        "AUC_ROC": 0.5391568627450981
+    },
+    "best_test_a_metrics": {
+        "Accuracy": 0.5,
+        "Precision": 0.0,
+        "Recall": 0.0,
+        "F1_Score": 0.0,
+        "AUC_ROC": 0.4646625
+    },
+    "best_test_b_metrics": {
+        "Accuracy": 0.16666666666666666,
+        "Precision": 0.0,
+        "Recall": 0.0,
+        "F1_Score": 0.0,
+        "AUC_ROC": 0.504215
+    },
+    "pythia_baseline": {
+        "model": "AnomalyCNN",
+        "val_metrics": {
+            "Accuracy": 0.46875,
+            "Precision": 0.0,
+            "Recall": 0.0,
+            "F1_Score": 0.0,
+            "AUC_ROC": 0.48998039215686273
+        },
+        "test_a_metrics": {
+            "Accuracy": 0.5,
+            "Precision": 0.0,
+            "Recall": 0.0,
+            "F1_Score": 0.0,
+            "AUC_ROC": 0.5398125
+        },
+        "test_b_metrics": {
+            "Accuracy": 0.16666666666666666,
+            "Precision": 0.0,
+            "Recall": 0.0,
+            "F1_Score": 0.0,
+            "AUC_ROC": 0.55614
+        }
+    },
+    "all_experiments": [
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "leaky_relu",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.49849019607843137
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5565375
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.517685
+            },
+            "stage": 1
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5391568627450981
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.4646625
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.504215
+            },
+            "stage": 1
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "gelu",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5098627450980391
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.51785
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5245474999999999
+            },
+            "stage": 1
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    5,
+                    5
+                ],
+                "activation": "leaky_relu",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.49611764705882355
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.42587500000000006
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.451945
+            },
+            "stage": 1
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    5,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.4843333333333334
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.4910625
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5390874999999999
+            },
+            "stage": 1
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    5,
+                    5
+                ],
+                "activation": "gelu",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.5134117647058823
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.4645375
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.47531999999999996
+            },
+            "stage": 1
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5244901960784315
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.48896249999999997
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.4984625
+            },
+            "stage": 2
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.2,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5231960784313725
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5210124999999999
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5414800000000001
+            },
+            "stage": 2
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.3,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.462843137254902
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.4601125
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.46506000000000003
+            },
+            "stage": 2
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.46875,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5029607843137255
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.514725
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.533515
+            },
+            "stage": 3
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    128,
+                    64
+                ],
+                "pooling": "flatten"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.5015686274509804
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5435500000000001
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.5455325
+            },
+            "stage": 3
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    256,
+                    128
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.4908431372549019
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.519425
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.49090500000000004
+            },
+            "stage": 3
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    256,
+                    128
+                ],
+                "pooling": "flatten"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.4932941176470589
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5189625
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.5292675
+            },
+            "stage": 3
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    64,
+                    32
+                ],
+                "pooling": "global_average"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.502921568627451
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.4678
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.47457499999999997
+            },
+            "stage": 3
+        },
+        {
+            "config": {
+                "kernel_size": [
+                    4,
+                    5
+                ],
+                "activation": "swish",
+                "dropout": 0.1,
+                "dense_head": [
+                    64,
+                    32
+                ],
+                "pooling": "flatten"
+            },
+            "val_metrics": {
+                "Accuracy": 0.53125,
+                "Precision": 0.53125,
+                "Recall": 1.0,
+                "F1_Score": 0.6938775510204082,
+                "AUC_ROC": 0.45772549019607844
+            },
+            "test_a_metrics": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5757625
+            },
+            "test_b_metrics": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.5469075
+            },
+            "stage": 3
+        }
+    ]
+}

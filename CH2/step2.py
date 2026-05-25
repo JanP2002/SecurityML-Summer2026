@@ -65,6 +65,7 @@ from lib import (
     AnomalyCNN,
     check_pythia_available,
     evaluate_model,
+    get_professor_cnn_best,
     load_pythia_data,
     make_dataloader,
     prepare_clean_data,
@@ -147,6 +148,7 @@ def run_progressive_training(
     attack_names: list[str],
     input_size: int,
     experiment_name: str,
+    model_factory=None,
 ) -> list[dict]:
     """Execute the progressive multi-attack training experiment.
 
@@ -177,6 +179,9 @@ def run_progressive_training(
         Spatial size H of square input images (28 for MNIST, 70 for Pythia).
     experiment_name : str
         Label used in console output (e.g. ``'MNIST'`` or ``'Pythia'``).
+    model_factory : callable(input_size) -> nn.Module, optional
+        Factory for the model trained in each round.  Defaults to
+        ``AnomalyCNN(input_size)`` when ``None``.
 
     Returns
     -------
@@ -232,7 +237,10 @@ def run_progressive_training(
         # Fresh model + optimiser for each round
         # (models trained on n attacks are independent experiments)
         # ------------------------------------------------------------------
-        model = AnomalyCNN(input_size=input_size)
+        if model_factory is None:
+            model = AnomalyCNN(input_size=input_size)
+        else:
+            model = model_factory(input_size)
         criterion = nn.BCELoss()  # model outputs probabilities via sigmoid
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
@@ -770,6 +778,64 @@ def run_order_sensitivity(
 
 
 # ===========================================================================
+# PYTHIA MODEL COMPARISON PLOT  (AnomalyCNN vs ProfessorCNNBest)
+# ===========================================================================
+
+
+def _plot_pythia_progressive_comparison(
+    baseline_results: list[dict],
+    prof_results: list[dict],
+    plots_dir,
+) -> None:
+    """Overlay AnomalyCNN and ProfessorCNNBest progressive-training curves.
+
+    Plots AUC-ROC and F1-Score vs. n for both models on Pythia.
+    ProfessorCNNBest is drawn with a thicker, highlighted line.
+
+    Parameters
+    ----------
+    baseline_results : list[dict]
+        Output of ``run_progressive_training`` with AnomalyCNN.
+    prof_results : list[dict]
+        Output of ``run_progressive_training`` with ProfessorCNNBest.
+    plots_dir : Path
+        Output directory.  File: ``pythia_model_comparison_progressive.png``.
+    """
+    import pathlib
+    plots_dir = pathlib.Path(plots_dir)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+
+    def _ns(r):  return [d["n_training_attacks"] for d in r]
+    def _mv(r, m): return [d.get(m) or 0.0 for d in r]
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    fig.suptitle(
+        "Pythia \u2014 Progressive Training: AnomalyCNN (Baseline) vs ProfessorCNNBest",
+        fontsize=12, fontweight="bold",
+    )
+
+    for ax, metric, mlabel in zip(axes, ["AUC_ROC", "F1_Score"], ["AUC-ROC", "F1-Score"]):
+        ax.plot(_ns(baseline_results), _mv(baseline_results, metric),
+                "o-", color="steelblue", linewidth=1.8, label="AnomalyCNN (Baseline)")
+        ax.plot(_ns(prof_results), _mv(prof_results, metric),
+                "s-", color="darkorange", linewidth=2.8, label="ProfessorCNNBest",
+                markeredgecolor="#8B4000", markeredgewidth=1.2, markersize=8)
+        ax.set_xlabel("n training attack types", fontsize=10)
+        ax.set_ylabel(mlabel, fontsize=10)
+        ax.set_title(f"Pythia \u2014 {mlabel} vs n", fontsize=11)
+        ax.set_ylim(0, 1.05)
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
+        ax.legend(fontsize=9)
+        ax.grid(True, alpha=0.3, linestyle="--")
+
+    plt.tight_layout()
+    save_path = plots_dir / "pythia_model_comparison_progressive.png"
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  [plot] Saved \u2192 {save_path}")
+
+
+# ===========================================================================
 # MAIN PIPELINE
 # ===========================================================================
 
@@ -925,6 +991,24 @@ def main() -> None:
         experiment_name="Pythia",
     )
 
+    # ------------------------------------------------------------------
+    # Progressive training — Pythia with ProfessorCNNBest
+    # ------------------------------------------------------------------
+    print("\n" + "=" * 65)
+    print("  STEP 2 — PYTHIA ProfessorCNNBest GENERALISATION EXPERIMENT")
+    print("=" * 65)
+    pythia_results_prof = run_progressive_training(
+        clean_train=pythia_clean_train_base,
+        clean_test=pythia_clean_test,
+        attack_train_datasets=pythia_attack_train,
+        attack_test_datasets=pythia_attack_test,
+        attack_names=pythia_attack_names,
+        input_size=70,
+        experiment_name="Pythia (ProfessorCNN)",
+        model_factory=get_professor_cnn_best,
+    )
+    print_summary_table(pythia_results_prof, "Pythia ProfessorCNNBest")
+
     # =======================================================================
     # RESULTS — summary tables, all plots, order sensitivity, JSON
     # =======================================================================
@@ -941,6 +1025,12 @@ def main() -> None:
     )
     plot_per_metric(mnist_results, pythia_results, PLOTS_DIR)
     plot_heatmap(mnist_results, pythia_results, PLOTS_DIR)
+
+    # --- Pythia: AnomalyCNN vs ProfessorCNNBest progressive comparison ---
+    print("\nGenerating Pythia model comparison plot...")
+    _plot_pythia_progressive_comparison(
+        pythia_results, pythia_results_prof, PLOTS_DIR,
+    )
 
     # --- Order sensitivity analysis ---
     print("\n" + "=" * 65)
@@ -1072,6 +1162,7 @@ def main() -> None:
         "experiment": "Step 2 — Generalisation via Multi-Attack Training",
         "MNIST_progressive_results": mnist_results,
         "Pythia_progressive_results": pythia_results,
+        "Pythia_ProfessorCNNBest_progressive_results": pythia_results_prof,
         "MNIST_order_sensitivity": mnist_order_results,
         "Pythia_order_sensitivity": pythia_order_results,
         "MNIST_variants_progressive_results": variants_results,

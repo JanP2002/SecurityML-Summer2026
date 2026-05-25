@@ -1,35 +1,53 @@
 {
-    "timestamp": "2026-05-13 20:35:01",
+    "timestamp": "2026-05-25 18:55:37",
     "MNIST_Experiment": {
         "Test_A_Znany_Atak": {
             "Accuracy": 1.0,
             "Precision": 1.0,
             "Recall": 1.0,
             "F1_Score": 1.0,
-            "AUC_ROC": 1.0
+            "AUC_ROC": 0.9999999999999999
         },
         "Test_B_Nieznany_Atak": {
-            "Accuracy": 0.5036,
+            "Accuracy": 0.7773,
             "Precision": 1.0,
-            "Recall": 0.0072,
-            "F1_Score": 0.014297061159650517,
-            "AUC_ROC": 0.9907308099999999
+            "Recall": 0.5546,
+            "F1_Score": 0.7134954329087868,
+            "AUC_ROC": 0.9968568800000001
         }
     },
     "PYTHIA_Experiment": {
-        "Test_A_Znany_Atak": {
-            "Accuracy": 0.5,
-            "Precision": 0.5,
-            "Recall": 1.0,
-            "F1_Score": 0.6666666666666666,
-            "AUC_ROC": 0.5172875
+        "AnomalyCNN_Baseline": {
+            "Test_A_Znany_Atak": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5112875
+            },
+            "Test_B_Nieznany_Atak": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5059275
+            }
         },
-        "Test_B_Nieznany_Atak": {
-            "Accuracy": 0.8333333333333334,
-            "Precision": 0.8333333333333334,
-            "Recall": 1.0,
-            "F1_Score": 0.9090909090909091,
-            "AUC_ROC": 0.5301175
+        "ProfessorCNNBest": {
+            "Test_A_Znany_Atak": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5389125
+            },
+            "Test_B_Nieznany_Atak": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5126999999999999
+            }
         }
     }
 }

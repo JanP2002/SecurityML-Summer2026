@@ -93,6 +93,7 @@ from lib import (
     check_pythia_available,
     evaluate_autoencoder,
     evaluate_model,
+    get_professor_cnn_best,
     load_pythia_data,
     make_dataloader,
     parse_results,
@@ -201,6 +202,7 @@ def run_baseline_classifier(
     attack_b_test,
     input_size: int,
     name: str,
+    model_factory=None,
 ) -> tuple[nn.Module, dict]:
     """Train the Step 1 baseline classifier and evaluate it on Test_A / Test_B.
 
@@ -243,7 +245,7 @@ def run_baseline_classifier(
     print(f"  Train: {len(train_ds):>7} | Val: {len(val_ds):>7}  "
           f"(clean ∪ attack_a, 80/20 split)")
 
-    model = AnomalyCNN(input_size=input_size)
+    model = AnomalyCNN(input_size=input_size) if model_factory is None else model_factory(input_size)
     criterion = nn.BCELoss()                   # AnomalyCNN outputs probabilities
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -595,22 +597,29 @@ def plot_metric_comparison(
     ae_results: dict,
     save_path: Path | str,
     title: str = "",
+    extra_results: dict | None = None,
+    extra_label: str = "ProfessorCNNBest",
 ) -> None:
     """Grouped bar chart: classifier vs. autoencoder on Test_A and Test_B.
 
-    Two side-by-side panels (Test_A, Test_B); each panel groups the five
-    metrics with one bar per detector.
+    When ``extra_results`` is provided a third bar group (ProfessorCNNBest) is
+    added to each panel so all three detectors can be compared side-by-side.
 
     Parameters
     ----------
     clf_results : dict
-        ``{"Test_A": {...}, "Test_B": {...}}`` for the classifier.
+        ``{"Test_A": {...}, "Test_B": {...}}`` for the AnomalyCNN classifier.
     ae_results : dict
         Same structure for the autoencoder.
     save_path : Path | str
         Output PNG path.
     title : str
         Figure suptitle.
+    extra_results : dict | None
+        Optional third detector results (same structure). When provided, bars
+        are narrowed to fit three bars per metric group.  Default ``None``.
+    extra_label : str
+        Legend label for the third bar group.  Default ``'ProfessorCNNBest'``.
     """
     metrics = ["Accuracy", "Precision", "Recall", "F1_Score", "AUC_ROC"]
     metric_labels = ["Accuracy", "Precision", "Recall", "F1", "AUC-ROC"]
@@ -621,16 +630,23 @@ def plot_metric_comparison(
 
     for ax, split in zip(axes, ["Test_A", "Test_B"]):
         x = np.arange(len(metrics))
-        width = 0.38
+        width = 0.25 if extra_results is not None else 0.38
+        offsets = [-width, 0, width] if extra_results is not None else [-width / 2, width / 2]
 
         def _vals(res: dict) -> list:
             return [res[split][m] if res[split][m] is not None else 0.0
                     for m in metrics]
 
-        ax.bar(x - width / 2, _vals(clf_results), width,
-               label="Classifier (Step 1)", color="steelblue")
-        ax.bar(x + width / 2, _vals(ae_results), width,
+        ax.bar(x + offsets[0], _vals(clf_results), width,
+               label="Classifier (AnomalyCNN)", color="steelblue")
+        ax.bar(x + offsets[1], _vals(ae_results), width,
                label="Autoencoder (Step 3)", color="crimson")
+        if extra_results is not None:
+            bars_extra = ax.bar(x + offsets[2], _vals(extra_results), width,
+                                label=extra_label, color="darkorange", alpha=0.90)
+            for bar in bars_extra:
+                bar.set_edgecolor("#8B4000")
+                bar.set_linewidth(1.5)
 
         subtitle = "KNOWN attack_a" if split == "Test_A" else "UNKNOWN attack_b"
         ax.set_title(f"{split}  ({subtitle})", fontsize=11, fontweight="bold")
@@ -946,6 +962,15 @@ def main() -> None:
         input_size=70, name="Pythia",
     )
 
+    # --- ProfessorCNNBest classifier (Pythia) ---
+    pythia_prof_clf, pythia_prof_clf_results = run_baseline_classifier(
+        pythia_clean_train, pythia_clean_test,
+        pythia_attack_train["attack_a"], pythia_attack_test["attack_a"],
+        pythia_attack_test["attack_b"],
+        input_size=70, name="Pythia (ProfessorCNN)",
+        model_factory=get_professor_cnn_best,
+    )
+
     # --- Autoencoder (clean only) ---
     pythia_ae, pythia_threshold, pythia_ae_results = run_autoencoder(
         pythia_clean_train, pythia_clean_test,
@@ -954,11 +979,19 @@ def main() -> None:
     )
 
     print_comparison_table(pythia_clf_results, pythia_ae_results, "Pythia")
+    print_comparison_table(pythia_prof_clf_results, pythia_ae_results,
+                           "Pythia (ProfessorCNN vs AE)")
 
     # --- Extended across-attacks analysis (Pythia: attack_a … attack_h) ---
     pythia_per_attack = evaluate_across_attacks(
         pythia_clf, pythia_ae, pythia_threshold,
         pythia_clean_test, pythia_attack_test, name="Pythia",
+    )
+
+    # ProfessorCNN extended analysis
+    pythia_prof_per_attack = evaluate_across_attacks(
+        pythia_prof_clf, pythia_ae, pythia_threshold,
+        pythia_clean_test, pythia_attack_test, name="Pythia (ProfessorCNN)",
     )
 
     # --- Pythia plots ---
@@ -1006,6 +1039,13 @@ def main() -> None:
         PLOTS_DIR / "pythia_metric_comparison.png",
         title="Pythia — Classifier vs. Autoencoder",
     )
+    plot_metric_comparison(
+        pythia_clf_results, pythia_ae_results,
+        PLOTS_DIR / "pythia_metric_comparison_with_professor.png",
+        title="Pythia — AnomalyCNN vs Autoencoder vs ProfessorCNNBest",
+        extra_results=pythia_prof_clf_results,
+        extra_label="ProfessorCNNBest",
+    )
     plot_per_attack(
         pythia_per_attack,
         PLOTS_DIR / "pythia_per_attack.png",
@@ -1014,8 +1054,10 @@ def main() -> None:
 
     output["Pythia"] = {
         "classifier_baseline": pythia_clf_results,
+        "classifier_professor_cnn_best": pythia_prof_clf_results,
         "autoencoder": pythia_ae_results,
         "across_attacks": pythia_per_attack,
+        "across_attacks_professor_cnn_best": pythia_prof_per_attack,
     }
 
     # =======================================================================

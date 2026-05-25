@@ -17,7 +17,9 @@ step1.py, step2.py and step3.py all import from this module.  It contains:
 
     Models
         AnomalyCNN           — 3-block CNN binary anomaly classifier (Step 1/2)
+        ProfessorCNN         — professor-suggested configurable CNN (Pythia, Steps 1/2/3)
         ConvAutoencoder      — "3+2" convolutional autoencoder (Step 3)
+        get_professor_cnn_best — load ProfessorCNN with best searched configuration
 
     Training
         train_model          — supervised training loop with early stopping
@@ -592,6 +594,233 @@ class AnomalyCNN(nn.Module):
         x = F.relu(self.fc1(x))
         x = torch.sigmoid(self.fc2(x))         # probability in [0, 1]
         return x
+
+
+# ===========================================================================
+# PROFESSOR CNN  (Pythia — professor-suggested configurable architecture)
+# ===========================================================================
+
+
+def _get_activation(name: str) -> nn.Module:
+    """Return a fresh activation-function module by name.
+
+    Parameters
+    ----------
+    name : str
+        One of ``'leaky_relu'``, ``'swish'``, ``'gelu'``.
+
+    Returns
+    -------
+    nn.Module
+        A newly constructed activation layer.
+    """
+    name = name.lower()
+    if name == "leaky_relu":
+        return nn.LeakyReLU(0.01, inplace=True)
+    elif name in ("swish", "silu"):
+        return nn.SiLU()          # SiLU(x) = x \u00b7 \u03c3(x)  \u2261  Swish
+    elif name == "gelu":
+        return nn.GELU()
+    else:
+        raise ValueError(
+            f"Unknown activation '{name}'.  "
+            "Choose: 'leaky_relu', 'swish', 'gelu'."
+        )
+
+
+class ProfessorCNN(nn.Module):
+    """Professor-suggested CNN binary classifier for the Pythia 70\u00d770 dataset.
+
+    Architecture (whiteboard sketch)::
+
+        Input
+          \u2193
+        3 \u00d7 [Conv2d \u2192 Activation \u2192 Dropout2d \u2192 MaxPool(2,2)]
+          \u2193
+        GlobalAveragePooling  |  Flatten
+          \u2193
+        Linear(\u2192 dense[0]) \u2192 Activation \u2192 Dropout
+          \u2193
+        Linear(\u2192 dense[1]) \u2192 Activation \u2192 Dropout
+          \u2193
+        Linear(\u2192 1) \u2192 Sigmoid \u2192 probability \u2208 (0, 1)
+
+    All convolutions use ``padding='same'`` so the spatial dimensions are
+    preserved through each block; the only downsampling is the
+    ``MaxPool2d(2, 2)`` at the end of each block.
+
+    Two candidate kernel sizes are tested (as per the ambiguous whiteboard
+    sketch): ``(4, 5)`` and ``(5, 5)``.  Three activation functions are
+    supported: ``'leaky_relu'``, ``'swish'``, ``'gelu'``.  Dropout is applied
+    after every activation: ``Dropout2d`` (channel-wise) in the convolutional
+    blocks, regular ``Dropout`` in the dense head.
+
+    The model outputs a **probability** in (0, 1) — sigmoid is applied inside
+    ``forward()``.  Use ``nn.BCELoss`` for training and :func:`evaluate_model`
+    for evaluation, consistent with :class:`AnomalyCNN`.
+
+    To find and load the best configuration from the staged search, use
+    :func:`get_professor_cnn_best`.
+
+    Parameters
+    ----------
+    input_size : int
+        Spatial side-length H of the square input (70 for Pythia).
+    kernel_size : tuple[int, int] or int
+        Conv kernel size.  Use ``(5, 5)`` or ``(4, 5)`` as suggested.
+        ``padding='same'`` is always applied so any size is valid.
+    activation : str
+        Activation function: ``'leaky_relu'``, ``'swish'``, or ``'gelu'``.
+    dropout : float
+        Dropout probability in both conv and dense parts (default 0.2).
+    dense_head : list[int]
+        Sizes of the two hidden dense layers (default ``[128, 64]``).
+    pooling : str
+        ``'global_average'`` (AdaptiveAvgPool2d \u2192 64-dim vector) or
+        ``'flatten'`` (Flatten \u2192 C \u00d7 H \u00d7 W vector).
+    conv_channels : list[int]
+        Output channels for each of the three conv blocks
+        (default ``[16, 32, 64]``).
+    """
+
+    def __init__(
+        self,
+        input_size: int = 70,
+        kernel_size: tuple | int = (5, 5),
+        activation: str = "gelu",
+        dropout: float = 0.2,
+        dense_head: list[int] | None = None,
+        pooling: str = "global_average",
+        conv_channels: list[int] | None = None,
+    ) -> None:
+        super().__init__()
+        if dense_head is None:
+            dense_head = [128, 64]
+        if conv_channels is None:
+            conv_channels = [16, 32, 64]
+
+        self._pooling = pooling
+
+        def act() -> nn.Module:
+            return _get_activation(activation)
+
+        # --- 3 convolutional blocks: Conv \u2192 Activation \u2192 Dropout2d \u2192 MaxPool ---
+        self.conv_blocks = nn.Sequential(
+            # Block 1
+            nn.Conv2d(1,                conv_channels[0], kernel_size=kernel_size, padding="same"),
+            act(), nn.Dropout2d(p=dropout), nn.MaxPool2d(2, 2),
+            # Block 2
+            nn.Conv2d(conv_channels[0], conv_channels[1], kernel_size=kernel_size, padding="same"),
+            act(), nn.Dropout2d(p=dropout), nn.MaxPool2d(2, 2),
+            # Block 3
+            nn.Conv2d(conv_channels[1], conv_channels[2], kernel_size=kernel_size, padding="same"),
+            act(), nn.Dropout2d(p=dropout), nn.MaxPool2d(2, 2),
+        )
+
+        # --- Compute flat size for the dense head ----------------------
+        if pooling == "global_average":
+            # AdaptiveAvgPool2d(1) squeezes spatial dims to 1\u00d71.
+            flat_size = conv_channels[2]
+        else:
+            # padding='same' keeps H\u00d7W unchanged through each conv;
+            # three MaxPool(2,2) each floor-divide the spatial side by 2.
+            h = input_size
+            for _ in range(3):
+                h = h // 2
+            flat_size = conv_channels[2] * h * h
+
+        # --- Dense head: 2 hidden layers + binary output ---------------
+        self.head = nn.Sequential(
+            nn.Linear(flat_size, dense_head[0]), act(), nn.Dropout(p=dropout),
+            nn.Linear(dense_head[0], dense_head[1]), act(), nn.Dropout(p=dropout),
+            nn.Linear(dense_head[1], 1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Grayscale image batch, shape (B, 1, H, W).
+
+        Returns
+        -------
+        torch.Tensor
+            Probability of anomaly, shape (B, 1).
+        """
+        x = self.conv_blocks(x)
+        if self._pooling == "global_average":
+            x = F.adaptive_avg_pool2d(x, 1).flatten(1)  # (B, C)
+        else:
+            x = x.flatten(1)                             # (B, C*H*W)
+        return torch.sigmoid(self.head(x))               # probability in (0, 1)
+
+
+# ---------------------------------------------------------------------------
+# ProfessorCNN configuration registry
+# ---------------------------------------------------------------------------
+
+# Path to the best-config JSON written by step_professor_search.py.
+_PROFESSOR_SEARCH_JSON = Path(__file__).parent / "faza_professor_cnn_search.json"
+
+# Fallback when the search has not been run yet.
+_PROFESSOR_CNN_DEFAULT_CONFIG: dict = {
+    "kernel_size": [5, 5],
+    "activation": "gelu",
+    "dropout": 0.2,
+    "dense_head": [128, 64],
+    "pooling": "global_average",
+}
+
+
+def get_professor_cnn_best(input_size: int = 70) -> "ProfessorCNN":
+    """Return a :class:`ProfessorCNN` initialised with the best searched config.
+
+    Reads ``faza_professor_cnn_search.json`` (produced by
+    ``step_professor_search.py``).  Falls back to a built-in sensible default
+    and prints a reminder if the file does not exist.
+
+    Parameters
+    ----------
+    input_size : int
+        Spatial side-length H of the square input (70 for Pythia).
+
+    Returns
+    -------
+    ProfessorCNN
+        A freshly initialised (untrained) model ready for training.
+    """
+    cfg = dict(_PROFESSOR_CNN_DEFAULT_CONFIG)
+    if _PROFESSOR_SEARCH_JSON.exists():
+        try:
+            with open(_PROFESSOR_SEARCH_JSON, "r", encoding="utf-8") as _f:
+                _data = json.load(_f)
+            cfg = _data.get("best_config", cfg)
+        except (json.JSONDecodeError, KeyError):
+            print(
+                "[ProfessorCNN] Warning: could not parse best config from "
+                f"'{_PROFESSOR_SEARCH_JSON}'. Using defaults."
+            )
+    else:
+        print(
+            "[ProfessorCNN] Search results not found at "
+            f"'{_PROFESSOR_SEARCH_JSON}'.\n"
+            "  Run 'python step_professor_search.py' first to select the best "
+            "variant.\n  Proceeding with default config."
+        )
+
+    ks = cfg.get("kernel_size", [5, 5])
+    if isinstance(ks, list):
+        ks = tuple(ks)
+    return ProfessorCNN(
+        input_size=input_size,
+        kernel_size=ks,
+        activation=cfg.get("activation", "gelu"),
+        dropout=float(cfg.get("dropout", 0.2)),
+        dense_head=cfg.get("dense_head", [128, 64]),
+        pooling=cfg.get("pooling", "global_average"),
+    )
 
 
 # ===========================================================================

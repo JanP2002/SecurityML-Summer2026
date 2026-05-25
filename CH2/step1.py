@@ -57,6 +57,8 @@ from lib import (
     make_dataloader,
     visualize_samples,
     AnomalyCNN,
+    ProfessorCNN,
+    get_professor_cnn_best,
     train_model,
     evaluate_model,
     parse_results,
@@ -64,10 +66,70 @@ from lib import (
 )
 from attacks.contamination import make_gaussian_attack, make_ood_attack
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+
+
 # ---------------------------------------------------------------------------
-# Hyperparameters — identical to notebook ch2_step1_v2.ipynb
+# Comparison plot helper  (Pythia baseline vs ProfessorCNNBest)
 # ---------------------------------------------------------------------------
-BATCH_SIZE = 64    # notebook uses 64 for both MNIST and Pythia
+
+def _plot_pythia_model_comparison(
+    baseline_a: dict,
+    baseline_b: dict,
+    prof_a: dict,
+    prof_b: dict,
+    save_path,
+) -> None:
+    """Bar chart: AnomalyCNN (PythiaBaseline) vs ProfessorCNNBest on Test_A / Test_B."""
+    metrics = ["Accuracy", "Precision", "Recall", "F1_Score", "AUC_ROC"]
+    mlabels = ["Acc", "Prec", "Rec", "F1", "AUC"]
+    x = np.arange(len(metrics))
+    width = 0.3
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle("Pythia — AnomalyCNN (Baseline) vs ProfessorCNNBest",
+                 fontsize=12, fontweight="bold")
+
+    for ax, (baseline, prof), split_label, subtitle in zip(
+        axes,
+        [(baseline_a, prof_a), (baseline_b, prof_b)],
+        ["Test_A", "Test_B"],
+        ["KNOWN attack_a", "UNKNOWN attack_b"],
+    ):
+        def _v(d): return [d.get(m) or 0.0 for m in metrics]
+
+        bars_base = ax.bar(x - width / 2, _v(baseline), width,
+                           label="AnomalyCNN (Baseline)", color="steelblue", alpha=0.85)
+        bars_prof = ax.bar(x + width / 2, _v(prof), width,
+                           label="ProfessorCNNBest", color="darkorange",
+                           linewidth=1.5, alpha=0.90)
+
+        # Emphasise ProfessorCNN with a bold edge
+        for bar in bars_prof:
+            bar.set_edgecolor("#8B4000")
+            bar.set_linewidth(1.5)
+
+        ax.set_title(f"{split_label}  ({subtitle})", fontsize=11, fontweight="bold")
+        ax.set_xticks(x)
+        ax.set_xticklabels(mlabels, fontsize=9)
+        ax.set_ylim(0, 1.15)
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
+        ax.set_ylabel("Metric value", fontsize=9)
+        ax.legend(fontsize=8)
+        ax.grid(True, axis="y", alpha=0.3, linestyle="--")
+
+    plt.tight_layout()
+    import pathlib; pathlib.Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  [plot] Saved \u2192 {save_path}")
+
+
+
+BATCH_SIZE = 64
 NUM_EPOCHS = 15
 PATIENCE   = 3
 
@@ -262,6 +324,21 @@ def main() -> None:
         patience=PATIENCE,
     )
 
+    # --- ProfessorCNNBest (Pythia) ---
+    print("\n>>> INICJALIZACJA I TRENING: PROFESSORCNN (PYTHIA) <<<")
+    prof_model_pythia = get_professor_cnn_best(input_size=70)
+    print(prof_model_pythia)
+    optimizer_prof_pythia = optim.Adam(prof_model_pythia.parameters(), lr=0.001)
+    prof_model_pythia = train_model(
+        model=prof_model_pythia,
+        train_loader=train_loader_pythia,
+        val_loader=val_loader_pythia,
+        criterion=criterion,
+        optimizer=optimizer_prof_pythia,
+        num_epochs=NUM_EPOCHS,
+        patience=PATIENCE,
+    )
+
     print("\nGratulacje! Faza 4 zakończona.")
     print("Obydwa modele bazowe (Baseline) zostały wytrenowane wyłącznie z użyciem znanego ataku_a!")
 
@@ -279,6 +356,9 @@ def main() -> None:
 
     print("\n>>> EWALUACJA PYTHIA (Test_A: Clean + Attack_A) <<<")
     res_pythia_a = evaluate_model(model_pythia, test_a_loader_pythia)
+
+    print("\n>>> EWALUACJA PROFESSORCNN - PYTHIA (Test_A: Clean + Attack_A) <<<")
+    res_prof_pythia_a = evaluate_model(prof_model_pythia, test_a_loader_pythia)
 
     print("\n[WNIOSEK KROKU 1]: Jeśli metryki są bardzo wysokie (np. blisko 1.0/100%),")
     print("oznacza to, że nasz bazowy model skutecznie nauczył się rozpoznawać ataki,")
@@ -299,6 +379,9 @@ def main() -> None:
     print("\n>>> EWALUACJA PYTHIA (Test_B: Clean + Attack_B) <<<")
     res_pythia_b = evaluate_model(model_pythia, test_b_loader_pythia)
 
+    print("\n>>> EWALUACJA PROFESSORCNN - PYTHIA (Test_B: Clean + Attack_B) <<<")
+    res_prof_pythia_b = evaluate_model(prof_model_pythia, test_b_loader_pythia)
+
     print("\n[ANALIZA KROKU 2 - DRASTYCZNY SPADEK SKUTECZNOŚCI]:")
     print("Zapewne zauważyłeś drastyczny spadek skuteczności (szczególnie Recall, F1 i AUC)")
     print("na zbiorze Test_B w porównaniu do wyników ze zbioru Test_A.")
@@ -317,12 +400,27 @@ def main() -> None:
             "Test_B_Nieznany_Atak": parse_results(res_mnist_b),
         },
         "PYTHIA_Experiment": {
-            "Test_A_Znany_Atak": parse_results(res_pythia_a),
-            "Test_B_Nieznany_Atak": parse_results(res_pythia_b),
+            "AnomalyCNN_Baseline": {
+                "Test_A_Znany_Atak": parse_results(res_pythia_a),
+                "Test_B_Nieznany_Atak": parse_results(res_pythia_b),
+            },
+            "ProfessorCNNBest": {
+                "Test_A_Znany_Atak": parse_results(res_prof_pythia_a),
+                "Test_B_Nieznany_Atak": parse_results(res_prof_pythia_b),
+            },
         },
     }
 
     save_results(results_summary, "faza1_wyniki_eksperymentu.json")
+
+    # Comparison bar chart — Pythia only
+    _plot_pythia_model_comparison(
+        baseline_a=parse_results(res_pythia_a),
+        baseline_b=parse_results(res_pythia_b),
+        prof_a=parse_results(res_prof_pythia_a),
+        prof_b=parse_results(res_prof_pythia_b),
+        save_path=PLOTS / "pythia_model_comparison.png",
+    )
 
 
 # ---------------------------------------------------------------------------
