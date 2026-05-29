@@ -1,0 +1,104 @@
+{
+    "timestamp": "2026-05-26 17:34:24",
+    "experiment": "Step 4 — Hybrid System (Frozen AE + Trainable Head)",
+    "MNIST": {
+        "Baseline": {
+            "Test_A": {
+                "Accuracy": 1.0,
+                "Precision": 1.0,
+                "Recall": 1.0,
+                "F1_Score": 1.0,
+                "AUC_ROC": 0.9999999999999999
+            },
+            "Test_B": {
+                "Accuracy": 0.5382,
+                "Precision": 1.0,
+                "Recall": 0.0764,
+                "F1_Score": 0.14195466369379414,
+                "AUC_ROC": 0.992092795
+            }
+        },
+        "Autoencoder": {
+            "Test_A": {
+                "Accuracy": 0.64725,
+                "Precision": 0.5863383172090296,
+                "Recall": 1.0,
+                "F1_Score": 0.7392348918868971,
+                "AUC_ROC": 1.0
+            },
+            "Test_B": {
+                "Accuracy": 0.6463,
+                "Precision": 0.5858769664240432,
+                "Recall": 0.9981,
+                "F1_Score": 0.7383488681757656,
+                "AUC_ROC": 0.9903078000000002
+            }
+        },
+        "Hybrid": {
+            "Test_A": {
+                "Accuracy": 0.9997,
+                "Precision": 0.9994003597841296,
+                "Recall": 1.0,
+                "F1_Score": 0.9997000899730081,
+                "AUC_ROC": 0.99999983
+            },
+            "Test_B": {
+                "Accuracy": 0.9025,
+                "Precision": 0.9992557677995535,
+                "Recall": 0.8056,
+                "F1_Score": 0.8920385339386557,
+                "AUC_ROC": 0.9897447500000002
+            }
+        }
+    },
+    "Pythia": {
+        "Baseline": {
+            "Test_A": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5236
+            },
+            "Test_B": {
+                "Accuracy": 0.16666666666666666,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5241825
+            }
+        },
+        "Autoencoder": {
+            "Test_A": {
+                "Accuracy": 0.5125,
+                "Precision": 0.6086956521739131,
+                "Recall": 0.07,
+                "F1_Score": 0.12556053811659193,
+                "AUC_ROC": 0.5594250000000001
+            },
+            "Test_B": {
+                "Accuracy": 0.2225,
+                "Precision": 0.8941176470588236,
+                "Recall": 0.076,
+                "F1_Score": 0.1400921658986175,
+                "AUC_ROC": 0.522305
+            }
+        },
+        "Hybrid": {
+            "Test_A": {
+                "Accuracy": 0.46,
+                "Precision": 0.47575757575757577,
+                "Recall": 0.785,
+                "F1_Score": 0.5924528301886792,
+                "AUC_ROC": 0.48137500000000005
+            },
+            "Test_B": {
+                "Accuracy": 0.6875,
+                "Precision": 0.8218331616889805,
+                "Recall": 0.798,
+                "F1_Score": 0.8097412480974124,
+                "AUC_ROC": 0.47386
+            }
+        }
+    }
+}
