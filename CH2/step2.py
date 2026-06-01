@@ -48,6 +48,7 @@ Usage
 
 from __future__ import annotations
 
+import random
 import sys
 from pathlib import Path
 
@@ -88,11 +89,22 @@ from attacks.contamination import (
 BATCH_SIZE = 64
 NUM_EPOCHS = 15
 PATIENCE = 3
+RANDOM_SEED = 2137
 # Cap MNIST clean-class training samples for Step 2.  The full 60 000 samples
 # per class make the order-sensitivity experiment
 # impractically slow.  10 000 per class keeps class balance, gives strong
 # generalisation signal, and reduces per-round training time ~6×.
 MNIST_STEP2_SAMPLES = 10_000
+NUM_PERMUTATIONS = 5  # for permutation-based feature importance (Step 3)
+
+
+def set_global_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 # ===========================================================================
@@ -149,6 +161,9 @@ def run_progressive_training(
     input_size: int,
     experiment_name: str,
     model_factory=None,
+    num_epochs: int | None = None,
+    patience: int | None = None,
+    monitor_auc: bool = False,
 ) -> list[dict]:
     """Execute the progressive multi-attack training experiment.
 
@@ -247,7 +262,9 @@ def run_progressive_training(
         from lib import train_model  # local import to keep namespace clean
         model = train_model(
             model, train_loader, val_loader, criterion, optimizer,
-            num_epochs=NUM_EPOCHS, patience=PATIENCE,
+            num_epochs=num_epochs if num_epochs is not None else NUM_EPOCHS,
+            patience=patience if patience is not None else PATIENCE,
+            monitor_auc=monitor_auc,
         )
 
         # ------------------------------------------------------------------
@@ -270,6 +287,395 @@ def run_progressive_training(
         )
 
     return results
+
+
+# ===========================================================================
+# GBM PROGRESSIVE TRAINING  (sklearn GradientBoostingClassifier)
+# ===========================================================================
+
+
+def run_progressive_training_gbm(
+    clean_train,
+    clean_test,
+    attack_train_datasets: list,
+    attack_test_datasets: list,
+    attack_names: list[str],
+    experiment_name: str = "Pythia (GBM)",
+) -> list[dict]:
+    """Progressive multi-attack training using GBM instead of AnomalyCNN.
+
+    For each round n a fresh GradientBoostingClassifier is trained on flat
+    pixel arrays collected from the balanced training DataLoader.  GBM
+    implicitly selects discriminative pixels via tree splits, which is the
+    key advantage over LR / PixelMLP on the low-SNR Pythia dataset.
+
+    Returns
+    -------
+    list[dict]
+        Same schema as :func:`run_progressive_training`.
+    """
+    from sklearn.ensemble import GradientBoostingClassifier as _GBC
+
+    n_attacks = len(attack_train_datasets)
+    results: list[dict] = []
+
+    for n in range(1, n_attacks):
+        held_out_name = attack_names[n]
+        bar = "=" * 65
+        print(f"\n{bar}")
+        print(f"  [{experiment_name}] Round n={n}")
+        print(f"  Training on:  clean + {attack_names[:n]}")
+        print(f"  Testing on:   {held_out_name}  (unseen)")
+        print(f"{bar}")
+
+        # Build balanced training set (same logic as run_progressive_training)
+        n_clean = len(clean_train)
+        attack_subset = balanced_attack_subset(attack_train_datasets[:n], n_clean)
+        combined_tv = ConcatDataset([clean_train, attack_subset])
+
+        tv_train_size = int(0.8 * len(combined_tv))
+        tv_val_size = len(combined_tv) - tv_train_size
+        train_ds, _ = random_split(combined_tv, [tv_train_size, tv_val_size])
+
+        test_ds = ConcatDataset([clean_test, attack_test_datasets[n]])
+        print(
+            f"  Train: {len(train_ds):>6} | Test: {len(test_ds):>6}  "
+            f"(clean={len(clean_test)}, attack_{n+1}={len(attack_test_datasets[n])})"
+        )
+
+        # Collect flat numpy arrays (GBM needs X: (N, 4900), y: (N,))
+        full_loader = make_dataloader(train_ds, batch_size=len(train_ds), shuffle=False)
+        _Xb, _yb = next(iter(full_loader))
+        X_tr = _Xb.numpy().reshape(len(_Xb), -1)
+        y_tr = _yb.numpy().astype(np.float32)
+
+        gbm = _GBC(
+            n_estimators=300, max_depth=3, learning_rate=0.05,
+            subsample=0.8, min_samples_leaf=10, random_state=42,
+        )
+        print(f"  Training GBM (300 trees, depth=3)…")
+        gbm.fit(X_tr, y_tr)
+
+        # Thin nn.Module wrapper for evaluate_model compatibility
+        class _GBMWrap(nn.Module):
+            def __init__(self, g):
+                super().__init__()
+                self._g = g
+            def forward(self, x):
+                xn = x.cpu().numpy().reshape(len(x), -1)
+                p = self._g.predict_proba(xn)[:, 1].astype(np.float32)
+                return torch.tensor(p, device=x.device).unsqueeze(1)
+
+        model = _GBMWrap(gbm)
+        test_loader = make_dataloader(test_ds, BATCH_SIZE)
+
+        print(f"\n  Evaluation on unseen attack '{held_out_name}':")
+        acc, prec, rec, f1, auc = evaluate_model(model, test_loader)
+
+        results.append(
+            {
+                "n_training_attacks": n,
+                "training_attacks": attack_names[:n],
+                "test_attack": held_out_name,
+                "Accuracy": float(acc),
+                "Precision": float(prec),
+                "Recall": float(rec),
+                "F1_Score": float(f1),
+                "AUC_ROC": float(auc) if auc == auc else None,
+            }
+        )
+
+    return results
+
+
+# ===========================================================================
+# ATTACK SUBSET COMPARISON
+# ===========================================================================
+
+# Default predefined subsets for Pythia (attack_a … attack_h).
+# Organised to answer two questions:
+#   (A) Does *how many* attack types matter?  (sequential growth 1→4)
+#   (B) Does *which* attack types matter?     (same-size diverse vs sequential)
+PYTHIA_ATTACK_SUBSETS: list[tuple[str, list[str]]] = [
+    # ── Size 1 ────────────────────────────────────────────────────────────
+    ("1 — A only",          ["attack_a"]),
+    # ── Size 2 ────────────────────────────────────────────────────────────
+    ("2 — A+B (seq)",       ["attack_a", "attack_b"]),
+    # ── Size 3 ────────────────────────────────────────────────────────────
+    ("3 — A+B+C (seq)",     ["attack_a", "attack_b", "attack_c"]),
+    ("3 — A+B+E (diverse)", ["attack_a", "attack_b", "attack_e"]),   # professor example
+    ("3 — A+D+G (spread)",  ["attack_a", "attack_d", "attack_g"]),
+    # ── Size 4 ────────────────────────────────────────────────────────────
+    ("4 — A+B+C+D (seq)",   ["attack_a", "attack_b", "attack_c", "attack_d"]),
+    ("4 — A+B+E+G (div)",   ["attack_a", "attack_b", "attack_e", "attack_g"]),
+    ("4 — A+C+E+G (alt)",   ["attack_a", "attack_c", "attack_e", "attack_g"]),
+    # ── Size 6 ────────────────────────────────────────────────────────────
+    ("6 — A-F (majority)",  ["attack_a", "attack_b", "attack_c",
+                              "attack_d", "attack_e", "attack_f"]),
+]
+
+
+def run_subset_comparison(
+    clean_train,
+    clean_test,
+    attack_train_datasets: list,
+    attack_test_datasets: list,
+    attack_names: list[str],
+    input_size: int,
+    subsets: list[tuple[str, list[str]]] | None = None,
+    model_factory=None,
+    num_epochs: int | None = None,
+    patience: int | None = None,
+    monitor_auc: bool = False,
+) -> list[dict]:
+    """Train a fresh model per attack subset and evaluate on all unseen attacks.
+
+    For each (label, train_attack_names) entry in *subsets*:
+      1. Build a balanced training set: clean_train ∪ balanced_sample(chosen attacks).
+      2. 80/20 train/val split and train a fresh model with early stopping.
+      3. Evaluate on clean_test ∪ A_i for every attack *not* in the subset.
+      4. Record per-attack metrics and aggregate means.
+
+    Parameters
+    ----------
+    subsets : list of (label, attack_names_to_train_on)
+        Defaults to :data:`PYTHIA_ATTACK_SUBSETS`.
+
+    Returns
+    -------
+    list[dict]
+        One dict per subset, keys:
+        ``subset_label``, ``train_attacks``, ``unseen_attacks``,
+        ``per_attack_metrics``, ``mean_Accuracy``, ``mean_F1_Score``,
+        ``mean_AUC_ROC``.
+    """
+    from lib import train_model  # local import to keep namespace clean
+
+    if subsets is None:
+        subsets = PYTHIA_ATTACK_SUBSETS
+
+    _epochs = num_epochs if num_epochs is not None else NUM_EPOCHS
+    _patience = patience if patience is not None else PATIENCE
+
+    results: list[dict] = []
+
+    for subset_label, train_attack_names in subsets:
+        bar = "=" * 65
+        print(f"\n{bar}")
+        print(f"  [Subset] {subset_label}")
+        print(f"  Training on: {train_attack_names}")
+        print(f"{bar}")
+
+        # Resolve attack indices (skip names not in this dataset)
+        train_idx = [
+            attack_names.index(n) for n in train_attack_names if n in attack_names
+        ]
+        if not train_idx:
+            print(f"  WARNING: no valid attacks found — skipping '{subset_label}'")
+            continue
+        unseen_idx = [i for i in range(len(attack_names)) if i not in train_idx]
+        unseen_names = [attack_names[i] for i in unseen_idx]
+
+        print(f"  Unseen (test only): {unseen_names}")
+
+        # ── Build balanced training set ──────────────────────────────────
+        n_clean = len(clean_train)
+        attack_subset_ds = balanced_attack_subset(
+            [attack_train_datasets[i] for i in train_idx], n_clean
+        )
+        combined_tv = ConcatDataset([clean_train, attack_subset_ds])
+
+        tv_train_size = int(0.8 * len(combined_tv))
+        tv_val_size = len(combined_tv) - tv_train_size
+        train_ds, val_ds = random_split(combined_tv, [tv_train_size, tv_val_size])
+
+        print(
+            f"  Train: {len(train_ds):>6} | Val: {len(val_ds):>6}"
+        )
+
+        train_loader = make_dataloader(train_ds, BATCH_SIZE, shuffle=True)
+        val_loader   = make_dataloader(val_ds,   BATCH_SIZE)
+
+        # ── Train fresh model ─────────────────────────────────────────────
+        if model_factory is None:
+            model = AnomalyCNN(input_size=input_size)
+        else:
+            model = model_factory(input_size)
+        criterion = nn.BCELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+        model = train_model(
+            model, train_loader, val_loader, criterion, optimizer,
+            num_epochs=_epochs, patience=_patience, monitor_auc=monitor_auc,
+        )
+
+        # ── Evaluate on every unseen attack ───────────────────────────────
+        per_attack: dict[str, dict] = {}
+        for i in unseen_idx:
+            name = attack_names[i]
+            test_ds = ConcatDataset([clean_test, attack_test_datasets[i]])
+            test_loader = make_dataloader(test_ds, BATCH_SIZE)
+            acc, prec, rec, f1, auc = evaluate_model(model, test_loader)
+            per_attack[name] = {
+                "Accuracy":  float(acc),
+                "Precision": float(prec),
+                "Recall":    float(rec),
+                "F1_Score":  float(f1),
+                "AUC_ROC":   float(auc) if auc == auc else None,
+            }
+            print(
+                f"    {name:12s}  Acc={acc:.3f}  F1={f1:.3f}  AUC={auc:.3f}"
+            )
+
+        # ── Aggregate means (ignore None AUC) ────────────────────────────
+        def _mean(key: str) -> float:
+            vals = [v[key] for v in per_attack.values() if v[key] is not None]
+            return float(np.mean(vals)) if vals else float("nan")
+
+        results.append(
+            {
+                "subset_label":    subset_label,
+                "train_attacks":   [attack_names[i] for i in train_idx],
+                "unseen_attacks":  unseen_names,
+                "per_attack_metrics": per_attack,
+                "mean_Accuracy":  _mean("Accuracy"),
+                "mean_Precision": _mean("Precision"),
+                "mean_Recall":    _mean("Recall"),
+                "mean_F1_Score":  _mean("F1_Score"),
+                "mean_AUC_ROC":   _mean("AUC_ROC"),
+            }
+        )
+
+    return results
+
+
+def plot_subset_comparison(
+    results: list[dict],
+    plots_dir: Path | str,
+    title: str = "Pythia — Attack Subset Selection Comparison",
+    filename: str = "step2_subset_comparison.png",
+) -> None:
+    """Two-panel figure comparing attack subset strategies.
+
+    Top panel: grouped bar chart of mean AUC-ROC and mean F1-Score on
+    unseen attacks per subset, with individual-attack scatter.
+
+    Bottom panel: heatmap of per-attack AUC-ROC across all subsets,
+    making it easy to spot which unseen attack is hardest regardless of
+    the training set.
+
+    Parameters
+    ----------
+    results : list[dict]
+        Output of :func:`run_subset_comparison`.
+    plots_dir : Path or str
+        Output directory.
+    title : str
+        Figure super-title.
+    filename : str
+        Output filename inside *plots_dir*.
+    """
+    plots_dir = Path(plots_dir)
+
+    labels     = [r["subset_label"]  for r in results]
+    mean_aucs  = [r["mean_AUC_ROC"]  for r in results]
+    mean_f1s   = [r["mean_F1_Score"] for r in results]
+
+    # Collect all unseen attack names that appear in any result
+    all_unseen: list[str] = []
+    for r in results:
+        for k in r["unseen_attacks"]:
+            if k not in all_unseen:
+                all_unseen.append(k)
+    all_unseen.sort()
+
+    # Build AUC matrix: rows = subsets, cols = attacks (NaN where attack was in training)
+    auc_matrix = np.full((len(results), len(all_unseen)), np.nan)
+    for row_i, r in enumerate(results):
+        for col_j, atk in enumerate(all_unseen):
+            if atk in r["per_attack_metrics"]:
+                auc_matrix[row_i, col_j] = r["per_attack_metrics"][atk]["AUC_ROC"] or np.nan
+
+    x = np.arange(len(labels))
+    bar_w = 0.35
+
+    fig = plt.figure(figsize=(max(14, len(labels) * 1.6), 13))
+    gs  = fig.add_gridspec(2, 1, height_ratios=[1, 0.9], hspace=0.45)
+
+    # ── Top: grouped bar chart ───────────────────────────────────────────
+    ax_bar = fig.add_subplot(gs[0])
+    bars_auc = ax_bar.bar(x - bar_w / 2, mean_aucs, bar_w,
+                          color="steelblue", alpha=0.85, label="Mean AUC-ROC (unseen)")
+    bars_f1  = ax_bar.bar(x + bar_w / 2, mean_f1s,  bar_w,
+                          color="darkorange", alpha=0.85, label="Mean F1-Score (unseen)")
+
+    # Individual attack scatter points
+    for row_i, r in enumerate(results):
+        for atk in r["unseen_attacks"]:
+            m = r["per_attack_metrics"].get(atk)
+            if m and m["AUC_ROC"] is not None:
+                ax_bar.scatter(row_i - bar_w / 2, m["AUC_ROC"],
+                               color="navy", s=22, alpha=0.6, zorder=5)
+            if m and m["F1_Score"] is not None:
+                ax_bar.scatter(row_i + bar_w / 2, m["F1_Score"],
+                               color="saddlebrown", s=22, alpha=0.6, zorder=5)
+
+    # Value annotations on bars
+    for bar in bars_auc:
+        h = bar.get_height()
+        if h == h:
+            ax_bar.text(bar.get_x() + bar.get_width() / 2, h + 0.01,
+                        f"{h:.2f}", ha="center", va="bottom", fontsize=8)
+    for bar in bars_f1:
+        h = bar.get_height()
+        if h == h:
+            ax_bar.text(bar.get_x() + bar.get_width() / 2, h + 0.01,
+                        f"{h:.2f}", ha="center", va="bottom", fontsize=8)
+
+    ax_bar.set_xticks(x)
+    ax_bar.set_xticklabels(labels, rotation=35, ha="right", fontsize=9)
+    ax_bar.set_ylim(0, 1.15)
+    ax_bar.axhline(0.5, color="gray", linestyle=":", linewidth=0.9)
+    ax_bar.set_ylabel("Metric value", fontsize=11)
+    ax_bar.set_title(
+        "Mean metrics on unseen attacks  (dots = individual attacks)",
+        fontsize=12, fontweight="bold",
+    )
+    ax_bar.legend(fontsize=10)
+    ax_bar.grid(axis="y", alpha=0.3, linestyle="--")
+
+    # ── Bottom: heatmap ───────────────────────────────────────────────────
+    ax_hm = fig.add_subplot(gs[1])
+    im = ax_hm.imshow(auc_matrix, aspect="auto", cmap="RdYlGn",
+                      vmin=0.4, vmax=1.0, interpolation="nearest")
+    plt.colorbar(im, ax=ax_hm, label="AUC-ROC", shrink=0.8)
+
+    ax_hm.set_xticks(range(len(all_unseen)))
+    ax_hm.set_xticklabels(
+        [a.replace("attack_", "atk_") for a in all_unseen],
+        rotation=40, ha="right", fontsize=9,
+    )
+    ax_hm.set_yticks(range(len(labels)))
+    ax_hm.set_yticklabels(labels, fontsize=9)
+    ax_hm.set_title(
+        "Per-attack AUC-ROC heatmap  (grey = attack was in training set)",
+        fontsize=12, fontweight="bold",
+    )
+
+    # Annotate cells
+    for i in range(len(results)):
+        for j in range(len(all_unseen)):
+            v = auc_matrix[i, j]
+            if v == v:
+                ax_hm.text(j, i, f"{v:.2f}", ha="center", va="center",
+                           fontsize=7.5,
+                           color="black" if 0.45 < v < 0.85 else "white")
+
+    fig.suptitle(title, fontsize=14, fontweight="bold", y=1.01)
+    out = plots_dir / filename
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Saved → {out}")
 
 
 # ===========================================================================
@@ -697,6 +1103,79 @@ def plot_order_sensitivity(
     print(f"  [plot] Saved → {out}")
 
 
+def _plot_model_order_comparison(
+    models_ordering_results: dict,
+    dataset_name: str,
+    plots_dir,
+) -> None:
+    """Mean ± 1 std band per model across all ordering permutations.
+
+    Answers: which model is most robust to curriculum order?  For each model
+    the mean and ±1 std of AUC-ROC and F1-Score across all orderings at each n
+    are plotted, so narrower bands signal lower order-sensitivity.
+
+    Parameters
+    ----------
+    models_ordering_results : dict[str, dict[str, list[dict]]]
+        Mapping model_label → {ordering_name: per-round result dicts}.
+    dataset_name : str
+        Used in title and output filename.
+    plots_dir : Path | str
+        Output directory.
+    """
+    plots_dir = Path(plots_dir)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+
+    _styles: dict[str, tuple] = {
+        "AnomalyCNN":   ("steelblue",   "o"),
+        "ProfessorCNN": ("forestgreen", "D"),
+        "GBM":          ("darkorange",  "s"),
+    }
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle(
+        f"{dataset_name} — Order Sensitivity by Model  (mean ± 1 std across orderings)",
+        fontsize=13, fontweight="bold",
+    )
+
+    for ax, metric, mlabel in zip(axes, ["AUC_ROC", "F1_Score"], ["AUC-ROC", "F1-Score"]):
+        for model_label, orderings_results in models_ordering_results.items():
+            color, marker = _styles.get(model_label, ("gray", "o"))
+            per_n: dict[int, list[float]] = {}
+            for res_list in orderings_results.values():
+                for r in res_list:
+                    n = r["n_training_attacks"]
+                    v = r[metric]
+                    if v is not None:
+                        per_n.setdefault(n, []).append(float(v))
+            if not per_n:
+                continue
+            ns = sorted(per_n)
+            means = [float(np.nanmean(per_n[n])) for n in ns]
+            stds  = [float(np.nanstd(per_n[n]))  for n in ns]
+            ax.plot(ns, means, f"{marker}-", color=color, linewidth=2.5,
+                    markersize=8, label=model_label)
+            ax.fill_between(
+                ns,
+                [m - s for m, s in zip(means, stds)],
+                [m + s for m, s in zip(means, stds)],
+                alpha=0.18, color=color,
+            )
+        ax.set_title(mlabel, fontsize=12, fontweight="bold")
+        ax.set_xlabel("n (attack types in training)", fontsize=10)
+        ax.set_ylabel(mlabel, fontsize=10)
+        ax.set_ylim(-0.05, 1.10)
+        ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
+        ax.legend(fontsize=10)
+        ax.grid(True, alpha=0.3, linestyle="--")
+
+    plt.tight_layout()
+    out = plots_dir / f"order_sensitivity_model_comparison_{dataset_name.lower()}.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  [plot] Saved \u2192 {out}")
+
+
 # ===========================================================================
 # ORDER SENSITIVITY RUNNER
 # ===========================================================================
@@ -711,6 +1190,10 @@ def run_order_sensitivity(
     input_size: int,
     dataset_name: str,
     n_random_perms: int = 2,
+    model_factory=None,
+    num_epochs: int | None = None,
+    patience: int | None = None,
+    monitor_auc: bool = False,
 ) -> dict[str, list[dict]]:
     """Run progressive training under multiple attack orderings.
 
@@ -771,6 +1254,58 @@ def run_order_sensitivity(
             ordered_names,
             input_size,
             experiment_name=f"{dataset_name}[{ordering_name}]",
+            model_factory=model_factory,
+            num_epochs=num_epochs,
+            patience=patience,
+            monitor_auc=monitor_auc,
+        )
+        all_results[ordering_name] = res
+
+    return all_results
+
+
+def run_order_sensitivity_gbm(
+    clean_train,
+    clean_test,
+    attack_train_datasets: list,
+    attack_test_datasets: list,
+    attack_names: list[str],
+    dataset_name: str,
+    n_random_perms: int = 2,
+) -> dict[str, list[dict]]:
+    """Run GBM progressive training under multiple attack orderings.
+
+    Mirrors :func:`run_order_sensitivity` but uses
+    :func:`run_progressive_training_gbm`, so GBM robustness to curriculum
+    order can be compared against the AnomalyCNN baseline.
+
+    Returns
+    -------
+    dict[str, list[dict]]
+        Same schema as :func:`run_order_sensitivity`.
+    """
+    K = len(attack_names)
+    orderings: dict[str, list[int]] = {
+        "original": list(range(K)),
+        "reversed": list(range(K - 1, -1, -1)),
+    }
+    for seed in range(n_random_perms):
+        rng = np.random.default_rng(seed=seed)
+        orderings[f"perm_seed{seed}"] = rng.permutation(K).tolist()
+
+    all_results: dict[str, list[dict]] = {}
+    for ordering_name, idx_order in orderings.items():
+        ordered_names = [attack_names[i] for i in idx_order]
+        print(
+            f"\n  [Order sensitivity | {dataset_name} GBM | {ordering_name}]\n"
+            f"    order: {ordered_names}"
+        )
+        res = run_progressive_training_gbm(
+            clean_train, clean_test,
+            [attack_train_datasets[i] for i in idx_order],
+            [attack_test_datasets[i]  for i in idx_order],
+            ordered_names,
+            experiment_name=f"{dataset_name}_GBM[{ordering_name}]",
         )
         all_results[ordering_name] = res
 
@@ -784,22 +1319,26 @@ def run_order_sensitivity(
 
 def _plot_pythia_progressive_comparison(
     baseline_results: list[dict],
-    prof_results: list[dict],
     plots_dir,
+    gbm_results: list[dict] | None = None,
+    prof_cnn_results: list[dict] | None = None,
+    dataset_name: str = "Pythia",
 ) -> None:
-    """Overlay AnomalyCNN and ProfessorCNNBest progressive-training curves.
+    """Overlay AnomalyCNN and ProfessorCNN progressive-training curves for a dataset.
 
-    Plots AUC-ROC and F1-Score vs. n for both models on Pythia.
-    ProfessorCNNBest is drawn with a thicker, highlighted line.
+    Plots AUC-ROC and F1-Score vs. n for both models.  An optional GBM line
+    is drawn if ``gbm_results`` is supplied.
 
     Parameters
     ----------
     baseline_results : list[dict]
         Output of ``run_progressive_training`` with AnomalyCNN.
-    prof_results : list[dict]
-        Output of ``run_progressive_training`` with ProfessorCNNBest.
     plots_dir : Path
         Output directory.  File: ``pythia_model_comparison_progressive.png``.
+    gbm_results : list[dict] | None
+        Optional output of ``run_progressive_training_gbm`` with GBM.
+    prof_cnn_results : list[dict] | None
+        Optional output of ``run_progressive_training`` with ProfessorCNN.
     """
     import pathlib
     plots_dir = pathlib.Path(plots_dir)
@@ -810,26 +1349,30 @@ def _plot_pythia_progressive_comparison(
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
     fig.suptitle(
-        "Pythia \u2014 Progressive Training: AnomalyCNN (Baseline) vs ProfessorCNNBest",
+        f"{dataset_name} — Progressive Training: AnomalyCNN vs ProfessorCNN",
         fontsize=12, fontweight="bold",
     )
 
     for ax, metric, mlabel in zip(axes, ["AUC_ROC", "F1_Score"], ["AUC-ROC", "F1-Score"]):
         ax.plot(_ns(baseline_results), _mv(baseline_results, metric),
                 "o-", color="steelblue", linewidth=1.8, label="AnomalyCNN (Baseline)")
-        ax.plot(_ns(prof_results), _mv(prof_results, metric),
-                "s-", color="darkorange", linewidth=2.8, label="ProfessorCNNBest",
-                markeredgecolor="#8B4000", markeredgewidth=1.2, markersize=8)
+        if prof_cnn_results:
+            ax.plot(_ns(prof_cnn_results), _mv(prof_cnn_results, metric),
+                    "D--", color="forestgreen", linewidth=1.8, label="ProfessorCNN")
+        if gbm_results:
+            ax.plot(_ns(gbm_results), _mv(gbm_results, metric),
+                    "s-", color="darkorange", linewidth=2.8, label="GBM (Best)",
+                    markeredgecolor="#8B4000", markeredgewidth=1.2, markersize=8)
         ax.set_xlabel("n training attack types", fontsize=10)
         ax.set_ylabel(mlabel, fontsize=10)
-        ax.set_title(f"Pythia \u2014 {mlabel} vs n", fontsize=11)
+        ax.set_title(f"{dataset_name} \u2014 {mlabel} vs n", fontsize=11)
         ax.set_ylim(0, 1.05)
         ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3, linestyle="--")
 
     plt.tight_layout()
-    save_path = plots_dir / "pythia_model_comparison_progressive.png"
+    save_path = plots_dir / f"{dataset_name.lower().replace(' ', '_')}_model_comparison_progressive.png"
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  [plot] Saved \u2192 {save_path}")
@@ -857,6 +1400,8 @@ def main() -> None:
     Loads all 8 labelled partitions (attack_a … attack_h) and runs
     7 progressive rounds (n = 1 … 7).
     """
+
+    set_global_seed(RANDOM_SEED)
 
     PLOTS_DIR = Path("plots") / "step2"
 
@@ -991,24 +1536,6 @@ def main() -> None:
         experiment_name="Pythia",
     )
 
-    # ------------------------------------------------------------------
-    # Progressive training — Pythia with ProfessorCNNBest
-    # ------------------------------------------------------------------
-    print("\n" + "=" * 65)
-    print("  STEP 2 — PYTHIA ProfessorCNNBest GENERALISATION EXPERIMENT")
-    print("=" * 65)
-    pythia_results_prof = run_progressive_training(
-        clean_train=pythia_clean_train_base,
-        clean_test=pythia_clean_test,
-        attack_train_datasets=pythia_attack_train,
-        attack_test_datasets=pythia_attack_test,
-        attack_names=pythia_attack_names,
-        input_size=70,
-        experiment_name="Pythia (ProfessorCNN)",
-        model_factory=get_professor_cnn_best,
-    )
-    print_summary_table(pythia_results_prof, "Pythia ProfessorCNNBest")
-
     # =======================================================================
     # RESULTS — summary tables, all plots, order sensitivity, JSON
     # =======================================================================
@@ -1026,11 +1553,9 @@ def main() -> None:
     plot_per_metric(mnist_results, pythia_results, PLOTS_DIR)
     plot_heatmap(mnist_results, pythia_results, PLOTS_DIR)
 
-    # --- Pythia: AnomalyCNN vs ProfessorCNNBest progressive comparison ---
+    # --- Pythia: AnomalyCNN progressive comparison (baseline only) ---
     print("\nGenerating Pythia model comparison plot...")
-    _plot_pythia_progressive_comparison(
-        pythia_results, pythia_results_prof, PLOTS_DIR,
-    )
+    _plot_pythia_progressive_comparison(pythia_results, PLOTS_DIR)
 
     # --- Order sensitivity analysis ---
     print("\n" + "=" * 65)
@@ -1041,12 +1566,12 @@ def main() -> None:
     mnist_order_results = run_order_sensitivity(
         clean_train_mnist_sub, clean_test_mnist,
         mnist_attack_train, mnist_attack_test, mnist_attack_names,
-        input_size=28, dataset_name="MNIST", n_random_perms=25,
+        input_size=28, dataset_name="MNIST", n_random_perms=NUM_PERMUTATIONS,
     )
     pythia_order_results = run_order_sensitivity(
         pythia_clean_train_base, pythia_clean_test,
         pythia_attack_train, pythia_attack_test, pythia_attack_names,
-        input_size=70, dataset_name="Pythia", n_random_perms=25,
+        input_size=70, dataset_name="Pythia", n_random_perms=NUM_PERMUTATIONS,
     )
 
     print("\nGenerating order-sensitivity plots...")
@@ -1150,7 +1675,7 @@ def main() -> None:
     variants_order_results = run_order_sensitivity(
         clean_train_mnist_sub_v, clean_test_mnist,
         variant_attack_train, variant_attack_test, variant_attack_names,
-        input_size=28, dataset_name="MNIST_variants", n_random_perms=25,
+        input_size=28, dataset_name="MNIST_variants", n_random_perms=NUM_PERMUTATIONS,
     )
 
     print("\nGenerating variant order-sensitivity plot...")
@@ -1162,7 +1687,6 @@ def main() -> None:
         "experiment": "Step 2 — Generalisation via Multi-Attack Training",
         "MNIST_progressive_results": mnist_results,
         "Pythia_progressive_results": pythia_results,
-        "Pythia_ProfessorCNNBest_progressive_results": pythia_results_prof,
         "MNIST_order_sensitivity": mnist_order_results,
         "Pythia_order_sensitivity": pythia_order_results,
         "MNIST_variants_progressive_results": variants_results,

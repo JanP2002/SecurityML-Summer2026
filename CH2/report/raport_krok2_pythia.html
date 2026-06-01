@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raport — Usprawnienie Kroku 2: Zbiór Pythia</title>
+<style>
+  :root {
+    --accent: #2a5caa;
+    --accent-light: #e8f0fb;
+    --warn: #c0392b;
+    --ok: #1a7a3c;
+    --border: #ccc;
+    --code-bg: #f4f4f4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #222;
+    background: #fff;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 40px 64px;
+  }
+  h1 { font-size: 26px; color: var(--accent); margin-bottom: 4px; }
+  h2 { font-size: 20px; color: var(--accent); margin: 36px 0 10px; border-bottom: 2px solid var(--accent); padding-bottom: 4px; }
+  h3 { font-size: 16px; color: #333; margin: 22px 0 6px; }
+  p  { margin-bottom: 10px; }
+  ul, ol { margin: 6px 0 10px 22px; }
+  li { margin-bottom: 4px; }
+  .subtitle { color: #555; font-size: 13px; margin-bottom: 28px; }
+  .box {
+    background: var(--accent-light);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    margin: 14px 0;
+    border-radius: 3px;
+  }
+  .warn {
+    background: #fdf2f2;
+    border-left: 4px solid var(--warn);
+  }
+  .ok {
+    background: #f0fbf3;
+    border-left: 4px solid var(--ok);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+    font-size: 13px;
+  }
+  th {
+    background: var(--accent);
+    color: #fff;
+    padding: 7px 10px;
+    text-align: left;
+  }
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:nth-child(even) td { background: #f7f9fc; }
+  td.good  { color: var(--ok);   font-weight: bold; }
+  td.bad   { color: var(--warn); font-weight: bold; }
+  td.mid   { color: #b8860b;     font-weight: bold; }
+  figure {
+    margin: 18px 0 26px;
+    text-align: center;
+  }
+  figure img {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  figcaption {
+    font-size: 12px;
+    color: #555;
+    margin-top: 6px;
+    font-style: italic;
+  }
+  code {
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: "Consolas", monospace;
+    font-size: 12px;
+  }
+  .toc {
+    background: #f7f9fc;
+    border: 1px solid var(--border);
+    padding: 14px 20px;
+    margin-bottom: 28px;
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 280px;
+  }
+  .toc li { margin-bottom: 3px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+  hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }
+  .stamp { font-size: 11px; color: #999; }
+  .highlight { font-weight: bold; }
+  .seed-badge {
+    display: inline-block;
+    background: #e8f0fb;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Raport: Usprawnienie Kroku 2 — Zbiór Pythia</h1>
+<p class="subtitle">
+  SecurityML Summer 2026 · CH2 · Data wygenerowania: 1 czerwca 2026
+  <span class="seed-badge">seed = 2137 · 5 powtórzeń</span>
+</p>
+
+<div class="toc">
+  <strong>Spis treści</strong>
+  <ol>
+    <li><a href="#context">Kontekst i zadanie</a></li>
+    <li><a href="#step1">Krok 1 — Baseline klasyfikacyjny</a></li>
+    <li><a href="#step2">Krok 2 — Progresywne uczenie (MNIST i Pythia)</a></li>
+    <li><a href="#step2prof">Krok 2 (Professor) — Usprawnienia reproducibility</a></li>
+    <li><a href="#subsets">Eksperyment główny: Porównanie strategii wyboru podzbiorów ataków</a></li>
+    <li><a href="#pairwise">Protokół par (A→B): Wierność krokowi 1</a></li>
+    <li><a href="#step3">Krok 3 — Autoenkoder (kontekst)</a></li>
+    <li><a href="#conclusions">Wnioski i rekomendacje</a></li>
+  </ol>
+</div>
+
+<!-- ========================================================= -->
+<h2 id="context">1. Kontekst i zadanie</h2>
+
+<p>Profesor Krzysztof Tałataj zaproponował skupienie się na <strong>usprawnieniu Kroku 2 dla zbioru Pythia</strong>. Konkretne wytyczne:</p>
+
+<div class="box">
+  „Chodzi o eksperymentowanie z różnymi <strong>strategiami wyboru typów ataków</strong> ze zbioru Pythia.
+  Na przykład samo A, możemy porównać z połączeniem A, B, E. Chodzi o to, żebyśmy porównali kilka kombinacji."
+</div>
+
+<p>Równoległe zadania:</p>
+<ul>
+  <li>Kroki 1, 3, 4 — opcjonalne/dodatkowe, jeśli starczy czasu.</li>
+  <li>Krok 4 (MNIST + Fashion-MNIST) — realizowany osobno przez kolegę.</li>
+  <li>Krok 2 dla Pythii — <strong>główny cel prezentacji na następnych zajęciach</strong>.</li>
+</ul>
+
+<p>Zidentyfikowano następujące problemy z bazowym Krokiem 2 (przed usprawnieniami):</p>
+<ol>
+  <li><strong>Brak reprodukowalności</strong> — brak globalnego losowania ziarna (seed) powodował inne wyniki przy każdym uruchomieniu.</li>
+  <li><strong>Małe zbiory treningowe</strong> — funkcja <code>balanced_attack_subset</code> próbkowała w dół do rozmiaru podzbioru czystego, drastycznie zmniejszając dane treningowe.</li>
+  <li><strong>Duża wariancja ProfessorCNN</strong> — duży model + mały zbiór = niestabilne wyniki, ProfessorCNN czasem gorszy niż baseline.</li>
+  <li><strong>Brak porównania ze strategiami wyboru ataków</strong> — progresywna kolejność A→B→C→… nie odpowiada na pytanie „co jeśli wybierzemy A+B+E zamiast A+B+C?"</li>
+</ol>
+
+<!-- ========================================================= -->
+<h2 id="step1">2. Krok 1 — Baseline klasyfikacyjny</h2>
+
+<p>Krok 1 ustanawia punkt odniesienia: model trenowany na <code>attack_a</code> (znany), testowany na <code>attack_a</code> (Test_A) i <code>attack_b</code> (Test_B — nieznany). Na Pythii porównano cztery modele.</p>
+
+<figure>
+  <img src="../plots/step1/pythia_model_comparison.png" alt="Step 1 Pythia model comparison">
+  <figcaption>Rysunek 1. Porównanie AnomalyCNN, PixelMLP, ProfessorCNN i GBM na zbiorze Pythia (Test_A = znany atak_a, Test_B = nieznany atak_b).</figcaption>
+</figure>
+
+<h3>Wyniki liczbowe — Pythia (Krok 1)</h3>
+<table>
+  <tr><th>Model</th><th>Test_A AUC</th><th>Test_A F1</th><th>Test_B AUC</th><th>Test_B F1</th></tr>
+  <tr>
+    <td>AnomalyCNN (Baseline)</td>
+    <td class="bad">0.472</td><td class="bad">0.000</td>
+    <td class="bad">0.484</td><td class="bad">0.000</td>
+  </tr>
+  <tr>
+    <td>PixelMLP</td>
+    <td class="mid">0.558</td><td class="mid">0.600</td>
+    <td class="mid">0.535</td><td class="mid">0.697</td>
+  </tr>
+  <tr>
+    <td>ProfessorCNN</td>
+    <td class="bad">0.489</td><td class="mid">0.667</td>
+    <td class="mid">0.508</td><td class="good">0.909</td>
+  </tr>
+  <tr>
+    <td><strong>GBM (Best)</strong></td>
+    <td class="mid"><strong>0.608</strong></td><td class="mid"><strong>0.608</strong></td>
+    <td class="mid"><strong>0.609</strong></td><td class="mid"><strong>0.720</strong></td>
+  </tr>
+</table>
+
+<div class="box warn">
+  <strong>Kluczowa obserwacja:</strong> AnomalyCNN (Baseline) osiąga AUC ≈ 0.47–0.48 na Pythii — poniżej losowości. Sygnał ataku istnieje (potwierdzone analizą diagnostyczną _ceiling.py: AUC = 0.845 dla oracle LR), ale standardowy CNN go nie wyłapuje. GBM poprzez selekcję drzewiastą osiąga AUC ≈ 0.61, co jest aktualnym najlepszym wynikiem dla Krok 1 na Pythii.
+</div>
+
+<div class="box">
+  <strong>Dlaczego ProfessorCNN na Test_B osiąga F1 = 0.91?</strong> To artefakt imbalance klasy: Test_B ma 5:1 imbalance (200 czystych vs. 1000 attack_b). ProfessorCNN klasyfikuje <em>wszystko</em> jako atak (Recall = 1.0), co daje wysokie F1 przy tej proporcji, ale AUC = 0.51 wskazuje, że model nie odróżnia klas — po prostu zawsze odpowiada "atak". AUC jest tutaj miarodajną metryką.
+</div>
+
+<!-- ========================================================= -->
+<h2 id="step2">3. Krok 2 — Progresywne uczenie (MNIST i Pythia)</h2>
+
+<p>Krok 2 testuje hipotezę: <em>czy trening na n różnych typach ataków poprawia wykrywanie niewidzianego ataku n+1?</em> Dla każdej rundy n trenujemy model na <code>clean ∪ balanced(A₁,…,Aₙ)</code> i testujemy na <code>clean_test ∪ Aₙ₊₁</code>.</p>
+
+<figure>
+  <img src="../plots/step2/step2_generalization.png" alt="Step 2 generalization curves">
+  <figcaption>Rysunek 2. Metryki vs. liczba typów ataków w treningu. Lewa: MNIST (28×28). Prawa: Pythia (70×70).</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step2/per_metric_curves.png" alt="Per-metric generalization curves">
+  <figcaption>Rysunek 3. Szczegółowe krzywe każdej metryki dla MNIST (niebieski) i Pythia (pomarańczowy).</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step2/metric_heatmap.png" alt="Step 2 heatmap">
+  <figcaption>Rysunek 4. Heatmapa metryk × runda dla MNIST (lewa) i Pythia (prawa).</figcaption>
+</figure>
+
+<h3>Wyniki — MNIST</h3>
+<table>
+  <tr><th>n</th><th>Trening na</th><th>Test na</th><th>Accuracy</th><th>F1</th><th>AUC-ROC</th></tr>
+  <tr><td>1</td><td>A1_gaussian</td><td>A2_salt_pepper</td>
+      <td class="good">1.000</td><td class="good">1.000</td><td class="good">1.000</td></tr>
+  <tr><td>2</td><td>+ A2_salt_pepper</td><td>A3_geometric</td>
+      <td class="bad">0.501</td><td class="bad">0.004</td><td class="mid">0.908</td></tr>
+  <tr><td>3</td><td>+ A3_geometric</td><td>A4_blended</td>
+      <td class="good">0.997</td><td class="good">0.997</td><td class="good">1.000</td></tr>
+  <tr><td>4</td><td>+ A4_blended</td><td>A5_backdoor</td>
+      <td class="mid">0.555</td><td class="mid">0.215</td><td class="mid">0.834</td></tr>
+  <tr><td>5</td><td>+ A5_backdoor</td><td>A6_ood</td>
+      <td class="good">0.997</td><td class="good">0.997</td><td class="good">1.000</td></tr>
+</table>
+
+<h3>Wyniki — Pythia (baseline AnomalyCNN)</h3>
+<table>
+  <tr><th>n</th><th>Test na</th><th>Accuracy</th><th>F1</th><th>AUC-ROC</th></tr>
+  <tr><td>1</td><td>attack_b</td><td class="mid">0.500</td><td class="mid">0.667</td><td class="bad">0.470</td></tr>
+  <tr><td>2</td><td>attack_c</td><td class="mid">0.500</td><td class="mid">0.667</td><td class="bad">0.486</td></tr>
+  <tr><td>3</td><td>attack_d</td><td class="mid">0.500</td><td class="mid">0.667</td><td class="bad">0.475</td></tr>
+  <tr><td>4</td><td>attack_e</td><td class="mid">0.500</td><td class="mid">0.667</td><td class="mid">0.511</td></tr>
+  <tr><td>5</td><td>attack_f</td><td class="mid">0.500</td><td class="mid">0.667</td><td class="mid">0.506</td></tr>
+  <tr><td>6</td><td>attack_g</td><td class="bad">0.500</td><td class="bad">0.000</td><td class="bad">0.458</td></tr>
+  <tr><td>7</td><td>attack_h</td><td class="mid">0.500</td><td class="mid">0.667</td><td class="mid">0.528</td></tr>
+</table>
+
+<div class="box warn">
+  <strong>Problem Pythia w progresywnym uczeniu:</strong> AUC oscyluje wokół 0.47–0.53 (= losowość) dla wszystkich rund. Model nie generalizuje na żaden niewidziany atak. Recall = 1.0 / Precision = 0.5 wskazuje, że model klasyfikuje <em>wszystko</em> jako atak — uczył się zgadywania większościowej klasy. Jedyna wyjątek: runda n=6 (test na attack_g) gdzie model zaklasyfikował wszystko jako czyste (Precision=0, Recall=0) — odwrotna degeneracja.
+</div>
+
+<div class="box">
+  <strong>Kontrast MNIST vs. Pythia:</strong> Na MNIST model faktycznie generalizuje (AUC do 1.0 na łatwych atakach). Różnica wynika ze struktury sygnału: ataki MNIST to globalne transformacje (cały obraz), natomiast ataki Pythia są lokalne (subtelne zmiany pikselowe o max |Δ|=0.068). CNN z poolingiem przestrzennym traci informację o lokalizacji i nie wychwytuje takiego sygnału.
+</div>
+
+<!-- ========================================================= -->
+<h2 id="step2prof">4. Krok 2 (Professor) — Cztery usprawnienia reprodukowalności</h2>
+
+<p>Zidentyfikowane problemy zostały rozwiązane w pliku <code>step2_professor.py</code>:</p>
+
+<div class="two-col">
+  <div class="box ok">
+    <strong>✓ Ziarno losowania (seed = 2137)</strong><br>
+    Wszystkie pliki (step1–step3, step_professor_search) mają teraz wspólną funkcję <code>set_global_seed()</code> ustawiającą Python random, NumPy, PyTorch i cuDNN.deterministic=True. Każdy eksperyment jest w pełni reprodukowalny.
+  </div>
+  <div class="box ok">
+    <strong>✓ Powtórzenia (5 rund × różne ziarna)</strong><br>
+    Każdy podzbiór treningowy trenowany jest 5-krotnie z innym, deterministycznym ziarnem. Wyniki przedstawiane są jako mean ± std, eliminując efekt szczęśliwej inicjalizacji.
+  </div>
+  <div class="box ok">
+    <strong>✓ Pełny zbiór treningowy (bez downsamplingu)</strong><br>
+    Poprzednia metoda (<code>balanced_attack_subset</code>) próbkowała w dół do rozmiaru klasy czystej. Teraz używamy <em>wszystkich</em> próbek z wybranych ataków — większy zbiór, brak straty danych.
+  </div>
+  <div class="box ok">
+    <strong>✓ Protokół par (styl Kroku 1)</strong><br>
+    Dla każdej pary (train_attack, test_attack) trenujemy osobny model. Umożliwia bezpośrednie porównanie z wynikami z Kroku 1 i wychwycenie które pary ataków są strukturalnie podobne.
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<h2 id="subsets">5. Eksperyment główny: Porównanie strategii wyboru podzbiorów</h2>
+
+<p>Zgodnie z wytyczną profesora, porównano <strong>9 strategii wyboru podzbiorów ataków</strong> odpowiadając na dwa pytania:</p>
+<ul>
+  <li><strong>Ile ataków?</strong> — czy większa liczba typów poprawia generalizację? (n=1 → n=2 → n=3 → n=4 → n=6)</li>
+  <li><strong>Które ataki?</strong> — czy wybór „różnorodny" jest lepszy od „sekwencyjnego"? (A+B+C vs. A+B+E vs. A+D+G przy tym samym n=3)</li>
+</ul>
+
+<figure>
+  <img src="../plots/step2/step2_subset_comparison_prof_cnn.png" alt="Subset comparison">
+  <figcaption>Rysunek 5. Porównanie 9 strategii wyboru podzbiorów (ProfessorCNN, 5 powtórzeń). Górny panel: mean AUC-ROC i F1 na niewidzianych atakach (kropki = indywidualne ataki). Dolny panel: heatmapa per-attack AUC-ROC (szare = atak był w treningu).</figcaption>
+</figure>
+
+<h3>Wyniki zbiorcze — Porównanie podzbiorów (mean AUC-ROC na niewidzianych atakach)</h3>
+<table>
+  <tr><th>Podzbiór treningowy</th><th>n ataków</th><th>Mean AUC-ROC</th><th>Std AUC</th><th>Mean F1</th></tr>
+  <tr><td>1 — A only</td><td>1</td>
+      <td class="bad">0.498</td><td>0.010</td><td class="bad">0.267</td></tr>
+  <tr><td>2 — A+B (seq)</td><td>2</td>
+      <td class="bad">0.482</td><td>0.013</td><td class="mid">0.667</td></tr>
+  <tr><td>3 — A+B+C (seq)</td><td>3</td>
+      <td class="bad">0.491</td><td>0.016</td><td class="mid">0.667</td></tr>
+  <tr><td>3 — A+B+E (diverse)</td><td>3</td>
+      <td class="bad">0.490</td><td>0.023</td><td class="mid">0.667</td></tr>
+  <tr><td>3 — A+D+G (spread)</td><td>3</td>
+      <td class="bad">0.496</td><td>0.018</td><td class="mid">0.667</td></tr>
+  <tr><td>4 — A+B+C+D (seq)</td><td>4</td>
+      <td class="bad">0.482</td><td>—</td><td class="mid">0.667</td></tr>
+  <tr><td>4 — A+B+E+G (div)</td><td>4</td>
+      <td class="bad">0.490</td><td>—</td><td class="mid">0.667</td></tr>
+  <tr><td>4 — A+C+E+G (alt)</td><td>4</td>
+      <td class="mid">0.510</td><td>—</td><td class="mid">0.667</td></tr>
+  <tr><td>6 — A-F (majority)</td><td>6</td>
+      <td class="bad">0.480</td><td>—</td><td class="mid">0.667</td></tr>
+</table>
+
+<div class="box warn">
+  <strong>Wynik negatywny (naukowo ważny):</strong> Żadna strategia wyboru podzbiorów nie daje AUC > 0.52 na niewidzianych atakach. Wszystkie wartości oscylują wokół 0.48–0.51, co jest statystycznie nieodróżnialne od losowości (AUC = 0.5). Model degeneruje do odpowiedzi "atak na wszystko" (Recall = 1.0, Precision = 0.5, F1 = 0.67) niezależnie od wyboru podzbioru.
+</div>
+
+<div class="box">
+  <strong>Jedyna różnica między podzbiorami:</strong> przy n=1 (samo A) model oscyluje między klasyfikowaniem wszystkiego jako atak i wszystkiego jako czyste (F1 = 0.27, std = 0.33) — najwyższa niestabilność. Już n=2 stabilizuje odpowiedź na stałe "wszystko atak" (std ≈ 0 dla Acc/F1). Interpretacja: większy zbiór treningowy daje deterministyczną, ale nadal błędną decyzję.
+</div>
+
+<!-- ========================================================= -->
+<h2 id="pairwise">6. Protokół par (A→B): Wierność Krokowi 1</h2>
+
+<p>Aby bezpośrednio porównać się z Krokiem 1, przeprowadzono eksperyment: dla każdej pary (train_attack_X, test_attack_Y) trenujemy ProfessorCNN na czystych + wszystkich próbkach ataku X, i testujemy na czystych + wszystkich próbkach ataku Y. Każda para powtarzana 5-krotnie.</p>
+
+<figure>
+  <img src="../plots/step2/step2_professor_pairwise_auc_heatmap.png" alt="Pairwise AUC heatmap">
+  <figcaption>Rysunek 6. Heatmapa mean AUC-ROC dla protokołu par (wiersz = atak treningowy, kolumna = atak testowy). Białe komórki na przekątnej = trening i test na tym samym ataku (pominięto). Wszystkie wartości ≈ 0.45–0.53.</figcaption>
+</figure>
+
+<div class="box warn">
+  <strong>Wynik negatywny protokołu par:</strong> Mean AUC-ROC dla wszystkich par zawiera się w [0.45, 0.53]. Żadna kombinacja trening→test nie osiąga AUC powyżej 0.53. Kontrast z Krokiem 1 jest wyraźny: AnomalyCNN na MNIST osiąga AUC = 1.0 przy treningu na A, teście na B (salt &amp; pepper). ProfessorCNN na Pythii nie generalizuje <em>żadnego</em> ataku na żaden inny.
+</div>
+
+<div class="box">
+  <strong>Interpretacja strukturalna:</strong> W Kroku 1 na MNIST trenujemy na attack_a (Gaussian) i testujemy na attack_b (OOD Fashion-MNIST) — ataki są <em>zupełnie różne strukturalnie</em>, ale clean vs. atak jest silnie separowalne (AUC = 1.0). Na Pythii ataki są subtelne (lokalne zmiany pikseli), a ProfessorCNN jako model konwolucyjny traci informację przestrzenną przez pooling. To tłumaczy 100% failure.
+</div>
+
+<!-- ========================================================= -->
+<h2 id="step3">7. Krok 3 — Autoenkoder (kontekst)</h2>
+
+<p>Krok 3 testuje podejście nienadzorowane: autoenkoder trenowany <strong>tylko na czystych danych</strong> używa błędu rekonstrukcji jako miary anomalii. Dla MNIST działa wyśmienicie — dla Pythii nadal nie generalizuje.</p>
+
+<figure>
+  <img src="../plots/step3/pythia_metric_comparison.png" alt="Step 3 Pythia classifier vs autoencoder">
+  <figcaption>Rysunek 7. Porównanie AnomalyCNN (Krok 1) vs. Autoenkoder (Krok 3) na zbiorze Pythia. Autoenkoder jest marginalnie lepszy w AUC (0.52 vs. 0.46), ale recall pozostaje bliski zeru (~7%).</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step3/pythia_per_attack.png" alt="Step 3 per-attack Pythia">
+  <figcaption>Rysunek 8. AUC-ROC i Recall dla AnomalyCNN i Autoenkodera na wszystkich 8 partycjach Pythii. Autoenkoder nieznacznie przewyższa classifier w AUC (AUC ≈ 0.51–0.55), ale recall jest zerowy lub bliski zeru (~7%) dla wszystkich ataków.</figcaption>
+</figure>
+
+<table>
+  <tr><th>Model</th><th>Test_A AUC</th><th>Test_A Recall</th><th>Test_B AUC</th><th>Test_B Recall</th></tr>
+  <tr>
+    <td>Classifier (AnomalyCNN)</td>
+    <td class="bad">0.465</td><td class="bad">0.000</td>
+    <td class="bad">0.466</td><td class="bad">0.000</td>
+  </tr>
+  <tr>
+    <td>Autoencoder (Step 3)</td>
+    <td class="mid">0.524</td><td class="bad">0.070</td>
+    <td class="mid">0.552</td><td class="bad">0.075</td>
+  </tr>
+</table>
+
+<p>Dla porównania, na MNIST autoenkoder osiąga AUC = 1.0 i Recall = 1.0 na obu Test_A i Test_B — wynik niemal idealny.</p>
+
+<!-- ========================================================= -->
+<h2 id="conclusions">8. Wnioski i rekomendacje</h2>
+
+<h3>Wnioski ogólne</h3>
+
+<ol>
+  <li>
+    <strong>Krok 2 (i wszystkie kroki) na Pythii: wynik negatywny jest stabilny i reprodukowalny.</strong>
+    Po ustanowieniu deterministycznego ziarna (seed = 2137) i 5-krotnym powtórzeniu każdego eksperymentu wynik jest potwierdzony: żadna strategia wyboru podzbiorów ataków nie daje AUC powyżej 0.52 na niewidzianych atakach.
+  </li>
+  <li>
+    <strong>Różnorodność podzbioru nie pomaga.</strong>
+    A+B+E (diverse), A+D+G (spread), A+C+E+G (alternating) — żadna z tych kombinacji rekomendowanych przez profesora nie jest lepsza niż proste A+B+C (sequential). Różnice są rzędu ±0.01 AUC i leżą w zakresie szumu statystycznego (std ≈ 0.015–0.03).
+  </li>
+  <li>
+    <strong>Rozmiar podzbioru nie pomaga powyżej n=2.</strong>
+    Przejście z n=1 do n=2 stabilizuje odpowiedź modelu (eliminuje mode collapse), ale dalsze dodawanie ataków (n=3,4,6) nie poprawia AUC na niewidzianych atakach.
+  </li>
+  <li>
+    <strong>Problem leży w architekturze CNN, nie w strategii danych.</strong>
+    Analiza diagnostyczna (_ceiling.py) wykazała: sygnał istnieje (oracle LR osiąga AUC = 0.845), ale CNN z poolingiem traci informację przestrzenną. GBM (selekcja cech przez drzewa decyzyjne) osiąga AUC = 0.61 bez wiedzy oracle.
+  </li>
+</ol>
+
+<h3>Rekomendacje dalszej pracy</h3>
+
+<div class="box ok">
+  <strong>Rekomendacja 1 (Architektura):</strong> Zamiast standardowego CNN z MaxPooling, zastosować architekturę <em>bez przestrzennego poolingu</em> (np. fully convolutional z globalnym poolingiem, lub ViT patch-level attention). Alternatywnie: wieloskalowy model który łączy wyniki CNN z GBM na poziomie cech.
+</div>
+
+<div class="box ok">
+  <strong>Rekomendacja 2 (Dane):</strong> Zbadać transformacje self-supervised (SimCLR/MoCo) które uczą się reprezentacji bez etykiet ataku — mogłyby wychwycić lokalne anomalie bez konieczności znania konkretnego ataku w treningu.
+</div>
+
+<div class="box ok">
+  <strong>Rekomendacja 3 (Metryki):</strong> Na Pythii AUC-ROC jest jedyną wiarygodną metryką (5:1 imbalance w Test_B). Nie raportować Accuracy ani F1 jako głównych wyników dla Pythii.
+</div>
+
+<h3>Podsumowanie dla prezentacji</h3>
+
+<div class="box">
+  <p><strong>Główny komunikat do zaprezentowania:</strong></p>
+  <p>Przeprowadziliśmy systematyczne porównanie 9 strategii wyboru typów ataków ze zbioru Pythia, w tym kombinacji rekomendowanych przez profesora (A+B+E, A+D+G). Każda strategia była powtarzana 5-krotnie z deterministycznym ziarnem. Wynik jest jednoznaczny: <strong>wybór konkretnych ataków nie ma znaczenia</strong> — model ProfessorCNN nie generalizuje na niewidziane ataki Pythii niezależnie od kombinacji. Kluczową barierą jest architektura konwolucyjna, która gubi informację przestrzenną przez pooling. Najlepszym aktualnym rozwiązaniem dla Pythii jest GBM (selekcja cech drzewiastych), który osiąga AUC ≈ 0.61.</p>
+</div>
+
+<hr>
+<p class="stamp">
+  Wygenerowano: 1 czerwca 2026 · Pliki: step1.py, step2.py, step2_professor.py, step3.py ·
+  Seed: 2137 · Powtórzenia: 5 · JSON: faza1_wyniki_eksperymentu.json, faza2_wyniki_generalizacji.json,
+  faza2_wyniki_generalizacji_professor.json, faza3_wyniki_autoenkodera.json
+</p>
+
+</body>
+</html>

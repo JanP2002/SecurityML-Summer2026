@@ -35,6 +35,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import random
 import sys
 import time
 from datetime import datetime
@@ -246,8 +247,12 @@ def main() -> None:
     log.info("  Log:    %s", LOG_FILE)
     log.info("=" * 60)
 
-    torch.manual_seed(RANDOM_SEED)
+    random.seed(RANDOM_SEED)
     np.random.seed(RANDOM_SEED)
+    torch.manual_seed(RANDOM_SEED)
+    torch.cuda.manual_seed_all(RANDOM_SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     PYTHIA_DIR = Path("pythia")
     check_pythia_available(PYTHIA_DIR)

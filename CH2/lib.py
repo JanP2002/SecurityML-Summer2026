@@ -628,6 +628,63 @@ def _get_activation(name: str) -> nn.Module:
         )
 
 
+class PixelMLP(nn.Module):
+    """Position-aware binary classifier that operates on raw flattened pixels.
+
+    Unlike ProfessorCNN (which uses spatial convolutions that are
+    translation-invariant), PixelMLP assigns an independent learnable weight
+    to *every pixel position*, which is exactly how Logistic Regression works.
+    This is critical for the Pythia dataset where the attack signal is
+    position-specific statistical camouflage rather than a spatial pattern.
+
+    Architecture::
+
+        Flatten → Linear(H*W, h0) → Act → Dropout
+                → Linear(h0, h1) → Act → Dropout
+                → ...
+                → Linear(hn, 1)  → Sigmoid
+
+    Parameters
+    ----------
+    input_size : int
+        Height (= width) of the square input image in pixels.
+    hidden : list[int]
+        Sizes of the hidden layers.  Defaults to ``[128]``.
+    activation : str
+        Activation name: ``"gelu"``, ``"swish"``, or ``"leaky_relu"``.
+    dropout : float
+        Dropout probability applied after every hidden layer.
+    """
+
+    def __init__(
+        self,
+        input_size: int = 70,
+        hidden: list[int] | None = None,
+        activation: str = "gelu",
+        dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        if hidden is None:
+            hidden = [128]
+        act = lambda: _get_activation(activation)  # noqa: E731
+        n_pixels = input_size * input_size
+        dims = [n_pixels] + hidden
+        layers: list[nn.Module] = [nn.Flatten()]
+        for i in range(len(hidden)):
+            layers.append(nn.Linear(dims[i], dims[i + 1]))
+            layers.append(act())
+            if dropout > 0.0:
+                layers.append(nn.Dropout(p=dropout))
+        # Output layer: connect last hidden → 1; if no hidden layers, directly from pixels.
+        last_in = hidden[-1] if hidden else n_pixels
+        layers.append(nn.Linear(last_in, 1))
+        layers.append(nn.Sigmoid())
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
+        return self.net(x)
+
+
 class ProfessorCNN(nn.Module):
     """Professor-suggested CNN binary classifier for the Pythia 70\u00d770 dataset.
 
@@ -692,6 +749,8 @@ class ProfessorCNN(nn.Module):
         dense_head: list[int] | None = None,
         pooling: str = "global_average",
         conv_channels: list[int] | None = None,
+        batch_norm: bool = True,
+        head_batch_norm: bool = False,
     ) -> None:
         super().__init__()
         if dense_head is None:
@@ -705,17 +764,18 @@ class ProfessorCNN(nn.Module):
             return _get_activation(activation)
 
         # --- 3 convolutional blocks: Conv \u2192 Activation \u2192 Dropout2d \u2192 MaxPool ---
-        self.conv_blocks = nn.Sequential(
-            # Block 1
-            nn.Conv2d(1,                conv_channels[0], kernel_size=kernel_size, padding="same"),
-            act(), nn.Dropout2d(p=dropout), nn.MaxPool2d(2, 2),
-            # Block 2
-            nn.Conv2d(conv_channels[0], conv_channels[1], kernel_size=kernel_size, padding="same"),
-            act(), nn.Dropout2d(p=dropout), nn.MaxPool2d(2, 2),
-            # Block 3
-            nn.Conv2d(conv_channels[1], conv_channels[2], kernel_size=kernel_size, padding="same"),
-            act(), nn.Dropout2d(p=dropout), nn.MaxPool2d(2, 2),
-        )
+        ch_list = [1] + list(conv_channels)
+        _conv_layers: list[nn.Module] = []
+        for _i in range(3):
+            _conv_layers.append(
+                nn.Conv2d(ch_list[_i], ch_list[_i + 1], kernel_size=kernel_size, padding="same")
+            )
+            if batch_norm:
+                _conv_layers.append(nn.BatchNorm2d(ch_list[_i + 1]))
+            _conv_layers.append(act())
+            _conv_layers.append(nn.Dropout2d(p=dropout))
+            _conv_layers.append(nn.MaxPool2d(2, 2))
+        self.conv_blocks = nn.Sequential(*_conv_layers)
 
         # --- Compute flat size for the dense head ----------------------
         if pooling == "global_average":
@@ -730,11 +790,16 @@ class ProfessorCNN(nn.Module):
             flat_size = conv_channels[2] * h * h
 
         # --- Dense head: 2 hidden layers + binary output ---------------
-        self.head = nn.Sequential(
-            nn.Linear(flat_size, dense_head[0]), act(), nn.Dropout(p=dropout),
-            nn.Linear(dense_head[0], dense_head[1]), act(), nn.Dropout(p=dropout),
-            nn.Linear(dense_head[1], 1),
-        )
+        d_list = [flat_size] + list(dense_head)
+        _head_layers: list[nn.Module] = []
+        for _j in range(len(dense_head)):
+            _head_layers.append(nn.Linear(d_list[_j], d_list[_j + 1]))
+            if head_batch_norm:
+                _head_layers.append(nn.BatchNorm1d(d_list[_j + 1]))
+            _head_layers.append(act())
+            _head_layers.append(nn.Dropout(p=dropout))
+        _head_layers.append(nn.Linear(dense_head[-1], 1))
+        self.head = nn.Sequential(*_head_layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
@@ -768,9 +833,12 @@ _PROFESSOR_SEARCH_JSON = Path(__file__).parent / "faza_professor_cnn_search.json
 _PROFESSOR_CNN_DEFAULT_CONFIG: dict = {
     "kernel_size": [5, 5],
     "activation": "gelu",
-    "dropout": 0.2,
-    "dense_head": [128, 64],
+    "dropout": 0.1,
+    "dense_head": [256, 64],
     "pooling": "global_average",
+    "batch_norm": True,
+    "head_batch_norm": False,   # no BN in head — preserves gradient flow for weak signal
+    "conv_channels": [32, 64, 128],
 }
 
 
@@ -817,15 +885,63 @@ def get_professor_cnn_best(input_size: int = 70) -> "ProfessorCNN":
         input_size=input_size,
         kernel_size=ks,
         activation=cfg.get("activation", "gelu"),
-        dropout=float(cfg.get("dropout", 0.2)),
-        dense_head=cfg.get("dense_head", [128, 64]),
+        dropout=float(cfg.get("dropout", 0.1)),
+        dense_head=cfg.get("dense_head", [256, 64]),
         pooling=cfg.get("pooling", "global_average"),
+        batch_norm=bool(cfg.get("batch_norm", True)),
+        head_batch_norm=bool(cfg.get("head_batch_norm", False)),
+        conv_channels=cfg.get("conv_channels", [32, 64, 128]),
     )
 
 
 # ===========================================================================
 # TRAINING  (matches notebook ch2_step1_v2.ipynb exactly)
 # ===========================================================================
+
+
+def compute_pos_weight(dataset) -> float:
+    """Compute *pos_weight* = n_negative / n_positive for weighted BCE training.
+
+    Returns the ratio of negative (clean, label=0) to positive (attack,
+    label=1) samples in *dataset*.  Pass the result to
+    :func:`train_model` as ``pos_weight=...`` to counteract class imbalance
+    without oversampling: attack-labelled examples receive a loss weight of
+    *pos_weight* while clean examples keep weight 1.0.
+
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+        The training (or combined train+val) dataset.  Handles
+        ``TensorDataset``, ``ConcatDataset``, and ``Subset`` efficiently;
+        falls back to iterating for other types.
+
+    Returns
+    -------
+    float
+        ``n_neg / n_pos``, or ``1.0`` if there are no positive samples.
+    """
+    from torch.utils.data import TensorDataset, ConcatDataset, Subset  # local import OK
+
+    def _extract(ds) -> np.ndarray:
+        if isinstance(ds, TensorDataset):
+            return ds.tensors[1].numpy()
+        if isinstance(ds, ConcatDataset):
+            return np.concatenate([_extract(d) for d in ds.datasets])
+        if isinstance(ds, Subset):
+            return _extract(ds.dataset)[list(ds.indices)]
+        return np.array([int(ds[i][1]) for i in range(len(ds))])
+
+    labels = _extract(dataset).astype(int)
+    n_pos = int((labels == 1).sum())
+    n_neg = int((labels == 0).sum())
+    if n_pos == 0:
+        return 1.0
+    w = n_neg / n_pos
+    print(
+        f"  Class counts — clean: {n_neg}, attack: {n_pos}  "
+        f"=> pos_weight = {w:.3f}  (attack loss upweighted {w:.1f}x)"
+    )
+    return float(w)
 
 
 def train_model(
@@ -836,12 +952,15 @@ def train_model(
     optimizer: torch.optim.Optimizer,
     num_epochs: int = 20,
     patience: int = 3,
+    pos_weight: float | None = None,
+    scheduler=None,
+    monitor_auc: bool = False,
 ) -> nn.Module:
-    """Train a binary classifier with early stopping on validation loss.
+    """Train a binary classifier with early stopping.
 
     Exactly matches the training loop from the reference notebook.
     Model is moved to GPU automatically if available.
-    Best weights (lowest val loss) are restored before returning.
+    Best weights are restored before returning.
 
     Parameters
     ----------
@@ -852,19 +971,33 @@ def train_model(
     criterion : nn.Module
         Loss function — ``nn.BCELoss()`` (model must output probabilities).
     optimizer : Optimizer
-        ``torch.optim.Adam``.
+        ``torch.optim.Adam`` or ``torch.optim.AdamW``.
     num_epochs : int
         Maximum training epochs.
     patience : int
-        Epochs without val-loss improvement before early stopping.
+        Epochs without improvement before early stopping.
+    pos_weight : float | None
+        When set, attack samples (label=1) are weighted by *pos_weight* in
+        the training loss while clean samples keep weight 1.0.  Compute
+        this from the training dataset via :func:`compute_pos_weight`.
+        Has no effect on validation loss (criterion is used unchanged).
+    scheduler : optional
+        A ``torch.optim.lr_scheduler`` instance.  When provided,
+        ``scheduler.step(val_metric)`` is called after each epoch.
+    monitor_auc : bool
+        When *True*, early stopping monitors **val AUC-ROC** (higher is
+        better) instead of val BCE loss.  This is useful for weak-signal
+        datasets where the model may keep improving its ranking ability
+        even after validation loss stops decreasing.
 
     Returns
     -------
     nn.Module
-        Model with best-val-loss weights restored.
+        Model with best-checkpoint weights restored.
     """
     best_model_wts = copy.deepcopy(model.state_dict())
     best_val_loss = float("inf")
+    best_val_auc  = 0.0
     epochs_no_improve = 0
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -883,7 +1016,17 @@ def train_model(
 
             optimizer.zero_grad()
             outputs = model(inputs)
-            loss = criterion(outputs, labels)
+
+            if pos_weight is not None:
+                sample_weights = torch.where(
+                    labels >= 0.5,
+                    torch.full_like(labels, pos_weight),
+                    torch.ones_like(labels),
+                )
+                loss = F.binary_cross_entropy(outputs, labels, weight=sample_weights)
+            else:
+                loss = criterion(outputs, labels)
+
             loss.backward()
             optimizer.step()
 
@@ -907,29 +1050,78 @@ def train_model(
 
         epoch_val_loss = val_loss / len(val_loader.dataset)
 
-        print(
-            f"Epoka {epoch + 1:02d}/{num_epochs:02d} | "
-            f"Strata (Train): {epoch_train_loss:.4f} | "
-            f"Strata (Val): {epoch_val_loss:.4f}"
-        )
+        # ------------------------------------------------------------------
+        # Optional: compute val AUC for AUC-based early stopping
+        # ------------------------------------------------------------------
+        epoch_val_auc = 0.0
+        if monitor_auc:
+            import numpy as _np
+            _scores, _ytrue = [], []
+            with torch.no_grad():
+                for _xi, _yi in val_loader:
+                    _scores.extend(model(_xi.to(device)).cpu().numpy().flatten())
+                    _ytrue.extend(_yi.numpy().flatten())
+            try:
+                epoch_val_auc = float(roc_auc_score(_ytrue, _scores))
+            except Exception:
+                epoch_val_auc = 0.0
+
+        sched_metric = epoch_val_auc if monitor_auc else epoch_val_loss
+        if scheduler is not None:
+            # ReduceLROnPlateau expects mode='max' for AUC, 'min' for loss;
+            # pass the metric directly — callers must configure mode correctly.
+            scheduler.step(sched_metric)
+
+        if monitor_auc:
+            print(
+                f"Epoka {epoch + 1:02d}/{num_epochs:02d} | "
+                f"Strata (Train): {epoch_train_loss:.4f} | "
+                f"Strata (Val): {epoch_val_loss:.4f} | "
+                f"AUC (Val): {epoch_val_auc:.4f}"
+            )
+        else:
+            print(
+                f"Epoka {epoch + 1:02d}/{num_epochs:02d} | "
+                f"Strata (Train): {epoch_train_loss:.4f} | "
+                f"Strata (Val): {epoch_val_loss:.4f}"
+            )
 
         # ------------------------------------------------------------------
         # Early stopping
         # ------------------------------------------------------------------
-        if epoch_val_loss < best_val_loss:
-            best_val_loss = epoch_val_loss
-            best_model_wts = copy.deepcopy(model.state_dict())
-            epochs_no_improve = 0
+        if monitor_auc:
+            improved = epoch_val_auc > best_val_auc
+            if improved:
+                best_val_auc = epoch_val_auc
+                best_val_loss = epoch_val_loss
+                best_model_wts = copy.deepcopy(model.state_dict())
+                epochs_no_improve = 0
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve >= patience:
+                    print(
+                        f" -> Early Stopping! Brak poprawy od {patience} epok. "
+                        "Przerywam trening."
+                    )
+                    break
         else:
-            epochs_no_improve += 1
-            if epochs_no_improve >= patience:
-                print(
-                    f" -> Early Stopping! Brak poprawy od {patience} epok. "
-                    "Przerywam trening."
-                )
-                break
+            if epoch_val_loss < best_val_loss:
+                best_val_loss = epoch_val_loss
+                best_model_wts = copy.deepcopy(model.state_dict())
+                epochs_no_improve = 0
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve >= patience:
+                    print(
+                        f" -> Early Stopping! Brak poprawy od {patience} epok. "
+                        "Przerywam trening."
+                    )
+                    break
 
-    print(f"Najlepsza strata walidacyjna (Val Loss): {best_val_loss:.4f}")
+    if monitor_auc:
+        print(f"Najlepszy AUC walidacyjny (Val AUC): {best_val_auc:.4f}")
+    else:
+        print(f"Najlepsza strata walidacyjna (Val Loss): {best_val_loss:.4f}")
     model.load_state_dict(best_model_wts)
     return model
 

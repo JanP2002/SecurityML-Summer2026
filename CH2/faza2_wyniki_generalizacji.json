@@ -1,5 +1,5 @@
 {
-    "timestamp": "2026-05-14 08:22:23",
+    "timestamp": "2026-06-01 20:17:22",
     "experiment": "Step 2 — Generalisation via Multi-Attack Training",
     "MNIST_progressive_results": [
         {
@@ -8,11 +8,11 @@
                 "A1_gaussian"
             ],
             "test_attack": "A2_salt_pepper",
-            "Accuracy": 0.99935,
+            "Accuracy": 1.0,
             "Precision": 1.0,
-            "Recall": 0.9987,
-            "F1_Score": 0.9993495772251964,
-            "AUC_ROC": 0.9999999999999999
+            "Recall": 1.0,
+            "F1_Score": 1.0,
+            "AUC_ROC": 1.0
         },
         {
             "n_training_attacks": 2,
@@ -21,11 +21,11 @@
                 "A2_salt_pepper"
             ],
             "test_attack": "A3_geometric",
-            "Accuracy": 0.5058,
+            "Accuracy": 0.5011,
             "Precision": 1.0,
-            "Recall": 0.0116,
-            "F1_Score": 0.022933965994464216,
-            "AUC_ROC": 0.815169405
+            "Recall": 0.0022,
+            "F1_Score": 0.004390341249251646,
+            "AUC_ROC": 0.90753654
         },
         {
             "n_training_attacks": 3,
@@ -35,10 +35,10 @@
                 "A3_geometric"
             ],
             "test_attack": "A4_blended",
-            "Accuracy": 0.997,
-            "Precision": 0.9940357852882704,
+            "Accuracy": 0.99675,
+            "Precision": 0.9935419771485345,
             "Recall": 1.0,
-            "F1_Score": 0.9970089730807578,
+            "F1_Score": 0.99676052828308,
             "AUC_ROC": 1.0
         },
         {
@@ -50,11 +50,11 @@
                 "A4_blended"
             ],
             "test_attack": "A5_backdoor",
-            "Accuracy": 0.51365,
-            "Precision": 0.8719346049046321,
-            "Recall": 0.032,
-            "F1_Score": 0.06173434937783351,
-            "AUC_ROC": 0.799588515
+            "Accuracy": 0.55495,
+            "Precision": 0.9085501858736059,
+            "Recall": 0.1222,
+            "F1_Score": 0.2154252974878801,
+            "AUC_ROC": 0.8340400699999999
         },
         {
             "n_training_attacks": 5,
@@ -66,11 +66,11 @@
                 "A5_backdoor"
             ],
             "test_attack": "A6_ood",
-            "Accuracy": 0.99575,
-            "Precision": 0.991571641051066,
-            "Recall": 1.0,
-            "F1_Score": 0.9957679860592482,
-            "AUC_ROC": 0.9999986700000001
+            "Accuracy": 0.9971,
+            "Precision": 0.9943317422434368,
+            "Recall": 0.9999,
+            "F1_Score": 0.9971080973274831,
+            "AUC_ROC": 0.9999974500000001
         }
     ],
     "Pythia_progressive_results": [
@@ -84,7 +84,7 @@
             "Precision": 0.5,
             "Recall": 1.0,
             "F1_Score": 0.6666666666666666,
-            "AUC_ROC": 0.45595
+            "AUC_ROC": 0.4702
         },
         {
             "n_training_attacks": 2,
@@ -94,10 +94,10 @@
             ],
             "test_attack": "attack_c",
             "Accuracy": 0.5,
-            "Precision": 0.0,
-            "Recall": 0.0,
-            "F1_Score": 0.0,
-            "AUC_ROC": 0.5168625
+            "Precision": 0.5,
+            "Recall": 1.0,
+            "F1_Score": 0.6666666666666666,
+            "AUC_ROC": 0.4857375
         },
         {
             "n_training_attacks": 3,
@@ -111,7 +111,7 @@
             "Precision": 0.5,
             "Recall": 1.0,
             "F1_Score": 0.6666666666666666,
-            "AUC_ROC": 0.5086375
+            "AUC_ROC": 0.4754625
         },
         {
             "n_training_attacks": 4,
@@ -126,7 +126,7 @@
             "Precision": 0.5,
             "Recall": 1.0,
             "F1_Score": 0.6666666666666666,
-            "AUC_ROC": 0.5096375
+            "AUC_ROC": 0.5111375
         },
         {
             "n_training_attacks": 5,
@@ -139,10 +139,10 @@
             ],
             "test_attack": "attack_f",
             "Accuracy": 0.5,
-            "Precision": 0.0,
-            "Recall": 0.0,
-            "F1_Score": 0.0,
-            "AUC_ROC": 0.4534375
+            "Precision": 0.5,
+            "Recall": 1.0,
+            "F1_Score": 0.6666666666666666,
+            "AUC_ROC": 0.505875
         },
         {
             "n_training_attacks": 6,
@@ -156,10 +156,10 @@
             ],
             "test_attack": "attack_g",
             "Accuracy": 0.5,
-            "Precision": 0.5,
-            "Recall": 1.0,
-            "F1_Score": 0.6666666666666666,
-            "AUC_ROC": 0.5241375
+            "Precision": 0.0,
+            "Recall": 0.0,
+            "F1_Score": 0.0,
+            "AUC_ROC": 0.458175
         },
         {
             "n_training_attacks": 7,
@@ -174,10 +174,10 @@
             ],
             "test_attack": "attack_h",
             "Accuracy": 0.5,
-            "Precision": 0.0,
-            "Recall": 0.0,
-            "F1_Score": 0.0,
-            "AUC_ROC": 0.5332875
+            "Precision": 0.5,
+            "Recall": 1.0,
+            "F1_Score": 0.6666666666666666,
+            "AUC_ROC": 0.5284875
         }
     ],
     "MNIST_order_sensitivity": {
@@ -188,11 +188,11 @@
                     "A1_gaussian"
                 ],
                 "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.99895,
+                "Accuracy": 0.99825,
                 "Precision": 1.0,
-                "Recall": 0.9979,
-                "F1_Score": 0.9989488963411582,
-                "AUC_ROC": 0.9999999999999999
+                "Recall": 0.9965,
+                "F1_Score": 0.9982469321312296,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 2,
@@ -201,11 +201,11 @@
                     "A2_salt_pepper"
                 ],
                 "test_attack": "A3_geometric",
-                "Accuracy": 0.50155,
+                "Accuracy": 0.50325,
                 "Precision": 1.0,
-                "Recall": 0.0031,
-                "F1_Score": 0.006180839397866613,
-                "AUC_ROC": 0.8505790950000001
+                "Recall": 0.0065,
+                "F1_Score": 0.012916045702930949,
+                "AUC_ROC": 0.8373356650000001
             },
             {
                 "n_training_attacks": 3,
@@ -215,10 +215,10 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A4_blended",
-                "Accuracy": 0.99715,
-                "Precision": 0.9943323058566172,
+                "Accuracy": 0.99565,
+                "Precision": 0.991375037176564,
                 "Recall": 1.0,
-                "F1_Score": 0.9971580994166626,
+                "F1_Score": 0.9956688405436351,
                 "AUC_ROC": 1.0
             },
             {
@@ -230,11 +230,11 @@
                     "A4_blended"
                 ],
                 "test_attack": "A5_backdoor",
-                "Accuracy": 0.54835,
-                "Precision": 0.9464450600184672,
-                "Recall": 0.1025,
-                "F1_Score": 0.18496796896147252,
-                "AUC_ROC": 0.91865681
+                "Accuracy": 0.52815,
+                "Precision": 0.863225806451613,
+                "Recall": 0.0669,
+                "F1_Score": 0.12417633410672854,
+                "AUC_ROC": 0.7960359850000001
             },
             {
                 "n_training_attacks": 5,
@@ -246,11 +246,11 @@
                     "A5_backdoor"
                 ],
                 "test_attack": "A6_ood",
-                "Accuracy": 0.99605,
-                "Precision": 0.9923573200992556,
-                "Recall": 0.9998,
-                "F1_Score": 0.9960647571606476,
-                "AUC_ROC": 0.99999569
+                "Accuracy": 0.9973,
+                "Precision": 0.9947274174293673,
+                "Recall": 0.9999,
+                "F1_Score": 0.9973070017953322,
+                "AUC_ROC": 0.9999933199999999
             }
         ],
         "reversed": [
@@ -260,11 +260,11 @@
                     "A6_ood"
                 ],
                 "test_attack": "A5_backdoor",
-                "Accuracy": 0.5009,
-                "Precision": 0.95,
-                "Recall": 0.0019,
-                "F1_Score": 0.0037924151696606787,
-                "AUC_ROC": 0.806105975
+                "Accuracy": 0.50035,
+                "Precision": 0.8888888888888888,
+                "Recall": 0.0008,
+                "F1_Score": 0.0015985612948346487,
+                "AUC_ROC": 0.730903995
             },
             {
                 "n_training_attacks": 2,
@@ -273,10 +273,10 @@
                     "A5_backdoor"
                 ],
                 "test_attack": "A4_blended",
-                "Accuracy": 0.99995,
-                "Precision": 0.9999000099990001,
+                "Accuracy": 1.0,
+                "Precision": 1.0,
                 "Recall": 1.0,
-                "F1_Score": 0.999950002499875,
+                "F1_Score": 1.0,
                 "AUC_ROC": 1.0
             },
             {
@@ -287,11 +287,11 @@
                     "A4_blended"
                 ],
                 "test_attack": "A3_geometric",
-                "Accuracy": 0.67205,
-                "Precision": 0.9997095556200988,
-                "Recall": 0.3442,
-                "F1_Score": 0.5120880755783679,
-                "AUC_ROC": 0.95934651
+                "Accuracy": 0.67545,
+                "Precision": 1.0,
+                "Recall": 0.3509,
+                "F1_Score": 0.5195055148419572,
+                "AUC_ROC": 0.965347725
             },
             {
                 "n_training_attacks": 4,
@@ -302,11 +302,11 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.7557,
-                "Precision": 0.9853834472285498,
-                "Recall": 0.5191,
-                "F1_Score": 0.6799842808488341,
-                "AUC_ROC": 0.93471965
+                "Accuracy": 0.96575,
+                "Precision": 0.995531439514842,
+                "Recall": 0.9357,
+                "F1_Score": 0.9646889014897675,
+                "AUC_ROC": 0.9969579900000002
             },
             {
                 "n_training_attacks": 5,
@@ -318,10 +318,10 @@
                     "A2_salt_pepper"
                 ],
                 "test_attack": "A1_gaussian",
-                "Accuracy": 0.9944,
-                "Precision": 0.9889240506329114,
+                "Accuracy": 0.9961,
+                "Precision": 0.9922603691208574,
                 "Recall": 1.0,
-                "F1_Score": 0.994431185361973,
+                "F1_Score": 0.9961151509114453,
                 "AUC_ROC": 1.0
             }
         ],
@@ -332,11 +332,11 @@
                     "A4_blended"
                 ],
                 "test_attack": "A3_geometric",
-                "Accuracy": 0.5067,
+                "Accuracy": 0.50455,
                 "Precision": 1.0,
-                "Recall": 0.0134,
-                "F1_Score": 0.0264456285770673,
-                "AUC_ROC": 0.9365032999999999
+                "Recall": 0.0091,
+                "F1_Score": 0.01803587355068873,
+                "AUC_ROC": 0.914049645
             },
             {
                 "n_training_attacks": 2,
@@ -345,11 +345,11 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A6_ood",
-                "Accuracy": 0.9951,
-                "Precision": 0.9904893996433525,
-                "Recall": 0.9998,
-                "F1_Score": 0.9951229222653528,
-                "AUC_ROC": 0.99998907
+                "Accuracy": 0.99645,
+                "Precision": 0.9933419457418265,
+                "Recall": 0.9996,
+                "F1_Score": 0.9964611473857349,
+                "AUC_ROC": 0.99998742
             },
             {
                 "n_training_attacks": 3,
@@ -359,11 +359,11 @@
                     "A6_ood"
                 ],
                 "test_attack": "A5_backdoor",
-                "Accuracy": 0.51825,
-                "Precision": 0.8516377649325626,
-                "Recall": 0.0442,
-                "F1_Score": 0.08403840669265139,
-                "AUC_ROC": 0.7599482849999999
+                "Accuracy": 0.52555,
+                "Precision": 0.8888888888888888,
+                "Recall": 0.0584,
+                "F1_Score": 0.10959932438772638,
+                "AUC_ROC": 0.81375931
             },
             {
                 "n_training_attacks": 4,
@@ -374,10 +374,10 @@
                     "A5_backdoor"
                 ],
                 "test_attack": "A1_gaussian",
-                "Accuracy": 0.9968,
-                "Precision": 0.9936406995230525,
+                "Accuracy": 0.99785,
+                "Precision": 0.9957184108334163,
                 "Recall": 1.0,
-                "F1_Score": 0.9968102073365231,
+                "F1_Score": 0.9978546125829466,
                 "AUC_ROC": 1.0
             },
             {
@@ -390,11 +390,11 @@
                     "A1_gaussian"
                 ],
                 "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.9939,
-                "Precision": 0.989009900990099,
-                "Recall": 0.9989,
-                "F1_Score": 0.9939303482587065,
-                "AUC_ROC": 0.99995168
+                "Accuracy": 0.9957,
+                "Precision": 0.9956008798240352,
+                "Recall": 0.9958,
+                "F1_Score": 0.9957004299570043,
+                "AUC_ROC": 0.999867035
             }
         ],
         "perm_seed1": [
@@ -408,7 +408,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.9828477
+                "AUC_ROC": 0.9148054250000001
             },
             {
                 "n_training_attacks": 2,
@@ -417,11 +417,11 @@
                     "A1_gaussian"
                 ],
                 "test_attack": "A3_geometric",
-                "Accuracy": 0.53605,
+                "Accuracy": 0.545,
                 "Precision": 1.0,
-                "Recall": 0.0721,
-                "F1_Score": 0.1345023785094674,
-                "AUC_ROC": 0.890229385
+                "Recall": 0.09,
+                "F1_Score": 0.1651376146788991,
+                "AUC_ROC": 0.89068234
             },
             {
                 "n_training_attacks": 3,
@@ -431,11 +431,11 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.99545,
-                "Precision": 0.9909820632246557,
+                "Accuracy": 0.99425,
+                "Precision": 0.9886307464162135,
                 "Recall": 1.0,
-                "F1_Score": 0.9954706087302773,
-                "AUC_ROC": 1.0
+                "F1_Score": 0.9942828734775043,
+                "AUC_ROC": 0.9999960400000001
             },
             {
                 "n_training_attacks": 4,
@@ -446,11 +446,11 @@
                     "A2_salt_pepper"
                 ],
                 "test_attack": "A6_ood",
-                "Accuracy": 0.9971,
-                "Precision": 0.9943317422434368,
+                "Accuracy": 0.9974,
+                "Precision": 0.9949253731343284,
                 "Recall": 0.9999,
-                "F1_Score": 0.9971080973274831,
-                "AUC_ROC": 0.9999969200000002
+                "F1_Score": 0.9974064837905237,
+                "AUC_ROC": 0.99999663
             },
             {
                 "n_training_attacks": 5,
@@ -462,10 +462,10 @@
                     "A6_ood"
                 ],
                 "test_attack": "A4_blended",
-                "Accuracy": 0.9977,
-                "Precision": 0.9954210631096954,
+                "Accuracy": 0.99455,
+                "Precision": 0.9892175289346127,
                 "Recall": 1.0,
-                "F1_Score": 0.9977052778609199,
+                "F1_Score": 0.9945795414988313,
                 "AUC_ROC": 1.0
             }
         ],
@@ -476,11 +476,11 @@
                     "A4_blended"
                 ],
                 "test_attack": "A6_ood",
-                "Accuracy": 0.70875,
+                "Accuracy": 0.6997,
                 "Precision": 1.0,
-                "Recall": 0.4175,
-                "F1_Score": 0.5890652557319224,
-                "AUC_ROC": 0.9732389199999999
+                "Recall": 0.3994,
+                "F1_Score": 0.5708160640274403,
+                "AUC_ROC": 0.9827464399999999
             },
             {
                 "n_training_attacks": 2,
@@ -489,11 +489,11 @@
                     "A6_ood"
                 ],
                 "test_attack": "A3_geometric",
-                "Accuracy": 0.65175,
+                "Accuracy": 0.66,
                 "Precision": 1.0,
-                "Recall": 0.3035,
-                "F1_Score": 0.4656693517453011,
-                "AUC_ROC": 0.9672787800000001
+                "Recall": 0.32,
+                "F1_Score": 0.48484848484848486,
+                "AUC_ROC": 0.97912399
             },
             {
                 "n_training_attacks": 3,
@@ -503,11 +503,11 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A5_backdoor",
-                "Accuracy": 0.52755,
-                "Precision": 0.8678237650200267,
-                "Recall": 0.065,
-                "F1_Score": 0.12094148292864453,
-                "AUC_ROC": 0.77861751
+                "Accuracy": 0.515,
+                "Precision": 0.7976190476190477,
+                "Recall": 0.0402,
+                "F1_Score": 0.07654226961157654,
+                "AUC_ROC": 0.72126236
             },
             {
                 "n_training_attacks": 4,
@@ -518,10 +518,10 @@
                     "A5_backdoor"
                 ],
                 "test_attack": "A1_gaussian",
-                "Accuracy": 0.99795,
-                "Precision": 0.9959167413604223,
+                "Accuracy": 0.99755,
+                "Precision": 0.9951238929246691,
                 "Recall": 1.0,
-                "F1_Score": 0.9979541939024998,
+                "F1_Score": 0.9975559878298169,
                 "AUC_ROC": 1.0
             },
             {
@@ -534,11 +534,11 @@
                     "A1_gaussian"
                 ],
                 "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.92685,
-                "Precision": 0.9937536148062464,
-                "Recall": 0.8591,
-                "F1_Score": 0.9215339233038348,
-                "AUC_ROC": 0.9919178349999999
+                "Accuracy": 0.9928,
+                "Precision": 0.9922093487814623,
+                "Recall": 0.9934,
+                "F1_Score": 0.9928043174095542,
+                "AUC_ROC": 0.9997049899999999
             }
         ],
         "perm_seed3": [
@@ -548,11 +548,11 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A6_ood",
-                "Accuracy": 0.9898,
-                "Precision": 0.9800078400627205,
+                "Accuracy": 0.99155,
+                "Precision": 0.983380863408398,
                 "Recall": 1.0,
-                "F1_Score": 0.9899029895070283,
-                "AUC_ROC": 0.9999778199999999
+                "F1_Score": 0.9916208042044722,
+                "AUC_ROC": 0.9999900599999999
             },
             {
                 "n_training_attacks": 2,
@@ -561,11 +561,11 @@
                     "A6_ood"
                 ],
                 "test_attack": "A5_backdoor",
-                "Accuracy": 0.51995,
-                "Precision": 0.8757062146892656,
-                "Recall": 0.0465,
-                "F1_Score": 0.08831070173772672,
-                "AUC_ROC": 0.7692004750000001
+                "Accuracy": 0.5694,
+                "Precision": 0.9145758661887694,
+                "Recall": 0.1531,
+                "F1_Score": 0.2622922734281309,
+                "AUC_ROC": 0.844712925
             },
             {
                 "n_training_attacks": 3,
@@ -575,11 +575,11 @@
                     "A5_backdoor"
                 ],
                 "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.9317,
-                "Precision": 0.9881275440976933,
-                "Recall": 0.8739,
-                "F1_Score": 0.9275100827849714,
-                "AUC_ROC": 0.9913976900000001
+                "Accuracy": 0.9895,
+                "Precision": 0.9942447495961227,
+                "Recall": 0.9847,
+                "F1_Score": 0.9894493569131833,
+                "AUC_ROC": 0.9995046999999999
             },
             {
                 "n_training_attacks": 4,
@@ -590,10 +590,10 @@
                     "A2_salt_pepper"
                 ],
                 "test_attack": "A4_blended",
-                "Accuracy": 0.99575,
-                "Precision": 0.991571641051066,
+                "Accuracy": 0.9973,
+                "Precision": 0.9946290033817387,
                 "Recall": 1.0,
-                "F1_Score": 0.9957679860592482,
+                "F1_Score": 0.997307270370001,
                 "AUC_ROC": 1.0
             },
             {
@@ -606,10 +606,10 @@
                     "A4_blended"
                 ],
                 "test_attack": "A1_gaussian",
-                "Accuracy": 0.9954,
-                "Precision": 0.9908838684106223,
+                "Accuracy": 0.99805,
+                "Precision": 0.9961151509114453,
                 "Recall": 1.0,
-                "F1_Score": 0.9954210631096954,
+                "F1_Score": 0.9980537950995558,
                 "AUC_ROC": 1.0
             }
         ],
@@ -620,11 +620,11 @@
                     "A2_salt_pepper"
                 ],
                 "test_attack": "A3_geometric",
-                "Accuracy": 0.5011,
+                "Accuracy": 0.50045,
                 "Precision": 1.0,
-                "Recall": 0.0022,
-                "F1_Score": 0.004390341249251646,
-                "AUC_ROC": 0.79675659
+                "Recall": 0.0009,
+                "F1_Score": 0.00179838145668898,
+                "AUC_ROC": 0.72422903
             },
             {
                 "n_training_attacks": 2,
@@ -633,10 +633,10 @@
                     "A3_geometric"
                 ],
                 "test_attack": "A1_gaussian",
-                "Accuracy": 0.99695,
-                "Precision": 0.9939369843951893,
+                "Accuracy": 0.99815,
+                "Precision": 0.9963136395337252,
                 "Recall": 1.0,
-                "F1_Score": 0.9969592742136484,
+                "F1_Score": 0.9981534161800669,
                 "AUC_ROC": 1.0
             },
             {
@@ -647,1481 +647,41 @@
                     "A1_gaussian"
                 ],
                 "test_attack": "A6_ood",
-                "Accuracy": 0.99525,
-                "Precision": 0.9905894006934126,
-                "Recall": 1.0,
-                "F1_Score": 0.9952724558347847,
-                "AUC_ROC": 0.9999931099999999
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A3_geometric",
-                    "A1_gaussian",
-                    "A6_ood"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.53145,
-                "Precision": 0.9111111111111111,
-                "Recall": 0.0697,
-                "F1_Score": 0.12949372967951694,
-                "AUC_ROC": 0.84901213
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A3_geometric",
-                    "A1_gaussian",
-                    "A6_ood",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.99575,
-                "Precision": 0.991571641051066,
-                "Recall": 1.0,
-                "F1_Score": 0.9957679860592482,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed5": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.47761094
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.53215,
-                "Precision": 1.0,
-                "Recall": 0.0643,
-                "F1_Score": 0.12083059287794795,
-                "AUC_ROC": 0.92295945
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A3_geometric"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.996,
-                "Precision": 0.9920634920634921,
-                "Recall": 1.0,
-                "F1_Score": 0.9960159362549801,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A3_geometric",
-                    "A4_blended"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9969,
-                "Precision": 0.9939363817097415,
+                "Accuracy": 0.9983,
+                "Precision": 0.9967105263157895,
                 "Recall": 0.9999,
-                "F1_Score": 0.9969092721834496,
-                "AUC_ROC": 0.99999729
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A3_geometric",
-                    "A4_blended",
-                    "A6_ood"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.99625,
-                "Precision": 0.9925558312655087,
-                "Recall": 1.0,
-                "F1_Score": 0.9962640099626401,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed6": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A3_geometric"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.995,
-                "Precision": 0.9900990099009901,
-                "Recall": 1.0,
-                "F1_Score": 0.9950248756218906,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A3_geometric",
-                    "A4_blended"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.99325,
-                "Precision": 0.986679822397632,
-                "Recall": 1.0,
-                "F1_Score": 0.9932952570151478,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A3_geometric",
-                    "A4_blended",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.99705,
-                "Precision": 0.9942328726260317,
-                "Recall": 0.9999,
-                "F1_Score": 0.9970583836067208,
-                "AUC_ROC": 0.99999714
+                "F1_Score": 0.9983027156549521,
+                "AUC_ROC": 0.9999903349999999
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
+                    "A2_salt_pepper",
                     "A3_geometric",
-                    "A4_blended",
                     "A1_gaussian",
                     "A6_ood"
                 ],
                 "test_attack": "A5_backdoor",
-                "Accuracy": 0.52965,
-                "Precision": 0.9146853146853147,
-                "Recall": 0.0654,
-                "F1_Score": 0.12207186187587495,
-                "AUC_ROC": 0.7639852199999999
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A3_geometric",
-                    "A4_blended",
-                    "A1_gaussian",
-                    "A6_ood",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.87135,
-                "Precision": 0.9832140533506831,
-                "Recall": 0.7556,
-                "F1_Score": 0.8545094713033644,
-                "AUC_ROC": 0.978516175
-            }
-        ],
-        "perm_seed7": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.66675,
-                "Precision": 0.9997003296373989,
-                "Recall": 0.3336,
-                "F1_Score": 0.5002624278323461,
-                "AUC_ROC": 0.9705644649999998
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9954,
-                "Precision": 0.9908838684106223,
-                "Recall": 1.0,
-                "F1_Score": 0.9954210631096954,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5125,
-                "Precision": 0.8004807692307693,
-                "Recall": 0.0333,
-                "F1_Score": 0.06394009216589862,
-                "AUC_ROC": 0.748810035
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A1_gaussian",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.997,
-                "Precision": 0.9948227797690163,
-                "Recall": 0.9992,
-                "F1_Score": 0.9970065855118739,
-                "AUC_ROC": 0.9999500100000001
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A1_gaussian",
-                    "A5_backdoor",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9971,
-                "Precision": 0.9942334460131239,
-                "Recall": 1.0,
-                "F1_Score": 0.9971083856815236,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed8": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A1_gaussian"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.73965,
-                "Precision": 1.0,
-                "Recall": 0.4793,
-                "F1_Score": 0.648009193537484,
-                "AUC_ROC": 0.9999999999999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.7356,
-                "Precision": 1.0,
-                "Recall": 0.4712,
-                "F1_Score": 0.6405655247417075,
-                "AUC_ROC": 0.9974418500000001
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A6_ood"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.99885,
-                "Precision": 0.9997996192766256,
-                "Recall": 0.9979,
-                "F1_Score": 0.9988489064611381,
-                "AUC_ROC": 0.9999975
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A6_ood",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.6486,
-                "Precision": 1.0,
-                "Recall": 0.2972,
-                "F1_Score": 0.4582176996608079,
-                "AUC_ROC": 0.9619417849999998
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A6_ood",
-                    "A2_salt_pepper",
-                    "A3_geometric"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5231,
-                "Precision": 0.8982758620689655,
-                "Recall": 0.0521,
-                "F1_Score": 0.09848771266540643,
-                "AUC_ROC": 0.8178100500000001
-            }
-        ],
-        "perm_seed9": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A4_blended"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.7335,
-                "Precision": 1.0,
-                "Recall": 0.467,
-                "F1_Score": 0.6366734832992502,
-                "AUC_ROC": 0.9703027850000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A4_blended",
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.6351,
-                "Precision": 1.0,
-                "Recall": 0.2702,
-                "F1_Score": 0.425444811840655,
-                "AUC_ROC": 0.969060285
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A4_blended",
-                    "A6_ood",
-                    "A3_geometric"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.51615,
-                "Precision": 0.7770154373927959,
-                "Recall": 0.0453,
-                "F1_Score": 0.08560899555891524,
-                "AUC_ROC": 0.75084098
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A4_blended",
-                    "A6_ood",
-                    "A3_geometric",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9978,
-                "Precision": 0.9956192751891677,
-                "Recall": 1.0,
-                "F1_Score": 0.9978048293753742,
-                "AUC_ROC": 0.99999951
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A4_blended",
-                    "A6_ood",
-                    "A3_geometric",
-                    "A5_backdoor",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.99225,
-                "Precision": 0.9849275933405576,
-                "Recall": 0.9998,
-                "F1_Score": 0.9923080740409905,
-                "AUC_ROC": 0.9999882
-            }
-        ],
-        "perm_seed10": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A4_blended"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.34024431
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A4_blended",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.5018,
-                "Precision": 1.0,
-                "Recall": 0.0036,
-                "F1_Score": 0.007174172977281785,
-                "AUC_ROC": 0.95640996
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A4_blended",
-                    "A5_backdoor",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.57025,
-                "Precision": 1.0,
-                "Recall": 0.1405,
-                "F1_Score": 0.24638316527838666,
-                "AUC_ROC": 0.9051389999999999
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A4_blended",
-                    "A5_backdoor",
-                    "A2_salt_pepper",
-                    "A3_geometric"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9969,
-                "Precision": 0.9938382031405287,
-                "Recall": 1.0,
-                "F1_Score": 0.9969095803010667,
-                "AUC_ROC": 0.99999797
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A4_blended",
-                    "A5_backdoor",
-                    "A2_salt_pepper",
-                    "A3_geometric",
-                    "A6_ood"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.99755,
-                "Precision": 0.9951238929246691,
-                "Recall": 1.0,
-                "F1_Score": 0.9975559878298169,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed11": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A4_blended"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 1.6249999999999995e-05
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A4_blended",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.55738497
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A4_blended",
-                    "A2_salt_pepper",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.82545,
-                "Precision": 1.0,
-                "Recall": 0.6509,
-                "F1_Score": 0.7885395844690775,
-                "AUC_ROC": 0.99965423
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A4_blended",
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.67905,
-                "Precision": 0.999442119944212,
-                "Recall": 0.3583,
-                "F1_Score": 0.5274935590725064,
-                "AUC_ROC": 0.959052715
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A4_blended",
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A6_ood",
-                    "A3_geometric"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9966,
-                "Precision": 0.9932459276916965,
-                "Recall": 1.0,
-                "F1_Score": 0.9966115208291808,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed12": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.9976604800000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A4_blended"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.5335,
-                "Precision": 1.0,
-                "Recall": 0.067,
-                "F1_Score": 0.12558575445173384,
-                "AUC_ROC": 0.91955397
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A4_blended",
-                    "A3_geometric"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9955,
-                "Precision": 0.9910802775024777,
-                "Recall": 1.0,
-                "F1_Score": 0.9955201592832255,
-                "AUC_ROC": 0.99998666
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A4_blended",
-                    "A3_geometric",
-                    "A6_ood"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5471,
-                "Precision": 0.9197860962566845,
-                "Recall": 0.1032,
-                "F1_Score": 0.18557813342923934,
-                "AUC_ROC": 0.858917955
+                "Accuracy": 0.53405,
+                "Precision": 0.9147381242387332,
+                "Recall": 0.0751,
+                "F1_Score": 0.138804177063118,
+                "AUC_ROC": 0.8507972950000002
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
                     "A2_salt_pepper",
-                    "A4_blended",
                     "A3_geometric",
+                    "A1_gaussian",
                     "A6_ood",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9969,
-                "Precision": 0.9938382031405287,
-                "Recall": 1.0,
-                "F1_Score": 0.9969095803010667,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed13": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A1_gaussian"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.5168,
-                "Precision": 1.0,
-                "Recall": 0.0336,
-                "F1_Score": 0.06501547987616099,
-                "AUC_ROC": 0.877269055
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9945,
-                "Precision": 0.9894101346001584,
-                "Recall": 0.9997,
-                "F1_Score": 0.9945284520493434,
-                "AUC_ROC": 0.99998301
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric",
-                    "A6_ood"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9966,
-                "Precision": 0.9932459276916965,
-                "Recall": 1.0,
-                "F1_Score": 0.9966115208291808,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric",
-                    "A6_ood",
-                    "A4_blended"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.8836,
-                "Precision": 0.9849557522123894,
-                "Recall": 0.7791,
-                "F1_Score": 0.8700167504187605,
-                "AUC_ROC": 0.9758756450000001
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric",
-                    "A6_ood",
-                    "A4_blended",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5229,
-                "Precision": 0.9272388059701493,
-                "Recall": 0.0497,
-                "F1_Score": 0.09434320425208807,
-                "AUC_ROC": 0.81933882
-            }
-        ],
-        "perm_seed14": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A5_backdoor"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.8321526199999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9991,
-                "Precision": 1.0,
-                "Recall": 0.9982,
-                "F1_Score": 0.9990991892703434,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A1_gaussian",
-                    "A4_blended"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.89825,
-                "Precision": 1.0,
-                "Recall": 0.7965,
-                "F1_Score": 0.8867241859170609,
-                "AUC_ROC": 0.9999885300000001
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.55945,
-                "Precision": 1.0,
-                "Recall": 0.1189,
-                "F1_Score": 0.21253016355349003,
-                "AUC_ROC": 0.9017333700000002
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A2_salt_pepper",
-                    "A3_geometric"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.99555,
-                "Precision": 0.9911785112498761,
-                "Recall": 1.0,
-                "F1_Score": 0.9955697147692767,
-                "AUC_ROC": 0.9999979200000001
-            }
-        ],
-        "perm_seed15": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A4_blended"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.50225,
-                "Precision": 1.0,
-                "Recall": 0.0045,
-                "F1_Score": 0.008959681433549029,
-                "AUC_ROC": 0.8573384199999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A4_blended",
-                    "A3_geometric"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5394,
-                "Precision": 0.8738140417457305,
-                "Recall": 0.0921,
-                "F1_Score": 0.16663651166998372,
-                "AUC_ROC": 0.767449305
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A4_blended",
-                    "A3_geometric",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9978,
-                "Precision": 0.9956192751891677,
-                "Recall": 1.0,
-                "F1_Score": 0.9978048293753742,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A4_blended",
-                    "A3_geometric",
-                    "A5_backdoor",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.99415,
-                "Precision": 0.9884353069091628,
-                "Recall": 1.0,
-                "F1_Score": 0.9941840234627429,
-                "AUC_ROC": 0.9999913100000001
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A4_blended",
-                    "A3_geometric",
-                    "A5_backdoor",
-                    "A1_gaussian",
-                    "A6_ood"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.9968,
-                "Precision": 0.9940334128878282,
-                "Recall": 0.9996,
-                "F1_Score": 0.9968089349820503,
-                "AUC_ROC": 0.9999802200000001
-            }
-        ],
-        "perm_seed16": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A1_gaussian"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.57505,
-                "Precision": 1.0,
-                "Recall": 0.1501,
-                "F1_Score": 0.2610207808016694,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.8351,
-                "Precision": 1.0,
-                "Recall": 0.6702,
-                "F1_Score": 0.8025386181295653,
-                "AUC_ROC": 0.99992079
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.61120247
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A2_salt_pepper",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.8189,
-                "Precision": 1.0,
-                "Recall": 0.6378,
-                "F1_Score": 0.7788496763951642,
-                "AUC_ROC": 0.998692865
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A4_blended",
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.66225,
-                "Precision": 1.0,
-                "Recall": 0.3245,
-                "F1_Score": 0.4899962249905625,
-                "AUC_ROC": 0.9604956250000001
-            }
-        ],
-        "perm_seed17": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 1.0,
-                "Precision": 1.0,
-                "Recall": 1.0,
-                "F1_Score": 1.0,
-                "AUC_ROC": 0.9999999999999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.681170265
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A1_gaussian",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.5238,
-                "Precision": 1.0,
-                "Recall": 0.0476,
-                "F1_Score": 0.09087437953417335,
-                "AUC_ROC": 0.877240385
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A1_gaussian",
-                    "A5_backdoor",
-                    "A3_geometric"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9959,
-                "Precision": 0.9918666931164452,
-                "Recall": 1.0,
-                "F1_Score": 0.9959167413604223,
-                "AUC_ROC": 0.99999802
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A1_gaussian",
-                    "A5_backdoor",
-                    "A3_geometric",
-                    "A6_ood"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9948,
-                "Precision": 0.9897070467141726,
-                "Recall": 1.0,
-                "F1_Score": 0.9948269001193792,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed18": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A1_gaussian"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.50845,
-                "Precision": 1.0,
-                "Recall": 0.0169,
-                "F1_Score": 0.033238273183203854,
-                "AUC_ROC": 0.8605971699999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.98035,
-                "Precision": 0.9912056447489518,
-                "Recall": 0.9693,
-                "F1_Score": 0.9801304413772183,
-                "AUC_ROC": 0.997809165
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.6456,
-                "Precision": 0.9684684684684685,
-                "Recall": 0.301,
-                "F1_Score": 0.45926151968263657,
-                "AUC_ROC": 0.9357020000000001
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric",
-                    "A2_salt_pepper",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9961,
-                "Precision": 0.99245582688108,
-                "Recall": 0.9998,
-                "F1_Score": 0.9961143768058185,
-                "AUC_ROC": 0.99999562
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A3_geometric",
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A6_ood"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9955,
-                "Precision": 0.9910802775024777,
-                "Recall": 1.0,
-                "F1_Score": 0.9955201592832255,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed19": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A5_backdoor"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.52475,
-                "Precision": 1.0,
-                "Recall": 0.0495,
-                "F1_Score": 0.09433063363506432,
-                "AUC_ROC": 0.7844040400000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A3_geometric"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.69355,
-                "Precision": 0.9856963613550815,
-                "Recall": 0.3928,
-                "F1_Score": 0.5617447264926707,
-                "AUC_ROC": 0.8360797649999999
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A3_geometric",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9962,
-                "Precision": 0.9924573243350536,
-                "Recall": 1.0,
-                "F1_Score": 0.9962143853357243,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A3_geometric",
-                    "A2_salt_pepper",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.9954,
-                "Precision": 0.9912733042443475,
-                "Recall": 0.9996,
-                "F1_Score": 0.9954192391953794,
-                "AUC_ROC": 0.99997845
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A5_backdoor",
-                    "A3_geometric",
-                    "A2_salt_pepper",
-                    "A1_gaussian",
-                    "A6_ood"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9965,
-                "Precision": 0.9930486593843099,
-                "Recall": 1.0,
-                "F1_Score": 0.9965122072745392,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed20": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A1_gaussian"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5632881649999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.99325,
-                "Precision": 1.0,
-                "Recall": 0.9865,
-                "F1_Score": 0.9932041278630758,
-                "AUC_ROC": 0.9999996900000001
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A5_backdoor",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.59735,
-                "Precision": 1.0,
-                "Recall": 0.1947,
-                "F1_Score": 0.3259395664183477,
-                "AUC_ROC": 0.9972002799999999
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A5_backdoor",
-                    "A2_salt_pepper",
-                    "A6_ood"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 1.0,
-                "Precision": 1.0,
-                "Recall": 1.0,
-                "F1_Score": 1.0,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A5_backdoor",
-                    "A2_salt_pepper",
-                    "A6_ood",
-                    "A4_blended"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.6425,
-                "Precision": 1.0,
-                "Recall": 0.285,
-                "F1_Score": 0.44357976653696496,
-                "AUC_ROC": 0.9569318599999999
-            }
-        ],
-        "perm_seed21": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A1_gaussian"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.9989,
-                "Precision": 1.0,
-                "Recall": 0.9978,
-                "F1_Score": 0.9988987886675343,
-                "AUC_ROC": 0.9999999999999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5801108
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A2_salt_pepper",
                     "A5_backdoor"
                 ],
                 "test_attack": "A4_blended",
-                "Accuracy": 0.5016,
-                "Precision": 1.0,
-                "Recall": 0.0032,
-                "F1_Score": 0.006379585326953748,
-                "AUC_ROC": 0.99986467
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A4_blended"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.84945,
-                "Precision": 1.0,
-                "Recall": 0.6989,
-                "F1_Score": 0.8227676732003061,
-                "AUC_ROC": 0.99961124
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A1_gaussian",
-                    "A2_salt_pepper",
-                    "A5_backdoor",
-                    "A4_blended",
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.6678,
-                "Precision": 1.0,
-                "Recall": 0.3356,
-                "F1_Score": 0.5025456723569931,
-                "AUC_ROC": 0.95518762
-            }
-        ],
-        "perm_seed22": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.50025,
-                "Precision": 1.0,
-                "Recall": 0.0005,
-                "F1_Score": 0.0009995002498750624,
-                "AUC_ROC": 0.8583428149999999
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A3_geometric"
-                ],
-                "test_attack": "A6_ood",
-                "Accuracy": 0.99595,
-                "Precision": 0.9920627046333962,
-                "Recall": 0.9999,
-                "F1_Score": 0.9959659345584939,
-                "AUC_ROC": 0.99998697
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A3_geometric",
-                    "A6_ood"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9944,
-                "Precision": 0.9889240506329114,
+                "Accuracy": 0.99535,
+                "Precision": 0.9907856930545923,
                 "Recall": 1.0,
-                "F1_Score": 0.994431185361973,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A3_geometric",
-                    "A6_ood",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.5846,
-                "Precision": 0.9577922077922078,
-                "Recall": 0.177,
-                "F1_Score": 0.2987846049966239,
-                "AUC_ROC": 0.923855515
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A2_salt_pepper",
-                    "A3_geometric",
-                    "A6_ood",
-                    "A1_gaussian",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.99545,
-                "Precision": 0.9909820632246557,
-                "Recall": 1.0,
-                "F1_Score": 0.9954706087302773,
-                "AUC_ROC": 1.0
-            }
-        ],
-        "perm_seed23": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.67045,
-                "Precision": 1.0,
-                "Recall": 0.3409,
-                "F1_Score": 0.5084644641658588,
-                "AUC_ROC": 0.9605059600000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.99545,
-                "Precision": 0.9909820632246557,
-                "Recall": 1.0,
-                "F1_Score": 0.9954706087302773,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A4_blended"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9967,
-                "Precision": 0.9934432743890323,
-                "Recall": 1.0,
-                "F1_Score": 0.9967108541812021,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A4_blended",
-                    "A1_gaussian"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.98785,
-                "Precision": 0.9938252859601174,
-                "Recall": 0.9818,
-                "F1_Score": 0.9877760450726898,
-                "AUC_ROC": 0.9993119
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A4_blended",
-                    "A1_gaussian",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.54025,
-                "Precision": 0.9398907103825137,
-                "Recall": 0.086,
-                "F1_Score": 0.157581310123683,
-                "AUC_ROC": 0.8753973399999999
-            }
-        ],
-        "perm_seed24": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "A6_ood"
-                ],
-                "test_attack": "A3_geometric",
-                "Accuracy": 0.6665,
-                "Precision": 1.0,
-                "Recall": 0.333,
-                "F1_Score": 0.49962490622655664,
-                "AUC_ROC": 0.9619250800000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric"
-                ],
-                "test_attack": "A2_salt_pepper",
-                "Accuracy": 0.9939,
-                "Precision": 0.9888163103721298,
-                "Recall": 0.9991,
-                "F1_Score": 0.9939315559092717,
-                "AUC_ROC": 0.99993982
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A2_salt_pepper"
-                ],
-                "test_attack": "A4_blended",
-                "Accuracy": 0.9939,
-                "Precision": 0.9879470460383324,
-                "Recall": 1.0,
-                "F1_Score": 0.9939369843951893,
-                "AUC_ROC": 1.0
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A2_salt_pepper",
-                    "A4_blended"
-                ],
-                "test_attack": "A5_backdoor",
-                "Accuracy": 0.6446,
-                "Precision": 0.9652509652509652,
-                "Recall": 0.3,
-                "F1_Score": 0.45773573390296,
-                "AUC_ROC": 0.9135486149999998
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "A6_ood",
-                    "A3_geometric",
-                    "A2_salt_pepper",
-                    "A4_blended",
-                    "A5_backdoor"
-                ],
-                "test_attack": "A1_gaussian",
-                "Accuracy": 0.9958,
-                "Precision": 0.9916699722332408,
-                "Recall": 1.0,
-                "F1_Score": 0.9958175662218681,
+                "F1_Score": 0.9953715224207436,
                 "AUC_ROC": 1.0
             }
         ]
@@ -2135,10 +695,10 @@
                 ],
                 "test_attack": "attack_b",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5164375
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5085999999999999
             },
             {
                 "n_training_attacks": 2,
@@ -2147,11 +707,11 @@
                     "attack_b"
                 ],
                 "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4862375
+                "Accuracy": 0.4975,
+                "Precision": 0.49606299212598426,
+                "Recall": 0.315,
+                "F1_Score": 0.3853211009174312,
+                "AUC_ROC": 0.46732500000000005
             },
             {
                 "n_training_attacks": 3,
@@ -2165,7 +725,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5473750000000001
+                "AUC_ROC": 0.5308250000000001
             },
             {
                 "n_training_attacks": 4,
@@ -2180,7 +740,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.517925
+                "AUC_ROC": 0.5250375
             },
             {
                 "n_training_attacks": 5,
@@ -2196,7 +756,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.54405
+                "AUC_ROC": 0.4867375
             },
             {
                 "n_training_attacks": 6,
@@ -2213,7 +773,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5146750000000001
+                "AUC_ROC": 0.5129
             },
             {
                 "n_training_attacks": 7,
@@ -2231,7 +791,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.471275
+                "AUC_ROC": 0.49065000000000003
             }
         ],
         "reversed": [
@@ -2245,7 +805,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5118625
+                "AUC_ROC": 0.4772875
             },
             {
                 "n_training_attacks": 2,
@@ -2255,10 +815,10 @@
                 ],
                 "test_attack": "attack_f",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5040625000000001
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.530125
             },
             {
                 "n_training_attacks": 3,
@@ -2272,7 +832,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5381125
+                "AUC_ROC": 0.50795
             },
             {
                 "n_training_attacks": 4,
@@ -2284,10 +844,10 @@
                 ],
                 "test_attack": "attack_d",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5085625
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5705875
             },
             {
                 "n_training_attacks": 5,
@@ -2303,7 +863,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5027125
+                "AUC_ROC": 0.4674625
             },
             {
                 "n_training_attacks": 6,
@@ -2317,10 +877,10 @@
                 ],
                 "test_attack": "attack_b",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4749
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.46596250000000006
             },
             {
                 "n_training_attacks": 7,
@@ -2335,10 +895,10 @@
                 ],
                 "test_attack": "attack_a",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.503425
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5026250000000001
             }
         ],
         "perm_seed0": [
@@ -2352,7 +912,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.49198749999999997
+                "AUC_ROC": 0.4700375
             },
             {
                 "n_training_attacks": 2,
@@ -2361,11 +921,11 @@
                     "attack_e"
                 ],
                 "test_attack": "attack_d",
-                "Accuracy": 0.475,
-                "Precision": 0.4806201550387597,
-                "Recall": 0.62,
-                "F1_Score": 0.5414847161572053,
-                "AUC_ROC": 0.46905
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5099625
             },
             {
                 "n_training_attacks": 3,
@@ -2379,7 +939,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4599625
+                "AUC_ROC": 0.5148875
             },
             {
                 "n_training_attacks": 4,
@@ -2391,10 +951,10 @@
                 ],
                 "test_attack": "attack_f",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.512875
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.4660375000000001
             },
             {
                 "n_training_attacks": 5,
@@ -2407,10 +967,10 @@
                 ],
                 "test_attack": "attack_a",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.491225
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.529825
             },
             {
                 "n_training_attacks": 6,
@@ -2427,7 +987,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.522
+                "AUC_ROC": 0.48752500000000004
             },
             {
                 "n_training_attacks": 7,
@@ -2445,7 +1005,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.4686125
+                "AUC_ROC": 0.4647625
             }
         ],
         "perm_seed1": [
@@ -2455,11 +1015,11 @@
                     "attack_f"
                 ],
                 "test_attack": "attack_a",
-                "Accuracy": 0.4925,
-                "Precision": 0.4958904109589041,
-                "Recall": 0.905,
-                "F1_Score": 0.6407079646017699,
-                "AUC_ROC": 0.5017
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.4484
             },
             {
                 "n_training_attacks": 2,
@@ -2468,11 +1028,11 @@
                     "attack_a"
                 ],
                 "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.46048750000000005
+                "Accuracy": 0.5025,
+                "Precision": 0.5013404825737265,
+                "Recall": 0.935,
+                "F1_Score": 0.6527050610820244,
+                "AUC_ROC": 0.548775
             },
             {
                 "n_training_attacks": 3,
@@ -2486,7 +1046,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.4813750000000001
+                "AUC_ROC": 0.5153375
             },
             {
                 "n_training_attacks": 4,
@@ -2499,9 +1059,9 @@
                 "test_attack": "attack_c",
                 "Accuracy": 0.5,
                 "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.48978750000000004
+                "Recall": 0.995,
+                "F1_Score": 0.6655518394648829,
+                "AUC_ROC": 0.5198750000000001
             },
             {
                 "n_training_attacks": 5,
@@ -2517,7 +1077,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5452375
+                "AUC_ROC": 0.495875
             },
             {
                 "n_training_attacks": 6,
@@ -2530,11 +1090,11 @@
                     "attack_g"
                 ],
                 "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5540875
+                "Accuracy": 0.5025,
+                "Precision": 1.0,
+                "Recall": 0.005,
+                "F1_Score": 0.009950248756218905,
+                "AUC_ROC": 0.5351
             },
             {
                 "n_training_attacks": 7,
@@ -2549,10 +1109,10 @@
                 ],
                 "test_attack": "attack_h",
                 "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.472675
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5018125
             }
         ],
         "perm_seed2": [
@@ -2562,11 +1122,11 @@
                     "attack_g"
                 ],
                 "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.46290000000000003
+                "Accuracy": 0.495,
+                "Precision": 0.4583333333333333,
+                "Recall": 0.055,
+                "F1_Score": 0.09821428571428571,
+                "AUC_ROC": 0.4987125
             },
             {
                 "n_training_attacks": 2,
@@ -2576,10 +1136,10 @@
                 ],
                 "test_attack": "attack_h",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.48460000000000003
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.5215249999999999
             },
             {
                 "n_training_attacks": 3,
@@ -2590,10 +1150,10 @@
                 ],
                 "test_attack": "attack_c",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5215375
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.51105
             },
             {
                 "n_training_attacks": 4,
@@ -2605,10 +1165,10 @@
                 ],
                 "test_attack": "attack_d",
                 "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4911375
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5035000000000001
             },
             {
                 "n_training_attacks": 5,
@@ -2624,7 +1184,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.4754875
+                "AUC_ROC": 0.4796625
             },
             {
                 "n_training_attacks": 6,
@@ -2641,7 +1201,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49592499999999995
+                "AUC_ROC": 0.47496250000000007
             },
             {
                 "n_training_attacks": 7,
@@ -2656,10 +1216,10 @@
                 ],
                 "test_attack": "attack_b",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4738375
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.51
             }
         ],
         "perm_seed3": [
@@ -2670,10 +1230,10 @@
                 ],
                 "test_attack": "attack_h",
                 "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4929625000000001
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.51825
             },
             {
                 "n_training_attacks": 2,
@@ -2683,10 +1243,10 @@
                 ],
                 "test_attack": "attack_c",
                 "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5365
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5068625
             },
             {
                 "n_training_attacks": 3,
@@ -2697,10 +1257,10 @@
                 ],
                 "test_attack": "attack_b",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.48582500000000006
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.49858749999999996
             },
             {
                 "n_training_attacks": 4,
@@ -2711,11 +1271,11 @@
                     "attack_b"
                 ],
                 "test_attack": "attack_e",
-                "Accuracy": 0.505,
-                "Precision": 0.5026041666666666,
-                "Recall": 0.965,
-                "F1_Score": 0.660958904109589,
-                "AUC_ROC": 0.5124375000000001
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.4796625
             },
             {
                 "n_training_attacks": 5,
@@ -2731,7 +1291,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5096624999999999
+                "AUC_ROC": 0.5327375
             },
             {
                 "n_training_attacks": 6,
@@ -2745,10 +1305,10 @@
                 ],
                 "test_attack": "attack_d",
                 "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5284625000000001
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5569500000000001
             },
             {
                 "n_training_attacks": 7,
@@ -2766,7 +1326,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.46677500000000005
+                "AUC_ROC": 0.48275
             }
         ],
         "perm_seed4": [
@@ -2780,7 +1340,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49126250000000005
+                "AUC_ROC": 0.47771250000000004
             },
             {
                 "n_training_attacks": 2,
@@ -2793,7 +1353,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5029000000000001
+                "AUC_ROC": 0.5468875
             },
             {
                 "n_training_attacks": 3,
@@ -2804,10 +1364,10 @@
                 ],
                 "test_attack": "attack_h",
                 "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5120625
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5035625
             },
             {
                 "n_training_attacks": 4,
@@ -2819,10 +1379,10 @@
                 ],
                 "test_attack": "attack_e",
                 "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.461825
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.441925
             },
             {
                 "n_training_attacks": 5,
@@ -2838,7 +1398,7 @@
                 "Precision": 0.5,
                 "Recall": 1.0,
                 "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.463275
+                "AUC_ROC": 0.49445000000000006
             },
             {
                 "n_training_attacks": 6,
@@ -2855,7 +1415,7 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.4800875
+                "AUC_ROC": 0.533375
             },
             {
                 "n_training_attacks": 7,
@@ -2873,2147 +1433,585 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.4676375
+                "AUC_ROC": 0.44927500000000004
             }
-        ],
-        "perm_seed5": [
+        ]
+    },
+    "MNIST_variants_progressive_results": [
+        {
+            "n_training_attacks": 1,
+            "training_attacks": [
+                "BV1_gaussian"
+            ],
+            "test_attack": "BV2_salt_pepper",
+            "Accuracy": 1.0,
+            "Precision": 1.0,
+            "Recall": 1.0,
+            "F1_Score": 1.0,
+            "AUC_ROC": 0.9999999999999999
+        },
+        {
+            "n_training_attacks": 2,
+            "training_attacks": [
+                "BV1_gaussian",
+                "BV2_salt_pepper"
+            ],
+            "test_attack": "BV3_geometric",
+            "Accuracy": 0.5965,
+            "Precision": 1.0,
+            "Recall": 0.193,
+            "F1_Score": 0.3235540653813915,
+            "AUC_ROC": 0.934596605
+        },
+        {
+            "n_training_attacks": 3,
+            "training_attacks": [
+                "BV1_gaussian",
+                "BV2_salt_pepper",
+                "BV3_geometric"
+            ],
+            "test_attack": "BV4_blended",
+            "Accuracy": 0.99735,
+            "Precision": 0.9947279419078882,
+            "Recall": 1.0,
+            "F1_Score": 0.9973570039395602,
+            "AUC_ROC": 1.0
+        },
+        {
+            "n_training_attacks": 4,
+            "training_attacks": [
+                "BV1_gaussian",
+                "BV2_salt_pepper",
+                "BV3_geometric",
+                "BV4_blended"
+            ],
+            "test_attack": "BV5_backdoor",
+            "Accuracy": 0.9972,
+            "Precision": 0.9955152481562687,
+            "Recall": 0.9989,
+            "F1_Score": 0.9972047519217331,
+            "AUC_ROC": 0.9999531
+        },
+        {
+            "n_training_attacks": 5,
+            "training_attacks": [
+                "BV1_gaussian",
+                "BV2_salt_pepper",
+                "BV3_geometric",
+                "BV4_blended",
+                "BV5_backdoor"
+            ],
+            "test_attack": "BV6_ood",
+            "Accuracy": 0.99695,
+            "Precision": 0.9942317255096966,
+            "Recall": 0.9997,
+            "F1_Score": 0.9969583644976315,
+            "AUC_ROC": 0.99999118
+        }
+    ],
+    "MNIST_variants_order_sensitivity": {
+        "original": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_b"
+                    "BV1_gaussian"
                 ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4866499999999999
+                "test_attack": "BV2_salt_pepper",
+                "Accuracy": 1.0,
+                "Precision": 1.0,
+                "Recall": 1.0,
+                "F1_Score": 1.0,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_e"
+                    "BV1_gaussian",
+                    "BV2_salt_pepper"
                 ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.538575
+                "test_attack": "BV3_geometric",
+                "Accuracy": 0.59375,
+                "Precision": 1.0,
+                "Recall": 0.1875,
+                "F1_Score": 0.3157894736842105,
+                "AUC_ROC": 0.9193198949999999
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_e",
-                    "attack_c"
+                    "BV1_gaussian",
+                    "BV2_salt_pepper",
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5277125
+                "test_attack": "BV4_blended",
+                "Accuracy": 0.9988,
+                "Precision": 0.9976057462090981,
+                "Recall": 1.0,
+                "F1_Score": 0.9988014382740711,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_e",
-                    "attack_c",
-                    "attack_d"
+                    "BV1_gaussian",
+                    "BV2_salt_pepper",
+                    "BV3_geometric",
+                    "BV4_blended"
                 ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5243875
+                "test_attack": "BV5_backdoor",
+                "Accuracy": 0.98035,
+                "Precision": 0.9962806075007749,
+                "Recall": 0.9643,
+                "F1_Score": 0.9800294730423293,
+                "AUC_ROC": 0.99949003
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_e",
-                    "attack_c",
-                    "attack_d",
-                    "attack_h"
+                    "BV1_gaussian",
+                    "BV2_salt_pepper",
+                    "BV3_geometric",
+                    "BV4_blended",
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.4925,
-                "Precision": 0.4666666666666667,
-                "Recall": 0.105,
-                "F1_Score": 0.17142857142857143,
-                "AUC_ROC": 0.49162500000000003
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_e",
-                    "attack_c",
-                    "attack_d",
-                    "attack_h",
-                    "attack_f"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV6_ood",
+                "Accuracy": 0.9985,
+                "Precision": 0.9970089730807578,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49351249999999997
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_e",
-                    "attack_c",
-                    "attack_d",
-                    "attack_h",
-                    "attack_f",
-                    "attack_g"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5072125
+                "F1_Score": 0.9985022466300549,
+                "AUC_ROC": 0.9999976599999999
             }
         ],
-        "perm_seed6": [
+        "reversed": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_c"
+                    "BV6_ood"
                 ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4669875000000001
+                "test_attack": "BV5_backdoor",
+                "Accuracy": 0.6484,
+                "Precision": 1.0,
+                "Recall": 0.2968,
+                "F1_Score": 0.4577421344848859,
+                "AUC_ROC": 0.99472128
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_c",
-                    "attack_f"
+                    "BV6_ood",
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV4_blended",
+                "Accuracy": 0.99985,
+                "Precision": 0.9997000899730081,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4969
+                "F1_Score": 0.9998500224966255,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_c",
-                    "attack_f",
-                    "attack_d"
+                    "BV6_ood",
+                    "BV5_backdoor",
+                    "BV4_blended"
                 ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.54715
+                "test_attack": "BV3_geometric",
+                "Accuracy": 0.78975,
+                "Precision": 0.9991386735572783,
+                "Recall": 0.58,
+                "F1_Score": 0.7339449541284404,
+                "AUC_ROC": 0.9720460649999999
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_c",
-                    "attack_f",
-                    "attack_d",
-                    "attack_h"
+                    "BV6_ood",
+                    "BV5_backdoor",
+                    "BV4_blended",
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV2_salt_pepper",
+                "Accuracy": 0.9961,
+                "Precision": 0.9922603691208574,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4982
+                "F1_Score": 0.9961151509114453,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_c",
-                    "attack_f",
-                    "attack_d",
-                    "attack_h",
-                    "attack_a"
+                    "BV6_ood",
+                    "BV5_backdoor",
+                    "BV4_blended",
+                    "BV3_geometric",
+                    "BV2_salt_pepper"
                 ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5156625
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_f",
-                    "attack_d",
-                    "attack_h",
-                    "attack_a",
-                    "attack_e"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.47400000000000003
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_f",
-                    "attack_d",
-                    "attack_h",
-                    "attack_a",
-                    "attack_e",
-                    "attack_b"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.454275
+                "test_attack": "BV1_gaussian",
+                "Accuracy": 0.98295,
+                "Precision": 0.9930576824910669,
+                "Recall": 0.9727,
+                "F1_Score": 0.9827734276332407,
+                "AUC_ROC": 0.99911893
             }
         ],
-        "perm_seed7": [
+        "perm_seed0": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_a"
+                    "BV4_blended"
                 ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5194
+                "test_attack": "BV3_geometric",
+                "Accuracy": 0.50045,
+                "Precision": 1.0,
+                "Recall": 0.0009,
+                "F1_Score": 0.00179838145668898,
+                "AUC_ROC": 0.9320093049999999
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_a",
-                    "attack_g"
+                    "BV4_blended",
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4994
+                "test_attack": "BV6_ood",
+                "Accuracy": 0.9958,
+                "Precision": 0.9916699722332408,
+                "Recall": 1.0,
+                "F1_Score": 0.9958175662218681,
+                "AUC_ROC": 0.9999989799999999
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_a",
-                    "attack_g",
-                    "attack_h"
+                    "BV4_blended",
+                    "BV3_geometric",
+                    "BV6_ood"
                 ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.46217499999999995
+                "test_attack": "BV5_backdoor",
+                "Accuracy": 0.8619,
+                "Precision": 0.9923809523809524,
+                "Recall": 0.7294,
+                "F1_Score": 0.840806916426513,
+                "AUC_ROC": 0.9871604049999998
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_a",
-                    "attack_g",
-                    "attack_h",
-                    "attack_c"
+                    "BV4_blended",
+                    "BV3_geometric",
+                    "BV6_ood",
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV1_gaussian",
+                "Accuracy": 0.9973,
+                "Precision": 0.9946290033817387,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5018750000000001
+                "F1_Score": 0.997307270370001,
+                "AUC_ROC": 0.9999997899999999
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_a",
-                    "attack_g",
-                    "attack_h",
-                    "attack_c",
-                    "attack_e"
+                    "BV4_blended",
+                    "BV3_geometric",
+                    "BV6_ood",
+                    "BV5_backdoor",
+                    "BV1_gaussian"
                 ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV2_salt_pepper",
+                "Accuracy": 0.99815,
+                "Precision": 0.9963136395337252,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.48135000000000006
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_g",
-                    "attack_h",
-                    "attack_c",
-                    "attack_e",
-                    "attack_f"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.44876250000000006
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_g",
-                    "attack_h",
-                    "attack_c",
-                    "attack_e",
-                    "attack_f",
-                    "attack_b"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.47186249999999996
+                "F1_Score": 0.9981534161800669,
+                "AUC_ROC": 1.0
             }
         ],
-        "perm_seed8": [
+        "perm_seed1": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_d"
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_h",
+                "test_attack": "BV1_gaussian",
                 "Accuracy": 0.5,
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.47809999999999997
+                "AUC_ROC": 0.786892395
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h"
+                    "BV5_backdoor",
+                    "BV1_gaussian"
                 ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.518175
+                "test_attack": "BV3_geometric",
+                "Accuracy": 0.59275,
+                "Precision": 1.0,
+                "Recall": 0.1855,
+                "F1_Score": 0.312948123154787,
+                "AUC_ROC": 0.896855925
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_a"
+                    "BV5_backdoor",
+                    "BV1_gaussian",
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.48702500000000004
+                "test_attack": "BV2_salt_pepper",
+                "Accuracy": 0.99645,
+                "Precision": 0.992950054612253,
+                "Recall": 1.0,
+                "F1_Score": 0.9964625579193862,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_a",
-                    "attack_f"
+                    "BV5_backdoor",
+                    "BV1_gaussian",
+                    "BV3_geometric",
+                    "BV2_salt_pepper"
                 ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.48,
-                "Precision": 0.4759036144578313,
-                "Recall": 0.395,
-                "F1_Score": 0.43169398907103823,
-                "AUC_ROC": 0.4885
+                "test_attack": "BV6_ood",
+                "Accuracy": 0.9986,
+                "Precision": 0.9974062250598563,
+                "Recall": 0.9998,
+                "F1_Score": 0.9986016779864163,
+                "AUC_ROC": 0.99999717
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_a",
-                    "attack_f",
-                    "attack_g"
+                    "BV5_backdoor",
+                    "BV1_gaussian",
+                    "BV3_geometric",
+                    "BV2_salt_pepper",
+                    "BV6_ood"
                 ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV4_blended",
+                "Accuracy": 0.9966,
+                "Precision": 0.9932459276916965,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4642625
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_a",
-                    "attack_f",
-                    "attack_g",
-                    "attack_b"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.505275
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_a",
-                    "attack_f",
-                    "attack_g",
-                    "attack_b",
-                    "attack_c"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.462225
+                "F1_Score": 0.9966115208291808,
+                "AUC_ROC": 1.0
             }
         ],
-        "perm_seed9": [
+        "perm_seed2": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_d"
+                    "BV4_blended"
                 ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5398875
+                "test_attack": "BV6_ood",
+                "Accuracy": 0.73865,
+                "Precision": 1.0,
+                "Recall": 0.4773,
+                "F1_Score": 0.6461788397752657,
+                "AUC_ROC": 0.9977195000000001
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h"
+                    "BV4_blended",
+                    "BV6_ood"
                 ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4726625
+                "test_attack": "BV3_geometric",
+                "Accuracy": 0.7276,
+                "Precision": 1.0,
+                "Recall": 0.4552,
+                "F1_Score": 0.6256184716877405,
+                "AUC_ROC": 0.982892885
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_f"
+                    "BV4_blended",
+                    "BV6_ood",
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.43406249999999996
+                "test_attack": "BV5_backdoor",
+                "Accuracy": 0.77125,
+                "Precision": 0.9929129565691441,
+                "Recall": 0.5464,
+                "F1_Score": 0.7048958266142037,
+                "AUC_ROC": 0.977078715
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_f",
-                    "attack_c"
+                    "BV4_blended",
+                    "BV6_ood",
+                    "BV3_geometric",
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.491225
+                "test_attack": "BV1_gaussian",
+                "Accuracy": 0.9861,
+                "Precision": 0.9931020490971799,
+                "Recall": 0.979,
+                "F1_Score": 0.9860006042904623,
+                "AUC_ROC": 0.99909457
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_f",
-                    "attack_c",
-                    "attack_e"
+                    "BV4_blended",
+                    "BV6_ood",
+                    "BV3_geometric",
+                    "BV5_backdoor",
+                    "BV1_gaussian"
                 ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.52975
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_f",
-                    "attack_c",
-                    "attack_e",
-                    "attack_a"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4818875
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_h",
-                    "attack_f",
-                    "attack_c",
-                    "attack_e",
-                    "attack_a",
-                    "attack_g"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4960375
+                "test_attack": "BV2_salt_pepper",
+                "Accuracy": 0.99565,
+                "Precision": 0.991375037176564,
+                "Recall": 1.0,
+                "F1_Score": 0.9956688405436351,
+                "AUC_ROC": 1.0
             }
         ],
-        "perm_seed10": [
+        "perm_seed3": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_b"
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.515,
-                "Precision": 0.5130434782608696,
-                "Recall": 0.59,
-                "F1_Score": 0.5488372093023256,
-                "AUC_ROC": 0.5118875
+                "test_attack": "BV6_ood",
+                "Accuracy": 0.99605,
+                "Precision": 0.9921619208254787,
+                "Recall": 1.0,
+                "F1_Score": 0.9960655411126053,
+                "AUC_ROC": 0.99999894
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_c"
+                    "BV3_geometric",
+                    "BV6_ood"
                 ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5292000000000001
+                "test_attack": "BV5_backdoor",
+                "Accuracy": 0.89605,
+                "Precision": 0.9942593285910396,
+                "Recall": 0.7967,
+                "F1_Score": 0.8845833564647755,
+                "AUC_ROC": 0.9895152399999999
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_c",
-                    "attack_d"
+                    "BV3_geometric",
+                    "BV6_ood",
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV2_salt_pepper",
+                "Accuracy": 0.99705,
+                "Precision": 0.9941346058256287,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5375
+                "F1_Score": 0.9970586769031358,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_c",
-                    "attack_d",
-                    "attack_e"
+                    "BV3_geometric",
+                    "BV6_ood",
+                    "BV5_backdoor",
+                    "BV2_salt_pepper"
                 ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV4_blended",
+                "Accuracy": 0.9981,
+                "Precision": 0.9962143853357243,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49518750000000006
+                "F1_Score": 0.9981036031540074,
+                "AUC_ROC": 1.0
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_b",
-                    "attack_c",
-                    "attack_d",
-                    "attack_e",
-                    "attack_g"
+                    "BV3_geometric",
+                    "BV6_ood",
+                    "BV5_backdoor",
+                    "BV2_salt_pepper",
+                    "BV4_blended"
                 ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5028
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_c",
-                    "attack_d",
-                    "attack_e",
-                    "attack_g",
-                    "attack_h"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5292000000000001
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_c",
-                    "attack_d",
-                    "attack_e",
-                    "attack_g",
-                    "attack_h",
-                    "attack_f"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4262000000000001
+                "test_attack": "BV1_gaussian",
+                "Accuracy": 0.9878,
+                "Precision": 0.9946258365443115,
+                "Recall": 0.9809,
+                "F1_Score": 0.9877152351223442,
+                "AUC_ROC": 0.9994929250000001
             }
         ],
-        "perm_seed11": [
+        "perm_seed4": [
             {
                 "n_training_attacks": 1,
                 "training_attacks": [
-                    "attack_d"
+                    "BV2_salt_pepper"
                 ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5046375
+                "test_attack": "BV3_geometric",
+                "Accuracy": 0.501,
+                "Precision": 1.0,
+                "Recall": 0.002,
+                "F1_Score": 0.003992015968063872,
+                "AUC_ROC": 0.76287656
             },
             {
                 "n_training_attacks": 2,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_b"
+                    "BV2_salt_pepper",
+                    "BV3_geometric"
                 ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5157875
+                "test_attack": "BV1_gaussian",
+                "Accuracy": 0.94505,
+                "Precision": 0.9921486232444985,
+                "Recall": 0.8972,
+                "F1_Score": 0.9422885049624534,
+                "AUC_ROC": 0.9962955
             },
             {
                 "n_training_attacks": 3,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_b",
-                    "attack_h"
+                    "BV2_salt_pepper",
+                    "BV3_geometric",
+                    "BV1_gaussian"
                 ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4811625
+                "test_attack": "BV6_ood",
+                "Accuracy": 0.99705,
+                "Precision": 0.9941346058256287,
+                "Recall": 1.0,
+                "F1_Score": 0.9970586769031358,
+                "AUC_ROC": 0.99999844
             },
             {
                 "n_training_attacks": 4,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_b",
-                    "attack_h",
-                    "attack_f"
+                    "BV2_salt_pepper",
+                    "BV3_geometric",
+                    "BV1_gaussian",
+                    "BV6_ood"
                 ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.500775
+                "test_attack": "BV5_backdoor",
+                "Accuracy": 0.99365,
+                "Precision": 0.9952844386475369,
+                "Recall": 0.992,
+                "F1_Score": 0.9936395051835528,
+                "AUC_ROC": 0.9997839700000001
             },
             {
                 "n_training_attacks": 5,
                 "training_attacks": [
-                    "attack_d",
-                    "attack_b",
-                    "attack_h",
-                    "attack_f",
-                    "attack_e"
+                    "BV2_salt_pepper",
+                    "BV3_geometric",
+                    "BV1_gaussian",
+                    "BV6_ood",
+                    "BV5_backdoor"
                 ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
+                "test_attack": "BV4_blended",
+                "Accuracy": 0.9984,
+                "Precision": 0.9968102073365231,
                 "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5127625
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_b",
-                    "attack_h",
-                    "attack_f",
-                    "attack_e",
-                    "attack_c"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.45980000000000004
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_b",
-                    "attack_h",
-                    "attack_f",
-                    "attack_e",
-                    "attack_c",
-                    "attack_a"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4806125
-            }
-        ],
-        "perm_seed12": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_b"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4944875000000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_g"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5093249999999999
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_g",
-                    "attack_d"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.47792500000000004
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_g",
-                    "attack_d",
-                    "attack_f"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.46868750000000003
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_g",
-                    "attack_d",
-                    "attack_f",
-                    "attack_c"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5117375000000001
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_g",
-                    "attack_d",
-                    "attack_f",
-                    "attack_c",
-                    "attack_h"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.505,
-                "Precision": 0.5025125628140703,
-                "Recall": 1.0,
-                "F1_Score": 0.6688963210702341,
-                "AUC_ROC": 0.5384625000000001
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_g",
-                    "attack_d",
-                    "attack_f",
-                    "attack_c",
-                    "attack_h",
-                    "attack_e"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.509075
-            }
-        ],
-        "perm_seed13": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_a"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.44923750000000007
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_h"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.47993749999999996
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_h",
-                    "attack_d"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5296125
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_h",
-                    "attack_d",
-                    "attack_c"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5096125
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_h",
-                    "attack_d",
-                    "attack_c",
-                    "attack_f"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.500525
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_h",
-                    "attack_d",
-                    "attack_c",
-                    "attack_f",
-                    "attack_g"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.522475
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_h",
-                    "attack_d",
-                    "attack_c",
-                    "attack_f",
-                    "attack_g",
-                    "attack_b"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.458
-            }
-        ],
-        "perm_seed14": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_d"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.505,
-                "Precision": 0.5025510204081632,
-                "Recall": 0.985,
-                "F1_Score": 0.6655405405405406,
-                "AUC_ROC": 0.44438750000000005
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_g"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4873
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_g",
-                    "attack_e"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5235000000000001
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_g",
-                    "attack_e",
-                    "attack_a"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5120125000000001
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_g",
-                    "attack_e",
-                    "attack_a",
-                    "attack_h"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.491925
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_g",
-                    "attack_e",
-                    "attack_a",
-                    "attack_h",
-                    "attack_b"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49905
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_d",
-                    "attack_g",
-                    "attack_e",
-                    "attack_a",
-                    "attack_h",
-                    "attack_b",
-                    "attack_c"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5085875
-            }
-        ],
-        "perm_seed15": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_c"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.46005000000000007
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_a"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5063
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_a",
-                    "attack_d"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.508025
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_a",
-                    "attack_d",
-                    "attack_g"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.515225
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_a",
-                    "attack_d",
-                    "attack_g",
-                    "attack_e"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.515,
-                "Precision": 0.5091463414634146,
-                "Recall": 0.835,
-                "F1_Score": 0.6325757575757576,
-                "AUC_ROC": 0.47685
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_a",
-                    "attack_d",
-                    "attack_g",
-                    "attack_e",
-                    "attack_h"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5080500000000001
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_a",
-                    "attack_d",
-                    "attack_g",
-                    "attack_e",
-                    "attack_h",
-                    "attack_f"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4952625
-            }
-        ],
-        "perm_seed16": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_g"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4386625
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5239625
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.48216250000000005
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_d"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.484125
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_d",
-                    "attack_f"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5096
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_d",
-                    "attack_f",
-                    "attack_b"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5395625
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_d",
-                    "attack_f",
-                    "attack_b",
-                    "attack_h"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5118375
-            }
-        ],
-        "perm_seed17": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_b"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.49681250000000005
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_a"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5196000000000001
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_a",
-                    "attack_g"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5134000000000001
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_a",
-                    "attack_g",
-                    "attack_e"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5025124999999999
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_a",
-                    "attack_g",
-                    "attack_e",
-                    "attack_c"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4959125
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_a",
-                    "attack_g",
-                    "attack_e",
-                    "attack_c",
-                    "attack_h"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5429875
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_a",
-                    "attack_g",
-                    "attack_e",
-                    "attack_c",
-                    "attack_h",
-                    "attack_f"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5382374999999999
-            }
-        ],
-        "perm_seed18": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_c"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.47663750000000005
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_g"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5071125
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_g",
-                    "attack_a"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5435
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_g",
-                    "attack_a",
-                    "attack_e"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5006125000000001
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_f"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4650500000000001
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_f",
-                    "attack_b"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5313625000000001
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_f",
-                    "attack_b",
-                    "attack_h"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.46216250000000003
-            }
-        ],
-        "perm_seed19": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_a"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.46712499999999996
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_c"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4818125
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_c",
-                    "attack_b"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5331250000000001
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_c",
-                    "attack_b",
-                    "attack_f"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.46172500000000005
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_c",
-                    "attack_b",
-                    "attack_f",
-                    "attack_e"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4894375
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_c",
-                    "attack_b",
-                    "attack_f",
-                    "attack_e",
-                    "attack_h"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4937625
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_a",
-                    "attack_c",
-                    "attack_b",
-                    "attack_f",
-                    "attack_e",
-                    "attack_h",
-                    "attack_d"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49155000000000004
-            }
-        ],
-        "perm_seed20": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_g"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5241625000000001
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.44809999999999994
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.519725
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_h"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5008375
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_h",
-                    "attack_b"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4747875
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_h",
-                    "attack_b",
-                    "attack_f"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.520375
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_g",
-                    "attack_a",
-                    "attack_e",
-                    "attack_h",
-                    "attack_b",
-                    "attack_f",
-                    "attack_d"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.514975
-            }
-        ],
-        "perm_seed21": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_f"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.549725
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_f",
-                    "attack_a"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5028125
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_f",
-                    "attack_a",
-                    "attack_e"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.48331250000000003
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_f",
-                    "attack_a",
-                    "attack_e",
-                    "attack_b"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5173
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_f",
-                    "attack_a",
-                    "attack_e",
-                    "attack_b",
-                    "attack_g"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5118
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_f",
-                    "attack_a",
-                    "attack_e",
-                    "attack_b",
-                    "attack_g",
-                    "attack_d"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5275750000000001
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_f",
-                    "attack_a",
-                    "attack_e",
-                    "attack_b",
-                    "attack_g",
-                    "attack_d",
-                    "attack_h"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5187125
-            }
-        ],
-        "perm_seed22": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_b"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5234625
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_h"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5035125
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_h",
-                    "attack_g"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.49118750000000005
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_h",
-                    "attack_g",
-                    "attack_c"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5429375
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_h",
-                    "attack_g",
-                    "attack_c",
-                    "attack_f"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.5221
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_h",
-                    "attack_g",
-                    "attack_c",
-                    "attack_f",
-                    "attack_a"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4708125
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_b",
-                    "attack_h",
-                    "attack_g",
-                    "attack_c",
-                    "attack_f",
-                    "attack_a",
-                    "attack_e"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.508375
-            }
-        ],
-        "perm_seed23": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_c"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.48307500000000003
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_d"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5126
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_d",
-                    "attack_g"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.4756625
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_d",
-                    "attack_g",
-                    "attack_f"
-                ],
-                "test_attack": "attack_h",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5064625
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_d",
-                    "attack_g",
-                    "attack_f",
-                    "attack_h"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5176
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_d",
-                    "attack_g",
-                    "attack_f",
-                    "attack_h",
-                    "attack_a"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.51275
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_c",
-                    "attack_d",
-                    "attack_g",
-                    "attack_f",
-                    "attack_h",
-                    "attack_a",
-                    "attack_b"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.4975,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4784875
-            }
-        ],
-        "perm_seed24": [
-            {
-                "n_training_attacks": 1,
-                "training_attacks": [
-                    "attack_h"
-                ],
-                "test_attack": "attack_g",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.459675
-            },
-            {
-                "n_training_attacks": 2,
-                "training_attacks": [
-                    "attack_h",
-                    "attack_g"
-                ],
-                "test_attack": "attack_f",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5216375
-            },
-            {
-                "n_training_attacks": 3,
-                "training_attacks": [
-                    "attack_h",
-                    "attack_g",
-                    "attack_f"
-                ],
-                "test_attack": "attack_d",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.49165
-            },
-            {
-                "n_training_attacks": 4,
-                "training_attacks": [
-                    "attack_h",
-                    "attack_g",
-                    "attack_f",
-                    "attack_d"
-                ],
-                "test_attack": "attack_c",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.47968750000000004
-            },
-            {
-                "n_training_attacks": 5,
-                "training_attacks": [
-                    "attack_h",
-                    "attack_g",
-                    "attack_f",
-                    "attack_d",
-                    "attack_c"
-                ],
-                "test_attack": "attack_b",
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.4224375
-            },
-            {
-                "n_training_attacks": 6,
-                "training_attacks": [
-                    "attack_h",
-                    "attack_g",
-                    "attack_f",
-                    "attack_d",
-                    "attack_c",
-                    "attack_b"
-                ],
-                "test_attack": "attack_e",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.511075
-            },
-            {
-                "n_training_attacks": 7,
-                "training_attacks": [
-                    "attack_h",
-                    "attack_g",
-                    "attack_f",
-                    "attack_d",
-                    "attack_c",
-                    "attack_b",
-                    "attack_e"
-                ],
-                "test_attack": "attack_a",
-                "Accuracy": 0.5,
-                "Precision": 0.5,
-                "Recall": 1.0,
-                "F1_Score": 0.6666666666666666,
-                "AUC_ROC": 0.45787500000000003
+                "F1_Score": 0.9984025559105432,
+                "AUC_ROC": 1.0
             }
         ]
     }

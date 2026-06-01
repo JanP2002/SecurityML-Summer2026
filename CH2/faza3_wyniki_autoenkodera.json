@@ -1,5 +1,5 @@
 {
-    "timestamp": "2026-05-17 00:58:20",
+    "timestamp": "2026-06-01 21:14:56",
     "experiment": "Step 3 — Unsupervised Anomaly Detection via Autoencoder",
     "config": {
         "batch_size": 64,
@@ -7,7 +7,7 @@
         "autoencoder_epochs": 30,
         "latent_dim": 32,
         "threshold_percentile": 95.0,
-        "random_seed": 42
+        "random_seed": 2137
     },
     "MNIST": {
         "classifier_baseline": {
@@ -16,32 +16,32 @@
                 "Precision": 1.0,
                 "Recall": 1.0,
                 "F1_Score": 1.0,
-                "AUC_ROC": 1.0
+                "AUC_ROC": 0.9999999999999999
             },
             "Test_B": {
-                "Accuracy": 0.5695,
+                "Accuracy": 0.70985,
                 "Precision": 1.0,
-                "Recall": 0.139,
-                "F1_Score": 0.2440737489025461,
-                "AUC_ROC": 0.9962891950000001
+                "Recall": 0.4197,
+                "F1_Score": 0.5912516728886384,
+                "AUC_ROC": 0.99665883
             }
         },
         "autoencoder": {
-            "threshold": 0.011659695766866207,
+            "threshold": 0.012338545173406601,
             "threshold_percentile": 95.0,
             "Test_A": {
-                "Accuracy": 0.9761,
-                "Precision": 0.9543806069860661,
+                "Accuracy": 0.9798,
+                "Precision": 0.9611687812379854,
                 "Recall": 1.0,
-                "F1_Score": 0.976657876745776,
+                "F1_Score": 0.9801999607920016,
                 "AUC_ROC": 1.0
             },
             "Test_B": {
-                "Accuracy": 0.97435,
-                "Precision": 0.9542277123431964,
-                "Recall": 0.9965,
-                "F1_Score": 0.9749058357383945,
-                "AUC_ROC": 0.99898688
+                "Accuracy": 0.97815,
+                "Precision": 0.9610452222543632,
+                "Recall": 0.9967,
+                "F1_Score": 0.9785479357910756,
+                "AUC_ROC": 0.99915529
             }
         },
         "across_attacks": {
@@ -54,59 +54,59 @@
                     "AUC_ROC": 1.0
                 },
                 "autoencoder": {
-                    "Accuracy": 0.9761,
-                    "Precision": 0.9543806069860661,
+                    "Accuracy": 0.9798,
+                    "Precision": 0.9611687812379854,
                     "Recall": 1.0,
-                    "F1_Score": 0.976657876745776,
+                    "F1_Score": 0.9801999607920016,
                     "AUC_ROC": 1.0
                 }
             },
             "salt_pepper": {
                 "classifier": {
-                    "Accuracy": 0.9969,
+                    "Accuracy": 0.9531,
                     "Precision": 1.0,
-                    "Recall": 0.9938,
-                    "F1_Score": 0.9968903601163607,
-                    "AUC_ROC": 1.0
+                    "Recall": 0.9062,
+                    "F1_Score": 0.9507921519252964,
+                    "AUC_ROC": 0.9999999999999999
                 },
                 "autoencoder": {
-                    "Accuracy": 0.9761,
-                    "Precision": 0.9543806069860661,
+                    "Accuracy": 0.9798,
+                    "Precision": 0.9611687812379854,
                     "Recall": 1.0,
-                    "F1_Score": 0.976657876745776,
+                    "F1_Score": 0.9801999607920016,
                     "AUC_ROC": 1.0
                 }
             },
             "geometric": {
                 "classifier": {
-                    "Accuracy": 0.50005,
+                    "Accuracy": 0.5056,
                     "Precision": 1.0,
-                    "Recall": 0.0001,
-                    "F1_Score": 0.00019998000199980003,
-                    "AUC_ROC": 0.8356850050000001
+                    "Recall": 0.0112,
+                    "F1_Score": 0.022151898734177215,
+                    "AUC_ROC": 0.817504575
                 },
                 "autoencoder": {
-                    "Accuracy": 0.8813,
-                    "Precision": 0.9443020274994174,
-                    "Recall": 0.8104,
-                    "F1_Score": 0.8722419545797008,
-                    "AUC_ROC": 0.940922205
+                    "Accuracy": 0.8778,
+                    "Precision": 0.9516977522716403,
+                    "Recall": 0.796,
+                    "F1_Score": 0.8669135264648224,
+                    "AUC_ROC": 0.94116726
                 }
             },
             "blended": {
                 "classifier": {
-                    "Accuracy": 0.99675,
+                    "Accuracy": 1.0,
                     "Precision": 1.0,
-                    "Recall": 0.9935,
-                    "F1_Score": 0.9967394030599448,
-                    "AUC_ROC": 1.0
+                    "Recall": 1.0,
+                    "F1_Score": 1.0,
+                    "AUC_ROC": 0.9999999999999999
                 },
                 "autoencoder": {
-                    "Accuracy": 0.9761,
-                    "Precision": 0.9543806069860661,
+                    "Accuracy": 0.9798,
+                    "Precision": 0.9611687812379854,
                     "Recall": 1.0,
-                    "F1_Score": 0.976657876745776,
-                    "AUC_ROC": 0.9998900000000001
+                    "F1_Score": 0.9801999607920016,
+                    "AUC_ROC": 0.9999614099999999
                 }
             },
             "backdoor": {
@@ -115,30 +115,30 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.51997101
+                    "AUC_ROC": 0.67119092
                 },
                 "autoencoder": {
-                    "Accuracy": 0.9761,
-                    "Precision": 0.9543806069860661,
+                    "Accuracy": 0.9798,
+                    "Precision": 0.9611687812379854,
                     "Recall": 1.0,
-                    "F1_Score": 0.976657876745776,
-                    "AUC_ROC": 0.99994472
+                    "F1_Score": 0.9801999607920016,
+                    "AUC_ROC": 0.99996134
                 }
             },
             "ood": {
                 "classifier": {
-                    "Accuracy": 0.5695,
+                    "Accuracy": 0.70985,
                     "Precision": 1.0,
-                    "Recall": 0.139,
-                    "F1_Score": 0.2440737489025461,
-                    "AUC_ROC": 0.9962891950000001
+                    "Recall": 0.4197,
+                    "F1_Score": 0.5912516728886384,
+                    "AUC_ROC": 0.99665883
                 },
                 "autoencoder": {
-                    "Accuracy": 0.97435,
-                    "Precision": 0.9542277123431964,
-                    "Recall": 0.9965,
-                    "F1_Score": 0.9749058357383945,
-                    "AUC_ROC": 0.99898688
+                    "Accuracy": 0.97815,
+                    "Precision": 0.9610452222543632,
+                    "Recall": 0.9967,
+                    "F1_Score": 0.9785479357910756,
+                    "AUC_ROC": 0.99915529
                 }
             }
         }
@@ -150,32 +150,48 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5697125
+                "AUC_ROC": 0.4647875
             },
             "Test_B": {
                 "Accuracy": 0.5,
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5713375
+                "AUC_ROC": 0.4656874999999999
+            }
+        },
+        "classifier_professor_cnn": {
+            "Test_A": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5296000000000001
+            },
+            "Test_B": {
+                "Accuracy": 0.5,
+                "Precision": 0.0,
+                "Recall": 0.0,
+                "F1_Score": 0.0,
+                "AUC_ROC": 0.5443250000000001
             }
         },
         "autoencoder": {
-            "threshold": 0.0785595253109932,
+            "threshold": 0.07885309308767319,
             "threshold_percentile": 95.0,
             "Test_A": {
-                "Accuracy": 0.5225,
-                "Precision": 0.6216216216216216,
-                "Recall": 0.115,
-                "F1_Score": 0.1940928270042194,
-                "AUC_ROC": 0.528275
+                "Accuracy": 0.5175,
+                "Precision": 0.6666666666666666,
+                "Recall": 0.07,
+                "F1_Score": 0.12669683257918551,
+                "AUC_ROC": 0.5237125
             },
             "Test_B": {
-                "Accuracy": 0.5125,
-                "Precision": 0.5757575757575758,
-                "Recall": 0.095,
-                "F1_Score": 0.1630901287553648,
-                "AUC_ROC": 0.520375
+                "Accuracy": 0.52,
+                "Precision": 0.6818181818181818,
+                "Recall": 0.075,
+                "F1_Score": 0.13513513513513514,
+                "AUC_ROC": 0.551875
             }
         },
         "across_attacks": {
@@ -185,14 +201,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5697125
+                    "AUC_ROC": 0.4647875
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5225,
-                    "Precision": 0.6216216216216216,
-                    "Recall": 0.115,
-                    "F1_Score": 0.1940928270042194,
-                    "AUC_ROC": 0.528275
+                    "Accuracy": 0.5175,
+                    "Precision": 0.6666666666666666,
+                    "Recall": 0.07,
+                    "F1_Score": 0.12669683257918551,
+                    "AUC_ROC": 0.5237125
                 }
             },
             "attack_b": {
@@ -201,14 +217,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5713375
+                    "AUC_ROC": 0.4656874999999999
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5125,
-                    "Precision": 0.5757575757575758,
-                    "Recall": 0.095,
-                    "F1_Score": 0.1630901287553648,
-                    "AUC_ROC": 0.520375
+                    "Accuracy": 0.52,
+                    "Precision": 0.6818181818181818,
+                    "Recall": 0.075,
+                    "F1_Score": 0.13513513513513514,
+                    "AUC_ROC": 0.551875
                 }
             },
             "attack_c": {
@@ -217,14 +233,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5886
+                    "AUC_ROC": 0.4143875
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5175,
-                    "Precision": 0.6,
-                    "Recall": 0.105,
-                    "F1_Score": 0.17872340425531916,
-                    "AUC_ROC": 0.54585
+                    "Accuracy": 0.525,
+                    "Precision": 0.7083333333333334,
+                    "Recall": 0.085,
+                    "F1_Score": 0.15178571428571427,
+                    "AUC_ROC": 0.515075
                 }
             },
             "attack_d": {
@@ -233,14 +249,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5208124999999999
+                    "AUC_ROC": 0.46731249999999996
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5025,
-                    "Precision": 0.5172413793103449,
+                    "Accuracy": 0.52,
+                    "Precision": 0.6818181818181818,
                     "Recall": 0.075,
-                    "F1_Score": 0.13100436681222707,
-                    "AUC_ROC": 0.50345
+                    "F1_Score": 0.13513513513513514,
+                    "AUC_ROC": 0.5131125000000001
                 }
             },
             "attack_e": {
@@ -249,14 +265,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5623374999999999
+                    "AUC_ROC": 0.4468125
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5175,
-                    "Precision": 0.6,
-                    "Recall": 0.105,
-                    "F1_Score": 0.17872340425531916,
-                    "AUC_ROC": 0.5185000000000001
+                    "Accuracy": 0.495,
+                    "Precision": 0.4166666666666667,
+                    "Recall": 0.025,
+                    "F1_Score": 0.04716981132075472,
+                    "AUC_ROC": 0.466025
                 }
             },
             "attack_f": {
@@ -265,14 +281,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5270250000000001
+                    "AUC_ROC": 0.4267
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5025,
-                    "Precision": 0.5172413793103449,
-                    "Recall": 0.075,
-                    "F1_Score": 0.13100436681222707,
-                    "AUC_ROC": 0.502075
+                    "Accuracy": 0.5,
+                    "Precision": 0.5,
+                    "Recall": 0.035,
+                    "F1_Score": 0.06542056074766354,
+                    "AUC_ROC": 0.49874999999999997
                 }
             },
             "attack_g": {
@@ -281,14 +297,14 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5256124999999999
+                    "AUC_ROC": 0.5159250000000001
                 },
                 "autoencoder": {
-                    "Accuracy": 0.5075,
-                    "Precision": 0.5483870967741935,
-                    "Recall": 0.085,
-                    "F1_Score": 0.1471861471861472,
-                    "AUC_ROC": 0.5116
+                    "Accuracy": 0.505,
+                    "Precision": 0.5625,
+                    "Recall": 0.045,
+                    "F1_Score": 0.08333333333333333,
+                    "AUC_ROC": 0.48102500000000004
                 }
             },
             "attack_h": {
@@ -297,14 +313,144 @@
                     "Precision": 0.0,
                     "Recall": 0.0,
                     "F1_Score": 0.0,
-                    "AUC_ROC": 0.5596125
+                    "AUC_ROC": 0.45265
+                },
+                "autoencoder": {
+                    "Accuracy": 0.5125,
+                    "Precision": 0.631578947368421,
+                    "Recall": 0.06,
+                    "F1_Score": 0.1095890410958904,
+                    "AUC_ROC": 0.505
+                }
+            }
+        },
+        "across_attacks_professor_cnn": {
+            "attack_a": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.5296000000000001
+                },
+                "autoencoder": {
+                    "Accuracy": 0.5175,
+                    "Precision": 0.6666666666666666,
+                    "Recall": 0.07,
+                    "F1_Score": 0.12669683257918551,
+                    "AUC_ROC": 0.5237125
+                }
+            },
+            "attack_b": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.5443250000000001
+                },
+                "autoencoder": {
+                    "Accuracy": 0.52,
+                    "Precision": 0.6818181818181818,
+                    "Recall": 0.075,
+                    "F1_Score": 0.13513513513513514,
+                    "AUC_ROC": 0.551875
+                }
+            },
+            "attack_c": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.4913375
                 },
                 "autoencoder": {
                     "Accuracy": 0.525,
+                    "Precision": 0.7083333333333334,
+                    "Recall": 0.085,
+                    "F1_Score": 0.15178571428571427,
+                    "AUC_ROC": 0.515075
+                }
+            },
+            "attack_d": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.5093375
+                },
+                "autoencoder": {
+                    "Accuracy": 0.52,
+                    "Precision": 0.6818181818181818,
+                    "Recall": 0.075,
+                    "F1_Score": 0.13513513513513514,
+                    "AUC_ROC": 0.5131125000000001
+                }
+            },
+            "attack_e": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.51205
+                },
+                "autoencoder": {
+                    "Accuracy": 0.495,
+                    "Precision": 0.4166666666666667,
+                    "Recall": 0.025,
+                    "F1_Score": 0.04716981132075472,
+                    "AUC_ROC": 0.466025
+                }
+            },
+            "attack_f": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.51075
+                },
+                "autoencoder": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.5,
+                    "Recall": 0.035,
+                    "F1_Score": 0.06542056074766354,
+                    "AUC_ROC": 0.49874999999999997
+                }
+            },
+            "attack_g": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.4913625
+                },
+                "autoencoder": {
+                    "Accuracy": 0.505,
+                    "Precision": 0.5625,
+                    "Recall": 0.045,
+                    "F1_Score": 0.08333333333333333,
+                    "AUC_ROC": 0.48102500000000004
+                }
+            },
+            "attack_h": {
+                "classifier": {
+                    "Accuracy": 0.5,
+                    "Precision": 0.0,
+                    "Recall": 0.0,
+                    "F1_Score": 0.0,
+                    "AUC_ROC": 0.504125
+                },
+                "autoencoder": {
+                    "Accuracy": 0.5125,
                     "Precision": 0.631578947368421,
-                    "Recall": 0.12,
-                    "F1_Score": 0.20168067226890757,
-                    "AUC_ROC": 0.5349250000000001
+                    "Recall": 0.06,
+                    "F1_Score": 0.1095890410958904,
+                    "AUC_ROC": 0.505
                 }
             }
         }

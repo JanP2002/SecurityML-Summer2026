@@ -29,7 +29,9 @@ More precisely: if we progressively add attack types A₁, A₂, …, Aₙ to tr
 
 **MNIST speed-up.** The full 60 000 clean MNIST training images would make the order-sensitivity experiment (7 orderings × 5 rounds each) impractically slow. Clean training is capped at **10 000 samples**, keeping the 1:1 ratio and reducing per-round compute by ~6×.
 
-### 2.2 Model: AnomalyCNN
+### 2.2 Models
+
+**MNIST — AnomalyCNN (baseline)**
 
 A compact convolutional network with three 3×3 conv blocks followed by a two-layer classifier head:
 
@@ -44,7 +46,19 @@ Input (1, H, H)
 Output: probability ∈ [0, 1]   (≥ 0.5 → attack)
 ```
 
-**Training:** BCELoss, Adam (lr=0.001), 15 epochs max, early stopping on validation loss with patience=3.  
+**Training:** BCELoss, Adam (lr=0.001), 15 epochs max, early stopping on validation loss with patience=3.
+
+**Pythia — two models run in parallel per round:**
+
+1. **AnomalyCNN (Baseline):** same architecture as above; serves as comparison reference.
+2. **GBM (Best):** `GradientBoostingClassifier(n_estimators=300, max_depth=3, learning_rate=0.05,
+   subsample=0.8, min_samples_leaf=10)`.  Input: flattened pixel array (N, 4900).  A fresh
+   classifier is fitted from scratch each round.  Wrapped in `_GBMWrap(nn.Module)` to share
+   the `evaluate_model()` pipeline.
+
+> GBM was identified in Step 1 as the best Pythia model (Test_A AUC ≈ 0.61–0.68 vs. ≈0.49 for
+> AnomalyCNN).  Step 2 tracks whether this advantage persists under multi-attack training.
+
 **Evaluation metrics:** Accuracy, Precision, Recall, F1-Score, AUC-ROC.
 
 ### 2.3 Progressive Training Protocol
@@ -206,6 +220,11 @@ F1=0.990, AUC≈1.000. This is the easiest test: Fashion-MNIST images (T-shirts,
 
 ### 6.2 Pythia Progressive Training
 
+> **Note (updated codebase):** The table below shows `AnomalyCNN` (Baseline) results from the
+> original run.  The updated `step2.py` also trains `GBM` (Best) per round — progressive GBM
+> results are written to `faza2_wyniki_generalizacji.json` under the key
+> `"Pythia_GBM_Best_progressive_results"`.
+
 | n | Test attack | Accuracy | Precision | Recall | F1 | AUC-ROC |
 |---|---|---|---|---|---|---|
 | 1 | attack_b | 0.500 | 0.000 | 0.000 | 0.000 | **0.432** |
@@ -305,7 +324,12 @@ Seven orderings tested: original, reversed, and 5 random permutations (perm_seed
 
 **No.** Progressive training from 1 to 7 attack types produces no improvement. All seven rounds remain at chance-level performance. The Pythia partition differences are too subtle for a supervised CNN trained on 70×70 noise-like images to capture.
 
-**What would work for Pythia:**
+**Update (current codebase):** `GradientBoostingClassifier` (GBM) achieves AUC 0.61–0.68
+on Pythia Test_A even in Step 1's closed-world setting — significantly above chance.
+Step 2 now tracks GBM's per-round AUC alongside AnomalyCNN to determine whether
+progressive training improves GBM's generalisation in the same way.
+
+**What would further improve Pythia results:**
 - Autoencoder-based anomaly scoring (reconstruction error)
 - One-class classification (trained only on clean)
 - Statistical tests on deep feature distributions

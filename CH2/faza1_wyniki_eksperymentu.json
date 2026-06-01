@@ -1,19 +1,19 @@
 {
-    "timestamp": "2026-05-25 18:55:37",
+    "timestamp": "2026-06-01 19:59:54",
     "MNIST_Experiment": {
         "Test_A_Znany_Atak": {
             "Accuracy": 1.0,
             "Precision": 1.0,
             "Recall": 1.0,
             "F1_Score": 1.0,
-            "AUC_ROC": 0.9999999999999999
+            "AUC_ROC": 1.0
         },
         "Test_B_Nieznany_Atak": {
-            "Accuracy": 0.7773,
+            "Accuracy": 0.5526,
             "Precision": 1.0,
-            "Recall": 0.5546,
-            "F1_Score": 0.7134954329087868,
-            "AUC_ROC": 0.9968568800000001
+            "Recall": 0.1052,
+            "F1_Score": 0.19037278320665943,
+            "AUC_ROC": 0.995007855
         }
     },
     "PYTHIA_Experiment": {
@@ -23,30 +23,62 @@
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5112875
+                "AUC_ROC": 0.4724
             },
             "Test_B_Nieznany_Atak": {
                 "Accuracy": 0.16666666666666666,
                 "Precision": 0.0,
                 "Recall": 0.0,
                 "F1_Score": 0.0,
-                "AUC_ROC": 0.5059275
+                "AUC_ROC": 0.4839825
             }
         },
-        "ProfessorCNNBest": {
+        "PixelMLP": {
             "Test_A_Znany_Atak": {
-                "Accuracy": 0.5,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5389125
+                "Accuracy": 0.5725,
+                "Precision": 0.5638766519823789,
+                "Recall": 0.64,
+                "F1_Score": 0.5995316159250585,
+                "AUC_ROC": 0.55755
             },
             "Test_B_Nieznany_Atak": {
-                "Accuracy": 0.16666666666666666,
-                "Precision": 0.0,
-                "Recall": 0.0,
-                "F1_Score": 0.0,
-                "AUC_ROC": 0.5126999999999999
+                "Accuracy": 0.5741666666666667,
+                "Precision": 0.8558951965065502,
+                "Recall": 0.588,
+                "F1_Score": 0.6970954356846473,
+                "AUC_ROC": 0.5352300000000001
+            }
+        },
+        "ProfessorCNN": {
+            "Test_A_Znany_Atak": {
+                "Accuracy": 0.5,
+                "Precision": 0.5,
+                "Recall": 1.0,
+                "F1_Score": 0.6666666666666666,
+                "AUC_ROC": 0.48919999999999997
+            },
+            "Test_B_Nieznany_Atak": {
+                "Accuracy": 0.8333333333333334,
+                "Precision": 0.8333333333333334,
+                "Recall": 1.0,
+                "F1_Score": 0.9090909090909091,
+                "AUC_ROC": 0.507795
+            }
+        },
+        "GBM_Best": {
+            "Test_A_Znany_Atak": {
+                "Accuracy": 0.5975,
+                "Precision": 0.5924170616113744,
+                "Recall": 0.625,
+                "F1_Score": 0.6082725060827251,
+                "AUC_ROC": 0.6078749999999999
+            },
+            "Test_B_Nieznany_Atak": {
+                "Accuracy": 0.6041666666666666,
+                "Precision": 0.8766140602582496,
+                "Recall": 0.611,
+                "F1_Score": 0.7200942840306424,
+                "AUC_ROC": 0.608585
             }
         }
     }

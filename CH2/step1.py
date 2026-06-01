@@ -36,6 +36,7 @@ the classifier learned a *noise detector*, not a *normality model*.
 
 from __future__ import annotations
 
+import random
 import sys
 from pathlib import Path
 
@@ -58,11 +59,13 @@ from lib import (
     visualize_samples,
     AnomalyCNN,
     ProfessorCNN,
+    PixelMLP,
     get_professor_cnn_best,
     train_model,
     evaluate_model,
     parse_results,
     save_results,
+    compute_pos_weight,
 )
 from attacks.contamination import make_gaussian_attack, make_ood_attack
 
@@ -72,6 +75,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+RANDOM_SEED = 2137
+
+
+def set_global_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
 # ---------------------------------------------------------------------------
 # Comparison plot helper  (Pythia baseline vs ProfessorCNNBest)
 # ---------------------------------------------------------------------------
@@ -79,46 +94,75 @@ import numpy as np
 def _plot_pythia_model_comparison(
     baseline_a: dict,
     baseline_b: dict,
-    prof_a: dict,
-    prof_b: dict,
+    pixel_a: dict,
+    pixel_b: dict,
+    cnn_a: dict,
+    cnn_b: dict,
+    gbm_a: dict,
+    gbm_b: dict,
     save_path,
 ) -> None:
-    """Bar chart: AnomalyCNN (PythiaBaseline) vs ProfessorCNNBest on Test_A / Test_B."""
+    """Bar chart comparing all four Pythia classifiers on Test_A / Test_B.
+
+    Models shown (left to right within each metric group):
+      1. AnomalyCNN (Baseline)  — steelblue
+      2. PixelMLP               — mediumpurple
+      3. ProfessorCNN (CNN)     — forestgreen
+      4. GBM (Best)             — darkorange (bold)
+    """
     metrics = ["Accuracy", "Precision", "Recall", "F1_Score", "AUC_ROC"]
     mlabels = ["Acc", "Prec", "Rec", "F1", "AUC"]
     x = np.arange(len(metrics))
-    width = 0.3
+    width = 0.16   # 4 × 0.16 = 0.64 total; 0.36 breathing room between groups
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    fig.suptitle("Pythia — AnomalyCNN (Baseline) vs ProfessorCNNBest",
-                 fontsize=12, fontweight="bold")
+    model_specs = [
+        ("AnomalyCNN (Baseline)", "steelblue",   "#1a4f6e", 1.0),
+        ("PixelMLP",             "mediumpurple", "#4a1a8c", 1.0),
+        ("ProfessorCNN (CNN)",   "forestgreen",  "#1a5c1a", 1.0),
+        ("GBM (Best)",           "darkorange",   "#8B4000", 1.8),
+    ]
+    offsets = [-1.5 * width, -0.5 * width, 0.5 * width, 1.5 * width]
+    auc_idx = metrics.index("AUC_ROC")
 
-    for ax, (baseline, prof), split_label, subtitle in zip(
+    imbalance_notes = [None, "\u26a0 5:1 class imbalance \u2014 AUC is the reliable metric"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    fig.suptitle(
+        "Pythia \u2014 Por\u00f3wnanie modeli: AnomalyCNN | PixelMLP | ProfessorCNN | GBM",
+        fontsize=12, fontweight="bold",
+    )
+
+    for ax, data_list, split_label, subtitle, imb_note in zip(
         axes,
-        [(baseline_a, prof_a), (baseline_b, prof_b)],
+        [[baseline_a, pixel_a, cnn_a, gbm_a],
+         [baseline_b, pixel_b, cnn_b, gbm_b]],
         ["Test_A", "Test_B"],
         ["KNOWN attack_a", "UNKNOWN attack_b"],
+        imbalance_notes,
     ):
-        def _v(d): return [d.get(m) or 0.0 for m in metrics]
+        for (label, color, edge_color, lw), offset, data in zip(
+            model_specs, offsets, data_list
+        ):
+            vals = [data.get(m) or 0.0 for m in metrics]
+            bars = ax.bar(
+                x + offset, vals, width,
+                label=label, color=color, alpha=0.85,
+                edgecolor=edge_color, linewidth=lw,
+            )
+            # Bold green outline on AUC bar to draw attention to the key metric
+            list(bars)[auc_idx].set_edgecolor("green")
+            list(bars)[auc_idx].set_linewidth(2.5)
 
-        bars_base = ax.bar(x - width / 2, _v(baseline), width,
-                           label="AnomalyCNN (Baseline)", color="steelblue", alpha=0.85)
-        bars_prof = ax.bar(x + width / 2, _v(prof), width,
-                           label="ProfessorCNNBest", color="darkorange",
-                           linewidth=1.5, alpha=0.90)
-
-        # Emphasise ProfessorCNN with a bold edge
-        for bar in bars_prof:
-            bar.set_edgecolor("#8B4000")
-            bar.set_linewidth(1.5)
-
-        ax.set_title(f"{split_label}  ({subtitle})", fontsize=11, fontweight="bold")
+        title_str = f"{split_label}  ({subtitle})"
+        ax.set_title(title_str, fontsize=11, fontweight="bold")
+        if imb_note:
+            ax.set_xlabel(imb_note, fontsize=8, color="firebrick")
         ax.set_xticks(x)
         ax.set_xticklabels(mlabels, fontsize=9)
         ax.set_ylim(0, 1.15)
         ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
         ax.set_ylabel("Metric value", fontsize=9)
-        ax.legend(fontsize=8)
+        ax.legend(fontsize=7, ncol=2)
         ax.grid(True, axis="y", alpha=0.3, linestyle="--")
 
     plt.tight_layout()
@@ -132,6 +176,12 @@ def _plot_pythia_model_comparison(
 BATCH_SIZE = 64
 NUM_EPOCHS = 15
 PATIENCE   = 3
+
+# Pythia-specific training budget for ProfessorCNN.
+# Pythia has subtle inter-class differences; the model needs more epochs
+# and a more lenient patience than the MNIST baseline.
+PYTHIA_PROF_NUM_EPOCHS = 200
+PYTHIA_PROF_PATIENCE   = 20
 
 
 def main() -> None:
@@ -153,6 +203,7 @@ def main() -> None:
     """
 
     PLOTS = Path("plots") / "step1"
+    set_global_seed(RANDOM_SEED)
 
     # -----------------------------------------------------------------------
     # Cell 1 — MNIST clean + attack_a (Gaussian noise)
@@ -267,6 +318,10 @@ def main() -> None:
     print(f"  Pythia Test_A: {len(pythia_test_a_dataset)} samples")
     print(f"  Pythia Test_B: {len(pythia_test_b_dataset)} samples  ⚠ 5:1 imbalance\n")
 
+    # Compute class weight for ProfessorCNN weighted BCE training
+    print("  Obliczanie wag klas dla ProfessorCNN (Pythia)...")
+    pythia_pos_weight = compute_pos_weight(pythia_train_dataset)
+
     # -----------------------------------------------------------------------
     # Cell 7 — Model initialisation (identical to notebook)
     # -----------------------------------------------------------------------
@@ -324,20 +379,136 @@ def main() -> None:
         patience=PATIENCE,
     )
 
-    # --- ProfessorCNNBest (Pythia) ---
-    print("\n>>> INICJALIZACJA I TRENING: PROFESSORCNN (PYTHIA) <<<")
-    prof_model_pythia = get_professor_cnn_best(input_size=70)
-    print(prof_model_pythia)
-    optimizer_prof_pythia = optim.Adam(prof_model_pythia.parameters(), lr=0.001)
-    prof_model_pythia = train_model(
-        model=prof_model_pythia,
+    # -----------------------------------------------------------------------
+    # Cell 8b — Train PixelMLP (Pythia)
+    # -----------------------------------------------------------------------
+    # PixelMLP = Flatten → Linear(4900,1) → Sigmoid  (pure linear-in-pixel-space).
+    # Equivalent to logistic regression but trained with AdamW + full-batch so
+    # the decoupled weight decay doesn't collapse informative pixel weights.
+    # Uses monitor_auc=True because the AUC-ROC loss is a better training signal
+    # than BCE when the per-pixel SNR is very low.
+    print("\n>>> TRENING: PixelMLP (Pythia) <<<")
+    _pixel_m = PixelMLP(input_size=70, hidden=[], activation="gelu", dropout=0.0)
+    _pixel_opt = optim.AdamW(_pixel_m.parameters(), lr=0.001, weight_decay=1.0)
+    _pixel_full = make_dataloader(
+        pythia_train_dataset, batch_size=len(pythia_train_dataset), shuffle=False
+    )
+    _pixel_sched = optim.lr_scheduler.ReduceLROnPlateau(
+        _pixel_opt, mode="max", factor=0.5, patience=15, min_lr=1e-6
+    )
+    _pixel_m = train_model(
+        model=_pixel_m,
+        train_loader=_pixel_full,
+        val_loader=val_loader_pythia,
+        criterion=criterion,
+        optimizer=_pixel_opt,
+        num_epochs=PYTHIA_PROF_NUM_EPOCHS,
+        patience=PYTHIA_PROF_PATIENCE,
+        scheduler=_pixel_sched,
+        monitor_auc=True,
+    )
+    pixel_model_pythia: nn.Module = _pixel_m
+
+    # -----------------------------------------------------------------------
+    # Cell 8c — Train ProfessorCNN (Pythia) — best CNN from hyperparameter search
+    # -----------------------------------------------------------------------
+    # ProfessorCNN uses the best architecture found by the professor's grid
+    # search (faza_professor_cnn_search.json).  It is a proper convolutional
+    # network (3 conv layers + dense head) trained with Adam on mini-batches.
+    # Limitation for Pythia: CNNs are translation-equivariant, but the Pythia
+    # attack signal is positional (different pixels at different locations),
+    # so pooling smears the position information.
+    print("\n>>> TRENING: ProfessorCNN (Pythia) <<<")
+    _prof_cnn_m = get_professor_cnn_best(input_size=70)
+    _prof_cnn_opt = optim.Adam(_prof_cnn_m.parameters(), lr=0.001)
+    _prof_cnn_m = train_model(
+        model=_prof_cnn_m,
         train_loader=train_loader_pythia,
         val_loader=val_loader_pythia,
         criterion=criterion,
-        optimizer=optimizer_prof_pythia,
-        num_epochs=NUM_EPOCHS,
-        patience=PATIENCE,
+        optimizer=_prof_cnn_opt,
+        num_epochs=PYTHIA_PROF_NUM_EPOCHS,
+        patience=PYTHIA_PROF_PATIENCE,
+        monitor_auc=True,
     )
+    prof_cnn_model_pythia: nn.Module = _prof_cnn_m
+
+    # -----------------------------------------------------------------------
+    # Cell 8d — Train GBM (Best approach — Pythia)
+    # -----------------------------------------------------------------------
+    # WHY GBM instead of CNN / PixelMLP?
+    #
+    # Diagnostic (_ceiling.py) revealed:
+    #   - The attack signal exists at ~2094 / 4900 pixels (max |delta|=0.068)
+    #   - LR / PixelMLP achieve AUC≈0.55 because L2 regularisation smears
+    #     weight evenly across ALL pixels, so 2806 noise pixels drown the signal
+    #   - Oracle LR (top-500px by |delta|) achieves AUC=0.845 → signal IS there
+    #   - GBM's tree-split mechanism implicitly selects discriminative pixels
+    #     from training data alone → AUC=0.665 without any oracle knowledge
+    #
+    # Approach:
+    #   1. Collect flat training arrays from the DataLoader
+    #   2. Train sklearn GradientBoostingClassifier (n=300 shallow trees)
+    #   3. Wrap in a thin nn.Module so evaluate_model() works unchanged
+    # -------------------------------------------------------------------
+    from sklearn.ensemble import GradientBoostingClassifier as _GBC
+    from sklearn.metrics import roc_auc_score as _rauc
+
+    print("\n>>> INICJALIZACJA I TRENING: GBM (BEST) - PYTHIA <<<")
+    print("  Metoda: Gradient Boosting (GBM) — implicitna selekcja cech pikselowych")
+
+    # ── Collect flat training arrays ────────────────────────────────────
+    _full_loader = make_dataloader(
+        pythia_train_dataset, batch_size=len(pythia_train_dataset), shuffle=False
+    )
+    _X_tr_np, _y_tr_np = next(iter(_full_loader))
+    _X_tr_np = _X_tr_np.numpy().reshape(len(_X_tr_np), -1)   # (1280, 4900)
+    _y_tr_np = _y_tr_np.numpy().astype(np.float32)
+
+    # ── Train GBM ───────────────────────────────────────────────────────
+    _gbm = _GBC(
+        n_estimators=300,
+        max_depth=3,
+        learning_rate=0.05,
+        subsample=0.8,
+        min_samples_leaf=10,
+        random_state=42,
+    )
+    print("  Trenuję GBM (300 drzew, depth=3)…")
+    _gbm.fit(_X_tr_np, _y_tr_np)
+    print("  Trening GBM zakończony.")
+
+    # ── Thin nn.Module wrapper so evaluate_model() works unchanged ──────
+    class _GBMWrapper(nn.Module):
+        """Wraps a fitted sklearn GBM as an nn.Module for evaluate_model()."""
+        def __init__(self, fitted_gbm):
+            super().__init__()
+            self._gbm = fitted_gbm
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            x_np = x.cpu().numpy().reshape(len(x), -1)
+            probs = self._gbm.predict_proba(x_np)[:, 1].astype(np.float32)
+            return torch.tensor(probs, device=x.device).unsqueeze(1)
+
+        def __repr__(self) -> str:
+            est = self._gbm
+            return (
+                f"GBMWrapper(n_estimators={est.n_estimators}, "
+                f"max_depth={est.max_depth}, "
+                f"lr={est.learning_rate}, subsample={est.subsample})"
+            )
+
+    prof_model_pythia: nn.Module = _GBMWrapper(_gbm)
+
+    # ── Report val AUC ──────────────────────────────────────────────────
+    _scores_v, _yt_v = [], []
+    for _xi, _yi in val_loader_pythia:
+        with torch.no_grad():
+            _scores_v.extend(prof_model_pythia(_xi).cpu().numpy().flatten())
+        _yt_v.extend(_yi.numpy().flatten())
+    _val_auc = float(_rauc(_yt_v, _scores_v))
+    print(f"\n  Val AUC: {_val_auc:.4f}")
+    print(prof_model_pythia)
 
     print("\nGratulacje! Faza 4 zakończona.")
     print("Obydwa modele bazowe (Baseline) zostały wytrenowane wyłącznie z użyciem znanego ataku_a!")
@@ -357,7 +528,13 @@ def main() -> None:
     print("\n>>> EWALUACJA PYTHIA (Test_A: Clean + Attack_A) <<<")
     res_pythia_a = evaluate_model(model_pythia, test_a_loader_pythia)
 
-    print("\n>>> EWALUACJA PROFESSORCNN - PYTHIA (Test_A: Clean + Attack_A) <<<")
+    print("\n>>> EWALUACJA PIXEL MLP - PYTHIA (Test_A: Clean + Attack_A) <<<")
+    res_pixel_pythia_a = evaluate_model(pixel_model_pythia, test_a_loader_pythia)
+
+    print("\n>>> EWALUACJA PROFESSOR CNN - PYTHIA (Test_A: Clean + Attack_A) <<<")
+    res_prof_cnn_pythia_a = evaluate_model(prof_cnn_model_pythia, test_a_loader_pythia)
+
+    print("\n>>> EWALUACJA GBM (BEST) - PYTHIA (Test_A: Clean + Attack_A) <<<")
     res_prof_pythia_a = evaluate_model(prof_model_pythia, test_a_loader_pythia)
 
     print("\n[WNIOSEK KROKU 1]: Jeśli metryki są bardzo wysokie (np. blisko 1.0/100%),")
@@ -379,7 +556,13 @@ def main() -> None:
     print("\n>>> EWALUACJA PYTHIA (Test_B: Clean + Attack_B) <<<")
     res_pythia_b = evaluate_model(model_pythia, test_b_loader_pythia)
 
-    print("\n>>> EWALUACJA PROFESSORCNN - PYTHIA (Test_B: Clean + Attack_B) <<<")
+    print("\n>>> EWALUACJA PIXEL MLP - PYTHIA (Test_B: Clean + Attack_B) <<<")
+    res_pixel_pythia_b = evaluate_model(pixel_model_pythia, test_b_loader_pythia)
+
+    print("\n>>> EWALUACJA PROFESSOR CNN - PYTHIA (Test_B: Clean + Attack_B) <<<")
+    res_prof_cnn_pythia_b = evaluate_model(prof_cnn_model_pythia, test_b_loader_pythia)
+
+    print("\n>>> EWALUACJA GBM (BEST) - PYTHIA (Test_B: Clean + Attack_B) <<<")
     res_prof_pythia_b = evaluate_model(prof_model_pythia, test_b_loader_pythia)
 
     print("\n[ANALIZA KROKU 2 - DRASTYCZNY SPADEK SKUTECZNOŚCI]:")
@@ -404,7 +587,15 @@ def main() -> None:
                 "Test_A_Znany_Atak": parse_results(res_pythia_a),
                 "Test_B_Nieznany_Atak": parse_results(res_pythia_b),
             },
-            "ProfessorCNNBest": {
+            "PixelMLP": {
+                "Test_A_Znany_Atak": parse_results(res_pixel_pythia_a),
+                "Test_B_Nieznany_Atak": parse_results(res_pixel_pythia_b),
+            },
+            "ProfessorCNN": {
+                "Test_A_Znany_Atak": parse_results(res_prof_cnn_pythia_a),
+                "Test_B_Nieznany_Atak": parse_results(res_prof_cnn_pythia_b),
+            },
+            "GBM_Best": {
                 "Test_A_Znany_Atak": parse_results(res_prof_pythia_a),
                 "Test_B_Nieznany_Atak": parse_results(res_prof_pythia_b),
             },
@@ -413,12 +604,16 @@ def main() -> None:
 
     save_results(results_summary, "faza1_wyniki_eksperymentu.json")
 
-    # Comparison bar chart — Pythia only
+    # Comparison bar chart — Pythia only (all 4 models)
     _plot_pythia_model_comparison(
         baseline_a=parse_results(res_pythia_a),
         baseline_b=parse_results(res_pythia_b),
-        prof_a=parse_results(res_prof_pythia_a),
-        prof_b=parse_results(res_prof_pythia_b),
+        pixel_a=parse_results(res_pixel_pythia_a),
+        pixel_b=parse_results(res_pixel_pythia_b),
+        cnn_a=parse_results(res_prof_cnn_pythia_a),
+        cnn_b=parse_results(res_prof_cnn_pythia_b),
+        gbm_a=parse_results(res_prof_pythia_a),
+        gbm_b=parse_results(res_prof_pythia_b),
         save_path=PLOTS / "pythia_model_comparison.png",
     )
 

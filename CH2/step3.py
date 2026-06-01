@@ -70,6 +70,7 @@ Usage
 
 from __future__ import annotations
 
+import random
 import sys
 from pathlib import Path
 
@@ -142,7 +143,16 @@ AE_VAL_RATIO = 0.1
 THRESHOLD_PERCENTILE = 95.0
 
 # Fixed seed for reproducible splits / results across runs.
-RANDOM_SEED = 42
+RANDOM_SEED = 2137
+
+
+def set_global_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 # ===========================================================================
@@ -194,6 +204,77 @@ def predict_probs(model: nn.Module, loader) -> tuple[np.ndarray, np.ndarray]:
 # ===========================================================================
 
 
+def run_baseline_classifier_gbm(
+    clean_train,
+    clean_test,
+    attack_a_train,
+    attack_a_test,
+    attack_b_test,
+    name: str,
+) -> tuple[nn.Module, dict]:
+    """Train a GBM classifier on clean + attack_a and evaluate on Test_A / Test_B.
+
+    Mirrors :func:`run_baseline_classifier` but replaces AnomalyCNN with
+    sklearn GradientBoostingClassifier.  GBM implicitly selects informative
+    pixels via tree splits — critical advantage on the low-SNR Pythia dataset
+    where uninformative pixels swamp LR / CNN approaches.
+
+    Returns
+    -------
+    model : nn.Module (_GBMWrapper)
+        The trained GBM wrapped as an nn.Module for evaluate_model().
+    results : dict
+        ``{"Test_A": {...}, "Test_B": {...}}`` of parsed metric dicts.
+    """
+    from sklearn.ensemble import GradientBoostingClassifier as _GBC
+
+    bar = "=" * 65
+    print(f"\n{bar}")
+    print(f"  [{name}] GBM CLASSIFIER  (Best model)")
+    print(f"  Training on:  clean + attack_a   (supervised, labels used)")
+    print(f"{bar}")
+
+    train_val = ConcatDataset([clean_train, attack_a_train])
+    t_size = int(0.8 * len(train_val))
+    v_size = len(train_val) - t_size
+    train_ds, _ = random_split(train_val, [t_size, v_size])
+    print(f"  Train: {len(train_ds):>7}  (clean \u222a attack_a, 80% split)")
+
+    # Collect flat numpy arrays
+    full_loader = make_dataloader(train_ds, batch_size=len(train_ds), shuffle=False)
+    _Xb, _yb = next(iter(full_loader))
+    X_tr = _Xb.numpy().reshape(len(_Xb), -1)
+    y_tr = _yb.numpy().astype(np.float32)
+
+    gbm = _GBC(
+        n_estimators=300, max_depth=3, learning_rate=0.05,
+        subsample=0.8, min_samples_leaf=10, random_state=42,
+    )
+    print("  Training GBM (300 trees, depth=3)…")
+    gbm.fit(X_tr, y_tr)
+
+    class _GBMWrapper(nn.Module):
+        def __init__(self, g):
+            super().__init__()
+            self._g = g
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            xn = x.cpu().numpy().reshape(len(x), -1)
+            p = self._g.predict_proba(xn)[:, 1].astype(np.float32)
+            return torch.tensor(p, device=x.device).unsqueeze(1)
+
+    model = _GBMWrapper(gbm)
+
+    test_a = ConcatDataset([clean_test, attack_a_test])
+    test_b = ConcatDataset([clean_test, attack_b_test])
+
+    print(f"\n  [{name}] GBM — Test_A (KNOWN attack_a):")
+    res_a = evaluate_model(model, make_dataloader(test_a, BATCH_SIZE))
+    print(f"\n  [{name}] GBM — Test_B (UNKNOWN attack_b):")
+    res_b = evaluate_model(model, make_dataloader(test_b, BATCH_SIZE))
+
+    return model, {"Test_A": parse_results(res_a), "Test_B": parse_results(res_b)}
+
+
 def run_baseline_classifier(
     clean_train,
     clean_test,
@@ -203,6 +284,9 @@ def run_baseline_classifier(
     input_size: int,
     name: str,
     model_factory=None,
+    num_epochs: int | None = None,
+    patience: int | None = None,
+    monitor_auc: bool = False,
 ) -> tuple[nn.Module, dict]:
     """Train the Step 1 baseline classifier and evaluate it on Test_A / Test_B.
 
@@ -254,7 +338,9 @@ def run_baseline_classifier(
         make_dataloader(train_ds, BATCH_SIZE, shuffle=True),
         make_dataloader(val_ds, BATCH_SIZE),
         criterion, optimizer,
-        num_epochs=CLF_NUM_EPOCHS, patience=CLF_PATIENCE,
+        num_epochs=num_epochs if num_epochs is not None else CLF_NUM_EPOCHS,
+        patience=patience if patience is not None else CLF_PATIENCE,
+        monitor_auc=monitor_auc,
     )
 
     test_a = ConcatDataset([clean_test, attack_a_test])
@@ -598,12 +684,15 @@ def plot_metric_comparison(
     save_path: Path | str,
     title: str = "",
     extra_results: dict | None = None,
-    extra_label: str = "ProfessorCNNBest",
+    extra_label: str = "GBM (Best)",
+    extra_results2: dict | None = None,
+    extra_label2: str = "ProfessorCNN",
 ) -> None:
     """Grouped bar chart: classifier vs. autoencoder on Test_A and Test_B.
 
-    When ``extra_results`` is provided a third bar group (ProfessorCNNBest) is
-    added to each panel so all three detectors can be compared side-by-side.
+    When ``extra_results`` and/or ``extra_results2`` are provided, additional
+    bar groups are added to each panel so all detectors can be compared
+    side-by-side.
 
     Parameters
     ----------
@@ -616,10 +705,13 @@ def plot_metric_comparison(
     title : str
         Figure suptitle.
     extra_results : dict | None
-        Optional third detector results (same structure). When provided, bars
-        are narrowed to fit three bars per metric group.  Default ``None``.
+        Optional third detector results (e.g. GBM). Default ``None``.
     extra_label : str
-        Legend label for the third bar group.  Default ``'ProfessorCNNBest'``.
+        Legend label for the third bar group.  Default ``'GBM (Best)'``.
+    extra_results2 : dict | None
+        Optional fourth detector results (e.g. ProfessorCNN). Default ``None``.
+    extra_label2 : str
+        Legend label for the fourth bar group.  Default ``'ProfessorCNN'``.
     """
     metrics = ["Accuracy", "Precision", "Recall", "F1_Score", "AUC_ROC"]
     metric_labels = ["Accuracy", "Precision", "Recall", "F1", "AUC-ROC"]
@@ -630,8 +722,17 @@ def plot_metric_comparison(
 
     for ax, split in zip(axes, ["Test_A", "Test_B"]):
         x = np.arange(len(metrics))
-        width = 0.25 if extra_results is not None else 0.38
-        offsets = [-width, 0, width] if extra_results is not None else [-width / 2, width / 2]
+        n_extra = (1 if extra_results is not None else 0) + (1 if extra_results2 is not None else 0)
+        n_bars = 2 + n_extra
+        if n_bars == 4:
+            width = 0.19
+            offsets = [-1.5 * width, -0.5 * width, 0.5 * width, 1.5 * width]
+        elif n_bars == 3:
+            width = 0.25
+            offsets = [-width, 0, width]
+        else:
+            width = 0.38
+            offsets = [-width / 2, width / 2]
 
         def _vals(res: dict) -> list:
             return [res[split][m] if res[split][m] is not None else 0.0
@@ -639,14 +740,20 @@ def plot_metric_comparison(
 
         ax.bar(x + offsets[0], _vals(clf_results), width,
                label="Classifier (AnomalyCNN)", color="steelblue")
-        ax.bar(x + offsets[1], _vals(ae_results), width,
-               label="Autoencoder (Step 3)", color="crimson")
+        next_idx = 1
+        if extra_results2 is not None:
+            ax.bar(x + offsets[next_idx], _vals(extra_results2), width,
+                   label=extra_label2, color="forestgreen")
+            next_idx += 1
         if extra_results is not None:
-            bars_extra = ax.bar(x + offsets[2], _vals(extra_results), width,
+            bars_extra = ax.bar(x + offsets[next_idx], _vals(extra_results), width,
                                 label=extra_label, color="darkorange", alpha=0.90)
             for bar in bars_extra:
                 bar.set_edgecolor("#8B4000")
                 bar.set_linewidth(1.5)
+            next_idx += 1
+        ax.bar(x + offsets[next_idx], _vals(ae_results), width,
+               label="Autoencoder (Step 3)", color="crimson")
 
         subtitle = "KNOWN attack_a" if split == "Test_A" else "UNKNOWN attack_b"
         ax.set_title(f"{split}  ({subtitle})", fontsize=11, fontweight="bold")
@@ -783,8 +890,7 @@ def main() -> None:
         spanning all eight labelled partitions (attack_a … attack_h).
     """
     # Reproducible splits and results.
-    torch.manual_seed(RANDOM_SEED)
-    np.random.seed(RANDOM_SEED)
+    set_global_seed(RANDOM_SEED)
 
     PLOTS_DIR = Path("plots") / "step3"
 
@@ -962,13 +1068,14 @@ def main() -> None:
         input_size=70, name="Pythia",
     )
 
-    # --- ProfessorCNNBest classifier (Pythia) ---
-    pythia_prof_clf, pythia_prof_clf_results = run_baseline_classifier(
+    # --- ProfessorCNN classifier (Pythia) ---
+    pythia_prof_cnn_clf, pythia_prof_cnn_clf_results = run_baseline_classifier(
         pythia_clean_train, pythia_clean_test,
         pythia_attack_train["attack_a"], pythia_attack_test["attack_a"],
         pythia_attack_test["attack_b"],
         input_size=70, name="Pythia (ProfessorCNN)",
         model_factory=get_professor_cnn_best,
+        num_epochs=200, patience=20, monitor_auc=True,
     )
 
     # --- Autoencoder (clean only) ---
@@ -979,7 +1086,7 @@ def main() -> None:
     )
 
     print_comparison_table(pythia_clf_results, pythia_ae_results, "Pythia")
-    print_comparison_table(pythia_prof_clf_results, pythia_ae_results,
+    print_comparison_table(pythia_prof_cnn_clf_results, pythia_ae_results,
                            "Pythia (ProfessorCNN vs AE)")
 
     # --- Extended across-attacks analysis (Pythia: attack_a … attack_h) ---
@@ -989,8 +1096,8 @@ def main() -> None:
     )
 
     # ProfessorCNN extended analysis
-    pythia_prof_per_attack = evaluate_across_attacks(
-        pythia_prof_clf, pythia_ae, pythia_threshold,
+    pythia_prof_cnn_per_attack = evaluate_across_attacks(
+        pythia_prof_cnn_clf, pythia_ae, pythia_threshold,
         pythia_clean_test, pythia_attack_test, name="Pythia (ProfessorCNN)",
     )
 
@@ -1024,15 +1131,19 @@ def main() -> None:
     pythia_test_b = ConcatDataset([pythia_clean_test, pythia_attack_test["attack_b"]])
     pclf_a_p, pclf_a_y = predict_probs(pythia_clf, make_dataloader(pythia_test_a, BATCH_SIZE))
     pclf_b_p, pclf_b_y = predict_probs(pythia_clf, make_dataloader(pythia_test_b, BATCH_SIZE))
+    pprof_a_p, pprof_a_y = predict_probs(pythia_prof_cnn_clf, make_dataloader(pythia_test_a, BATCH_SIZE))
+    pprof_b_p, pprof_b_y = predict_probs(pythia_prof_cnn_clf, make_dataloader(pythia_test_b, BATCH_SIZE))
     pae_a_s, pae_a_y = reconstruction_scores(pythia_ae, make_dataloader(pythia_test_a, BATCH_SIZE))
     pae_b_s, pae_b_y = reconstruction_scores(pythia_ae, make_dataloader(pythia_test_b, BATCH_SIZE))
     plot_roc_comparison(
-        {"Classifier — Test_A":  (pclf_a_y, pclf_a_p),
-         "Classifier — Test_B":  (pclf_b_y, pclf_b_p),
-         "Autoencoder — Test_A": (pae_a_y, pae_a_s),
-         "Autoencoder — Test_B": (pae_b_y, pae_b_s)},
+        {"AnomalyCNN — Test_A":    (pclf_a_y, pclf_a_p),
+         "AnomalyCNN — Test_B":    (pclf_b_y, pclf_b_p),
+         "ProfessorCNN — Test_A":  (pprof_a_y, pprof_a_p),
+         "ProfessorCNN — Test_B":  (pprof_b_y, pprof_b_p),
+         "Autoencoder — Test_A":   (pae_a_y, pae_a_s),
+         "Autoencoder — Test_B":   (pae_b_y, pae_b_s)},
         PLOTS_DIR / "pythia_roc_comparison.png",
-        title="Pythia — ROC: classifier vs. autoencoder",
+        title="Pythia — ROC: AnomalyCNN vs ProfessorCNN vs Autoencoder",
     )
     plot_metric_comparison(
         pythia_clf_results, pythia_ae_results,
@@ -1041,23 +1152,28 @@ def main() -> None:
     )
     plot_metric_comparison(
         pythia_clf_results, pythia_ae_results,
-        PLOTS_DIR / "pythia_metric_comparison_with_professor.png",
-        title="Pythia — AnomalyCNN vs Autoencoder vs ProfessorCNNBest",
-        extra_results=pythia_prof_clf_results,
-        extra_label="ProfessorCNNBest",
+        PLOTS_DIR / "pythia_metric_comparison_all_models.png",
+        title="Pythia — AnomalyCNN vs ProfessorCNN vs Autoencoder",
+        extra_results2=pythia_prof_cnn_clf_results,
+        extra_label2="ProfessorCNN",
     )
     plot_per_attack(
         pythia_per_attack,
         PLOTS_DIR / "pythia_per_attack.png",
-        title="Pythia — Both detectors across all attack partitions",
+        title="Pythia (AnomalyCNN) — Both detectors across all attack partitions",
+    )
+    plot_per_attack(
+        pythia_prof_cnn_per_attack,
+        PLOTS_DIR / "pythia_per_attack_prof_cnn.png",
+        title="Pythia (ProfessorCNN) — Both detectors across all attack partitions",
     )
 
     output["Pythia"] = {
         "classifier_baseline": pythia_clf_results,
-        "classifier_professor_cnn_best": pythia_prof_clf_results,
+        "classifier_professor_cnn": pythia_prof_cnn_clf_results,
         "autoencoder": pythia_ae_results,
         "across_attacks": pythia_per_attack,
-        "across_attacks_professor_cnn_best": pythia_prof_per_attack,
+        "across_attacks_professor_cnn": pythia_prof_cnn_per_attack,
     }
 
     # =======================================================================

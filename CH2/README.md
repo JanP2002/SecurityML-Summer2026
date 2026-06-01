@@ -107,6 +107,8 @@ python step3.py
 | `faza3_wyniki_autoenkodera.json` | `step3.py` | Classifier vs. autoencoder metrics, per-attack breakdown |
 | `faza_professor_cnn_search.json` | `step_professor_search.py` | Best ProfessorCNN config + all 15 search experiment metrics |
 | `professor_search.log` | `step_professor_search.py` | Per-experiment timing + metrics log (INFO to console, DEBUG to file) |
+| `plots/step1/pythia_model_comparison.png` | `step1.py` | 4-model bar chart (AnomalyCNN / PixelMLP / ProfCNN / GBM) |
+| `plots/step1/pythia_delta_heatmap.png` | `step1.py` | Per-pixel attack signal heatmap |
 | `plots/step2/step2_generalization.png` | `step2.py` | All 5 metrics vs. n, both datasets |
 | `plots/step2/per_metric_curves.png` | `step2.py` | 2×3 grid: each metric separately |
 | `plots/step2/metric_heatmap.png` | `step2.py` | Heatmap: metric × round |
@@ -247,27 +249,35 @@ for the full hyperparameter reference.
 
 ---
 
-## Step 1 — Supervised baseline (closed-world)
+## Step 1 — Supervised baseline & model comparison (closed-world)
 
-**Research question:** Can a CNN trained on `clean` + `attack_a` detect
-a completely different `attack_b`?
+**Research questions:**
+1. Can a CNN trained on `clean` + `attack_a` detect a completely different `attack_b`?
+2. Which modelling approach best captures Pythia's subtle positional attack signal?
 
 **Setup:**
 
-- Model: `AnomalyCNN` — 3-block CNN with MaxPool, BCE loss, Adam (lr=0.001)
-- Training: `clean ∪ attack_a` (balanced 50/50), up to 15 epochs, early stopping patience=3
-- Test_A: `clean_test ∪ attack_a_test` (known attack)
-- Test_B: `clean_test ∪ attack_b_test` (unknown OOD attack)
+- Training: `clean ∪ attack_a` (balanced 50/50)
+- **Test_A:** `clean_test ∪ attack_a_test` (known attack)
+- **Test_B:** `clean_test ∪ attack_b_test` (unknown OOD attack)
+- MNIST: AnomalyCNN only (full baseline)
+- Pythia: all four models trained and compared in parallel
 
-**Expected result:**
+**Four Pythia models compared:**
 
-- Test_A: Accuracy, F1, AUC-ROC all close to 1.0
-- Test_B: Severe degradation, especially Recall and AUC-ROC
+| Model | Architecture | Epochs / Trees | Test_A AUC |
+|-------|-------------|----------------|------------|
+| AnomalyCNN (Baseline) | 3-block CNN, BCE, Adam | 15 / patience=3 | ~0.47–0.49 |
+| PixelMLP | Flat linear layer, AdamW full-batch | 200 / patience=20 | ~0.53–0.56 |
+| ProfessorCNN | Tuned CNN (hyperparameter search) | 200 / patience=20 | ~0.52–0.53 |
+| **GBM (Best)** | Gradient Boosting, 300 trees, depth=3 | — | **0.61–0.68** |
 
-This demonstrates the **closed-world assumption failure**: the classifier
-learned a noise-specific boundary, not a model of normality.  When the
-OOD attack does not activate the learned noise-sensitive filters, it is
-misclassified as clean.
+**Key finding:** AnomalyCNN and ProfessorCNN fail on Pythia (AUC ≈ 0.49–0.53)
+because MaxPooling and Global-Average-Pooling discard the position-specific signal.
+GBM's tree splits implicitly select the ~500 most informative pixels without oracle
+knowledge, achieving AUC 0.61–0.68.  See [MODELS.md](MODELS.md) for full analysis.
+
+**Output:** `plots/step1/pythia_model_comparison.png` — 4-model AUC/F1/Acc/Rec bar chart.
 
 ---
 
@@ -283,7 +293,9 @@ For each round $n = 1, 2, \ldots, K-1$:
 1. Training set: `clean ∪ balanced_sample(A_1, …, A_n)` — kept at 1:1 ratio by
    subsampling each attack type to `len(clean) // n` samples.
 2. Test set: `clean_test ∪ A_{n+1}` — the $(n+1)$-th attack is never seen during training.
-3. Fresh `AnomalyCNN` trained from scratch for each round.
+3. Fresh model trained from scratch each round:
+   - **MNIST:** `AnomalyCNN` (baseline)
+   - **Pythia:** `AnomalyCNN` (Baseline) **and** `GBM` (Best) — both run per round
 
 **MNIST attack sequence:**
 
@@ -297,9 +309,11 @@ For each round $n = 1, 2, \ldots, K-1$:
 | A6 | `A6_ood` | OOD (Fashion-MNIST) | — |
 
 **Pythia** uses all 8 labelled partitions (`attack_a` … `attack_h`), 7 rounds total.
+Both `AnomalyCNN` (Baseline) and `GBM` (Best) are tracked per round — the comparison
+plot shows whether GBM's pixel-selection advantage persists under progressive training.
 
-**Output:** `plots/step2/` contains five figures showing all 5 metrics
-(Accuracy, Precision, Recall, F1-Score, AUC-ROC) as a function of $n$ for both datasets.
+**Output:** `plots/step2/` — progressive-training curves for Baseline + GBM (Pythia) and
+all five metrics for MNIST.
 
 ---
 
@@ -319,18 +333,19 @@ manifold — with no prior exposure to any attack.
 
 Both detectors are trained on identical data splits for a fair comparison:
 
-| Detector | Training data | Anomaly score |
-|---|---|---|
-| `AnomalyCNN` (Step 1) | clean ∪ attack_a | sigmoid output ∈ [0,1] |
-| `ConvAutoencoder` (Step 3) | **clean only** | reconstruction MSE ∈ [0,∞) |
+| Detector | Datasets | Training data | Anomaly score |
+|---|---|---|---|
+| `AnomalyCNN` (Baseline) | MNIST + Pythia | clean ∪ attack_a | sigmoid ∈ [0,1] |
+| **`GBM` (Best)** | **Pythia only** | clean ∪ attack_a (flat pixels) | `predict_proba()[:,1]` ∈ [0,1] |
+| `ConvAutoencoder` | MNIST + Pythia | **clean only** | reconstruction MSE ∈ [0,∞) |
 
 The autoencoder threshold is the **95th percentile** of reconstruction error
 on a held-out clean validation split — chosen without ever looking at attack
 data, preserving unsupervised status.
 
-**Extended analysis:** both trained detectors are also evaluated on every
-contamination type (MNIST: all 6; Pythia: all 8), without retraining.  This
-shows which anomaly families each paradigm can and cannot detect.
+**Extended analysis:** all trained detectors are also evaluated on every
+contamination type (MNIST: all 6; Pythia: all 8), without retraining.
+(Pythia: AnomalyCNN, GBM, and the Autoencoder are all compared across attack_a … attack_h.)
 
 **Hyperparameters:**
 - Autoencoder: 30 epochs max, patience = 5, latent_dim = 32, random seed = 42
@@ -391,6 +406,7 @@ Loss: MSELoss | Optimiser: Adam lr=0.001 | Threshold: 95th-percentile of clean-v
 | `visualize_samples` | function | Save a row of labelled sample images |
 | `make_dataloader` | function | DataLoader with Windows-safe num_workers=0 |
 | `AnomalyCNN` | class | 3-block CNN binary classifier (Steps 1 & 2) |
+| `PixelMLP` | class | Flat linear classifier in pixel space (Step 1 Pythia) |
 | `ProfessorCNN` | class | Configurable CNN classifier (Steps 1–3, Pythia only) |
 | `get_professor_cnn_best` | function | Load ProfessorCNN with best searched config (or default fallback) |
 | `ConvAutoencoder` | class | 3+2 convolutional autoencoder (Step 3) |
