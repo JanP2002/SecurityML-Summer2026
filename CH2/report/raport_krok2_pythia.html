@@ -116,6 +116,80 @@
     font-weight: bold;
     margin-left: 6px;
   }
+  /* === Architecture diagram styles === */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 16px 0 24px;
+  }
+  @media (max-width: 720px) { .arch-grid { grid-template-columns: 1fr; } }
+  .arch-card {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .arch-card .arch-header {
+    padding: 9px 14px;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+  }
+  .arch-card.anomaly .arch-header  { background: #2a5caa; }
+  .arch-card.pixel   .arch-header  { background: #1a7a3c; }
+  .arch-card.professor .arch-header{ background: #7d3c98; }
+  .arch-card.gbm     .arch-header  { background: #b7770d; }
+  .arch-card .arch-body { padding: 10px 14px; }
+  .layer-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    font-size: 12px;
+  }
+  .layer {
+    background: #f4f7fc;
+    border: 1px solid #c8d4e8;
+    border-radius: 3px;
+    padding: 5px 10px;
+    text-align: center;
+    position: relative;
+  }
+  .layer.conv   { background: #dce8fb; border-color: #2a5caa; }
+  .layer.pool   { background: #e8f5ec; border-color: #1a7a3c; }
+  .layer.fc     { background: #f0ebfa; border-color: #7d3c98; }
+  .layer.act    { background: #f7f2e6; border-color: #c8a84b; }
+  .layer.out    { background: #fdecea; border-color: #c0392b; }
+  .layer.input  { background: #f0f0f0; border-color: #888; }
+  .layer.bn     { background: #e6faf6; border-color: #2aa87a; }
+  .layer.drop   { background: #fff4f0; border-color: #e0704a; font-style: italic; color: #888; }
+  .layer.gap    { background: #fef9e7; border-color: #d4ac0d; }
+  .arrow {
+    text-align: center;
+    color: #aaa;
+    font-size: 12px;
+    line-height: 1.0;
+    padding: 1px 0;
+    user-select: none;
+  }
+  .layer strong { font-size: 11px; display: block; color: #555; font-weight: normal; margin-top: 1px; }
+  .arch-meta {
+    font-size: 12px; color: #555; margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .arch-meta span { display: inline-block; margin-right: 12px; }
+  .param-count { font-weight: 700; color: #2a5caa; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .three-col { grid-template-columns: 1fr; } }
+  .best-cfg {
+    background: #f5edfb; border: 2px solid #7d3c98; border-radius: 5px;
+    padding: 12px 16px; margin: 12px 0;
+  }
+  .best-cfg h4 { color: #7d3c98; font-size: 13px; margin-bottom: 6px; }
+  pre.cfg-block {
+    background: #f4f4f4; border: 1px solid #ddd; border-radius: 3px;
+    padding: 10px 14px; font-size: 12px; font-family: "Consolas", monospace;
+    white-space: pre; overflow-x: auto; margin: 0;
+  }
 </style>
 </head>
 <body>
@@ -130,6 +204,7 @@
   <strong>Spis treści</strong>
   <ol>
     <li><a href="#context">Kontekst i zadanie</a></li>
+    <li><a href="#models">Budowa modeli</a></li>
     <li><a href="#step1">Krok 1 — Baseline klasyfikacyjny</a></li>
     <li><a href="#step2">Krok 2 — Progresywne uczenie (MNIST i Pythia)</a></li>
     <li><a href="#step2prof">Krok 2 (Professor) — Usprawnienia reproducibility</a></li>
@@ -166,7 +241,219 @@
 </ol>
 
 <!-- ========================================================= -->
-<h2 id="step1">2. Krok 1 — Baseline klasyfikacyjny</h2>
+<h2 id="models">2. Budowa modeli</h2>
+
+<p>W eksperymentach porównywane są cztery modele. Poniżej przedstawiono ich pełną architekturę — od warstwy wejściowej do wyjścia, wraz z kluczowymi parametrami trenowania.</p>
+
+<!-- ───── AnomalyCNN ───── -->
+<h3>AnomalyCNN — model bazowy</h3>
+<p>Standardowy CNN z trzema blokami konwolucyjnymi i MaxPoolingiem. Wejście: obraz H×H w odcieniach szarości (H=28 dla MNIST, H=70 dla Pythia).</p>
+
+<div class="arch-grid">
+  <div class="arch-card anomaly">
+    <div class="arch-header">AnomalyCNN — przepływ danych (H=70, Pythia)</div>
+    <div class="arch-body">
+      <div class="layer-flow">
+        <div class="layer input">Wejście: (B, 1, 70, 70)</div>
+        <div class="arrow">↓</div>
+        <div class="layer conv">Conv2d(1→16, 3×3, padding=1) → ReLU<strong>wyjście: (B, 16, 70, 70)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer pool">MaxPool2d(2×2)<strong>wyjście: (B, 16, 35, 35)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer conv">Conv2d(16→32, 3×3, padding=1) → ReLU<strong>wyjście: (B, 32, 35, 35)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer pool">MaxPool2d(2×2)<strong>wyjście: (B, 32, 17, 17)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer conv">Conv2d(32→64, 3×3, padding=1) → ReLU<strong>wyjście: (B, 64, 17, 17)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer pool">MaxPool2d(2×2)<strong>wyjście: (B, 64, 8, 8)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer fc">Flatten → Linear(4096 → 128) → ReLU<strong>4096 = 64×8×8</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer out">Linear(128 → 1) → Sigmoid<strong>wyjście: prawdopodobieństwo ataku ∈ (0,1)</strong></div>
+      </div>
+      <div class="arch-meta">
+        <span><b>Parametry:</b> ~540K (Pythia) / ~95K (MNIST)</span>
+        <span><b>Trening:</b> BCELoss, Adam, lr=0.001</span>
+        <span><b>Epoki:</b> 15, patience=3</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="box warn" style="margin-top:0">
+      <strong>Problem z MaxPoolingiem na Pythii:</strong> Trzy warstwy MaxPool(2×2) redukują mapę 70×70 → 35×35 → 17×17 → 8×8. Ataki Pythia to subtelne, <em>lokalne</em> perturbacje pikselowe (max |Δ|=0.068). MaxPooling wybiera wartość maksymalną z każdego okna 2×2 — tym samym <strong>niszczy informację o lokalizacji</strong> i maskuje słaby sygnał anomalii. Dla MNIST działa, bo tamtejsze ataki to globalne transformacje (każdy piksel zmieniony).
+    </div>
+    <div class="box">
+      <strong>Dlaczego wynik jest &asymp;0.5 AUC na Pythii?</strong><br>
+      Po 3 warstwach poolingu model <em>nie widzi</em> gdzie był atak — widzi tylko uśrednione cechy. Nie może odróżnić czystego obrazu od atakowanego, bo subtelna perturbacja lokalna ginie w agregacji.
+    </div>
+  </div>
+</div>
+
+<!-- ───── ProfessorCNN ───── -->
+<h3>ProfessorCNN — model wybrany przez grid search</h3>
+<p>ProfessorCNN to konfigurowalna architektura CNN zaproponowana przez profesora i przeszukana automatycznie przez <code>step_professor_search.py</code> (15 konfiguracji, selekcja przez val AUC-ROC). Poniżej pełna budowa <strong>najlepszej znalezionej konfiguracji</strong>.</p>
+
+<div class="best-cfg">
+  <h4>Najlepsza konfiguracja (faza_professor_cnn_search.json)</h4>
+  <pre class="cfg-block">kernel_size   = (4, 5)       # asymetryczne jądro konwolucji
+activation    = "swish"      # SiLU(x) = x · σ(x)  [wygładzone, ciągłe pochodne]
+dropout       = 0.2          # Dropout2d w blokach conv, Dropout w głowicy
+dense_head    = [128, 64]    # rozmiary dwóch ukrytych warstw liniowych
+pooling       = "global_average"  # GlobalAveragePooling zamiast Flatten
+conv_channels = [16, 32, 64] # liczba kanałów w każdym z 3 bloków conv
+batch_norm    = True         # BatchNorm2d po każdej konwolucji</pre>
+</div>
+
+<div class="arch-grid">
+  <div class="arch-card professor">
+    <div class="arch-header">ProfessorCNN — przepływ danych (H=70, Pythia)</div>
+    <div class="arch-body">
+      <div class="layer-flow">
+        <div class="layer input">Wejście: (B, 1, 70, 70)</div>
+        <div class="arrow">↓ Blok 1</div>
+        <div class="layer conv">Conv2d(1→16, 4×5, padding='same') → BatchNorm2d(16)<strong>wyjście: (B, 16, 70, 70)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer act">Swish (SiLU) → Dropout2d(0.2)</div>
+        <div class="arrow">↓</div>
+        <div class="layer pool">MaxPool2d(2×2)<strong>wyjście: (B, 16, 35, 35)</strong></div>
+        <div class="arrow">↓ Blok 2</div>
+        <div class="layer conv">Conv2d(16→32, 4×5, padding='same') → BatchNorm2d(32)<strong>wyjście: (B, 32, 35, 35)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer act">Swish → Dropout2d(0.2)</div>
+        <div class="arrow">↓</div>
+        <div class="layer pool">MaxPool2d(2×2)<strong>wyjście: (B, 32, 17, 17)</strong></div>
+        <div class="arrow">↓ Blok 3</div>
+        <div class="layer conv">Conv2d(32→64, 4×5, padding='same') → BatchNorm2d(64)<strong>wyjście: (B, 64, 17, 17)</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer act">Swish → Dropout2d(0.2)</div>
+        <div class="arrow">↓</div>
+        <div class="layer pool">MaxPool2d(2×2)<strong>wyjście: (B, 64, 8, 8)</strong></div>
+        <div class="arrow">↓ Global Average Pooling</div>
+        <div class="layer gap">AdaptiveAvgPool2d(1) → Flatten<strong>wyjście: (B, 64) — uśrednienie przestrzenne</strong></div>
+        <div class="arrow">↓ Głowica Dense</div>
+        <div class="layer fc">Linear(64 → 128) → Swish → Dropout(0.2)</div>
+        <div class="arrow">↓</div>
+        <div class="layer fc">Linear(128 → 64) → Swish → Dropout(0.2)</div>
+        <div class="arrow">↓</div>
+        <div class="layer out">Linear(64 → 1) → Sigmoid<strong>wyjście: prawdopodobieństwo ataku ∈ (0,1)</strong></div>
+      </div>
+      <div class="arch-meta">
+        <span><b>Parametry:</b> ~130K (z GAP), ~4.3M (z Flatten)</span>
+        <span><b>Trening:</b> BCELoss, AdamW</span>
+        <span><b>Epoki:</b> 200, patience=20, monitor=AUC-ROC</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h4>Co odróżnia ProfessorCNN od AnomalyCNN?</h4>
+    <table style="font-size:12px; margin-top:6px">
+      <tr><th>Cecha</th><th>AnomalyCNN</th><th>ProfessorCNN</th></tr>
+      <tr><td>Jądro konwolucji</td><td>3×3</td><td><b>4×5</b> (asymetr.)</td></tr>
+      <tr><td>BatchNorm</td><td>❌ brak</td><td class="good">✓ po każdym Conv</td></tr>
+      <tr><td>Aktywacja</td><td>ReLU</td><td><b>Swish/SiLU</b></td></tr>
+      <tr><td>Dropout</td><td>❌ brak</td><td class="good">✓ Dropout2d 0.2</td></tr>
+      <tr><td>Pooling końcowy</td><td>Flatten (4096-dim)</td><td><b>GlobalAvgPool (64-dim)</b></td></tr>
+      <tr><td>Głowica Dense</td><td>128 → 1</td><td><b>128 → 64 → 1</b></td></tr>
+      <tr><td>Epoki treningu</td><td>15</td><td class="good"><b>200</b></td></tr>
+      <tr><td>Early stopping</td><td>patience=3, loss</td><td class="good">patience=20, AUC</td></tr>
+    </table>
+    <div class="box" style="margin-top:12px">
+      <strong>Uwaga dot. GAP:</strong> GlobalAveragePooling redukuje (B,64,8,8) → (B,64) przez uśrednienie po wymiarach H i W. Zachowuje <em>jeszcze mniej</em> informacji przestrzennej niż Flatten, ale znacząco redukuje liczbę parametrów i ryzyko przeuczenia. Dla Pythia żadne z tych rozwiązań nie ratuje sygnału lokalnego.
+    </div>
+  </div>
+</div>
+
+<!-- ───── PixelMLP i GBM ───── -->
+<h3>PixelMLP i GBM — modele referencyjne z Kroku 1</h3>
+
+<div class="arch-grid">
+  <div class="arch-card pixel">
+    <div class="arch-header">PixelMLP — position-aware MLP</div>
+    <div class="arch-body">
+      <div class="layer-flow">
+        <div class="layer input">Wejście: (B, 1, 70, 70)</div>
+        <div class="arrow">↓</div>
+        <div class="layer fc">Flatten → wektor 4900 pikseli</div>
+        <div class="arrow">↓</div>
+        <div class="layer fc">Linear(4900 → 128) → GELU → Dropout</div>
+        <div class="arrow">↓</div>
+        <div class="layer out">Linear(128 → 1) → Sigmoid</div>
+      </div>
+      <div class="arch-meta">
+        <span><b>Parametry:</b> ~630K</span>
+        <span><b>Idea:</b> Każdy piksel ma osobną wagę — zachowuje informację pozycyjną (brak poolingu). Wrażliwy na lokalne perturbacje, ale podatny na przeuczenie.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-card gbm">
+    <div class="arch-header">GBM (Gradient Boosting Machine)</div>
+    <div class="arch-body">
+      <p style="font-size:12px; margin-bottom:8px">Model drzewiasty — nie używa sieci neuronowej. Cechy: surowe piksele (4900-dim) lub cechy ręczne.</p>
+      <div class="layer-flow">
+        <div class="layer input">Wejście: wektor 4900 pikseli (flattened)</div>
+        <div class="arrow">↓</div>
+        <div class="layer conv" style="background:#fef3dc; border-color:#b7770d">Ensemble drzew decyzyjnych (gradient boosting)<strong>każde drzewo poprawia reszty poprzedniego</strong></div>
+        <div class="arrow">↓</div>
+        <div class="layer out">Wynik: prawdopodobieństwo ataku</div>
+      </div>
+      <div class="arch-meta">
+        <span><b>Kluczowa zaleta:</b> Selekcja cech przez drzewa — automatycznie filtruje które piksele niosą sygnał. Osiąga AUC=0.61 na Pythii (najlepszy wynik w Kroku 1).</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── tabela podsumowująca ───── -->
+<h3>Zestawienie porównawcze wszystkich modeli</h3>
+<table>
+  <tr>
+    <th>Model</th><th>Architektura</th><th>Pooling</th><th>Batchnorm</th>
+    <th>Regularyzacja</th><th>Parametry (Pythia)</th><th>AUC Pythia (Krok 1)</th>
+  </tr>
+  <tr>
+    <td><b>AnomalyCNN</b></td>
+    <td>3× [Conv(3×3) → ReLU → MaxPool] + FC(128→1)</td>
+    <td class="bad">MaxPool ×3</td>
+    <td class="bad">❌</td>
+    <td class="bad">brak</td>
+    <td>~540K</td>
+    <td class="bad">0.47–0.49</td>
+  </tr>
+  <tr>
+    <td><b>ProfessorCNN</b></td>
+    <td>3× [Conv(4×5) → BN → Swish → Drop → MaxPool] + GAP + FC(128→64→1)</td>
+    <td class="bad">MaxPool ×3 + GAP</td>
+    <td class="good">✓ BN</td>
+    <td class="good">Dropout2d 0.2</td>
+    <td>~130K</td>
+    <td class="mid">0.49–0.51</td>
+  </tr>
+  <tr>
+    <td><b>PixelMLP</b></td>
+    <td>Flatten + FC(4900→128→1)</td>
+    <td class="good">❌ brak</td>
+    <td class="bad">❌</td>
+    <td class="mid">opcjonalny Drop</td>
+    <td>~630K</td>
+    <td class="mid">0.535–0.558</td>
+  </tr>
+  <tr>
+    <td><b>GBM</b></td>
+    <td>Gradient Boosting na pikselach</td>
+    <td class="good">❌ brak</td>
+    <td class="good">N/A</td>
+    <td class="good">tree depth limit</td>
+    <td>N/A (nieparametr.)</td>
+    <td class="good">0.608–0.609</td>
+  </tr>
+</table>
+
+<!-- ========================================================= -->
+<h2 id="step1">3. Krok 1 — Baseline klasyfikacyjny</h2>
 
 <p>Krok 1 ustanawia punkt odniesienia: model trenowany na <code>attack_a</code> (znany), testowany na <code>attack_a</code> (Test_A) i <code>attack_b</code> (Test_B — nieznany). Na Pythii porównano cztery modele.</p>
 
@@ -209,7 +496,7 @@
 </div>
 
 <!-- ========================================================= -->
-<h2 id="step2">3. Krok 2 — Progresywne uczenie (MNIST i Pythia)</h2>
+<h2 id="step2">4. Krok 2 — Progresywne uczenie (MNIST i Pythia)</h2>
 
 <p>Krok 2 testuje hipotezę: <em>czy trening na n różnych typach ataków poprawia wykrywanie niewidzianego ataku n+1?</em> Dla każdej rundy n trenujemy model na <code>clean ∪ balanced(A₁,…,Aₙ)</code> i testujemy na <code>clean_test ∪ Aₙ₊₁</code>.</p>
 
@@ -264,7 +551,7 @@
 </div>
 
 <!-- ========================================================= -->
-<h2 id="step2prof">4. Krok 2 (Professor) — Cztery usprawnienia reprodukowalności</h2>
+<h2 id="step2prof">5. Krok 2 (Professor) — Cztery usprawnienia reprodukowalności</h2>
 
 <p>Zidentyfikowane problemy zostały rozwiązane w pliku <code>step2_professor.py</code>:</p>
 
@@ -288,7 +575,7 @@
 </div>
 
 <!-- ========================================================= -->
-<h2 id="subsets">5. Eksperyment główny: Porównanie strategii wyboru podzbiorów</h2>
+<h2 id="subsets">6. Eksperyment główny: Porównanie strategii wyboru podzbiorów</h2>
 
 <p>Zgodnie z wytyczną profesora, porównano <strong>9 strategii wyboru podzbiorów ataków</strong> odpowiadając na dwa pytania:</p>
 <ul>
@@ -333,7 +620,7 @@
 </div>
 
 <!-- ========================================================= -->
-<h2 id="pairwise">6. Protokół par (A→B): Wierność Krokowi 1</h2>
+<h2 id="pairwise">7. Protokół par (A→B): Wierność Krokowi 1</h2>
 
 <p>Aby bezpośrednio porównać się z Krokiem 1, przeprowadzono eksperyment: dla każdej pary (train_attack_X, test_attack_Y) trenujemy ProfessorCNN na czystych + wszystkich próbkach ataku X, i testujemy na czystych + wszystkich próbkach ataku Y. Każda para powtarzana 5-krotnie.</p>
 
@@ -351,7 +638,7 @@
 </div>
 
 <!-- ========================================================= -->
-<h2 id="step3">7. Krok 3 — Autoenkoder (kontekst)</h2>
+<h2 id="step3">8. Krok 3 — Autoenkoder (kontekst)</h2>
 
 <p>Krok 3 testuje podejście nienadzorowane: autoenkoder trenowany <strong>tylko na czystych danych</strong> używa błędu rekonstrukcji jako miary anomalii. Dla MNIST działa wyśmienicie — dla Pythii nadal nie generalizuje.</p>
 
@@ -382,7 +669,7 @@
 <p>Dla porównania, na MNIST autoenkoder osiąga AUC = 1.0 i Recall = 1.0 na obu Test_A i Test_B — wynik niemal idealny.</p>
 
 <!-- ========================================================= -->
-<h2 id="conclusions">8. Wnioski i rekomendacje</h2>
+<h2 id="conclusions">9. Wnioski i rekomendacje</h2>
 
 <h3>Wnioski ogólne</h3>
 

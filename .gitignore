@@ -10,3 +10,5 @@ CH2/data
 
 # log files
 *.log
+
+/data

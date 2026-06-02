@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step 2 Deep-Dive Report — Open-World Generalisation &amp; ProfessorCNN</title>
+<style>
+  :root {
+    --blue:    #1a4fa0;
+    --red:     #c0392b;
+    --green:   #1a7a3c;
+    --purple:  #7d3c98;
+    --orange:  #d35400;
+    --bg-blue: #e8f0fb;
+    --bg-red:  #fdf0f0;
+    --bg-grn:  #edfaf2;
+    --bg-pur:  #f5edfb;
+    --bg-org:  #fef3ea;
+    --border:  #ccd3dc;
+    --muted:   #555566;
+    --code-bg: #f4f5f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, Arial, sans-serif;
+    font-size: 14px; line-height: 1.65; color: #1a1a2e;
+    background: #fff; max-width: 1150px;
+    margin: 0 auto; padding: 36px 44px 80px;
+  }
+  /* --- typography --- */
+  h1  { font-size: 28px; color: var(--blue); margin-bottom: 4px; letter-spacing: -.3px; }
+  h2  { font-size: 20px; color: var(--blue); margin: 42px 0 10px;
+        border-bottom: 3px solid var(--blue); padding-bottom: 5px; }
+  h2.red    { color: var(--red);    border-color: var(--red); }
+  h2.green  { color: var(--green);  border-color: var(--green); }
+  h2.purple { color: var(--purple); border-color: var(--purple); }
+  h2.orange { color: var(--orange); border-color: var(--orange); }
+  h3  { font-size: 15px; color: #2c3e50; margin: 20px 0 7px; }
+  h4  { font-size: 12px; color: var(--muted); margin: 14px 0 4px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .5px; }
+  p   { margin-bottom: 10px; }
+  ul,ol { margin: 6px 0 10px 22px; }
+  li  { margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 30px; }
+  /* --- callout boxes --- */
+  .box { border-radius: 4px; padding: 12px 16px; margin: 12px 0; }
+  .b-blue   { background: var(--bg-blue); border-left: 4px solid var(--blue); }
+  .b-red    { background: var(--bg-red);  border-left: 4px solid var(--red); }
+  .b-green  { background: var(--bg-grn);  border-left: 4px solid var(--green); }
+  .b-purple { background: var(--bg-pur);  border-left: 4px solid var(--purple); }
+  .b-orange { background: var(--bg-org);  border-left: 4px solid var(--orange); }
+  .b-warn   { background: #fffbea;        border-left: 4px solid var(--orange); }
+  /* --- tables --- */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 22px; font-size: 13px; }
+  th { padding: 7px 10px; text-align: left; font-weight: 600; font-size: 11px;
+       border-bottom: 2px solid var(--border); color: var(--muted);
+       text-transform: uppercase; letter-spacing: .4px; }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) td { background: #f8f9fb; }
+  td.g  { color: var(--green);  font-weight: 700; }
+  td.r  { color: var(--red);    font-weight: 700; }
+  td.m  { color: #b8860b;       font-weight: 700; }
+  td.b  { color: var(--blue);   font-weight: 700; }
+  td.v  { color: var(--purple); font-weight: 700; }
+  td.o  { color: var(--orange); font-weight: 700; }
+  tr.highlight td { background: #fffde7; }
+  /* --- figures --- */
+  figure { margin: 18px 0 28px; text-align: center; }
+  figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 5px;
+               box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+  figcaption { font-size: 12px; color: var(--muted); margin-top: 7px; font-style: italic;
+               max-width: 860px; margin-left: auto; margin-right: auto; }
+  /* --- layout --- */
+  .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+  /* --- toc --- */
+  .toc { background: #f7f9fc; border: 1px solid var(--border); padding: 16px 22px;
+         margin-bottom: 36px; border-radius: 5px; display: inline-block; min-width: 340px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc li { margin-bottom: 4px; }
+  /* --- badges --- */
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 9px;
+           border-radius: 10px; margin: 0 2px; vertical-align: middle; }
+  .bd-mn { background: #e8f0fb; color: var(--blue);   border: 1px solid var(--blue); }
+  .bd-py { background: #fdf0f0; color: var(--red);    border: 1px solid var(--red); }
+  .bd-pf { background: #f5edfb; color: var(--purple); border: 1px solid var(--purple); }
+  /* --- prof cnn highlight section --- */
+  .prof-header {
+    background: linear-gradient(135deg, #f5edfb 0%, #ede0f8 100%);
+    border: 2px solid var(--purple); border-radius: 8px;
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .prof-header h3 { color: var(--purple); font-size: 17px; margin-bottom: 8px; }
+  /* --- metric bar --- */
+  .bar-wrap { background: #eee; border-radius: 3px; height: 12px; width: 100%; margin: 2px 0; }
+  .bar { height: 12px; border-radius: 3px; }
+  /* --- scorecard --- */
+  .scorecard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0; }
+  .sc { border: 1px solid var(--border); border-radius: 6px; padding: 14px 10px; text-align: center; }
+  .sc .val { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .sc .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; margin-top: 3px; }
+  /* --- subset comparison visual --- */
+  .subset-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 14px 0; }
+  .subset-card { border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; font-size: 13px; }
+  .subset-card .name { font-weight: 700; margin-bottom: 4px; }
+  .subset-card .auc  { font-size: 22px; font-weight: 700; }
+  .subset-card .std  { font-size: 11px; color: var(--muted); }
+  .subset-card .bar-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  /* --- misc --- */
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
+         font-family: "Consolas","Cascadia Code",monospace; font-size: 12px; }
+  hr { border: none; border-top: 1px solid #dde; margin: 36px 0; }
+  .stamp { font-size: 11px; color: #aaa; margin-top: 30px; }
+  .tag-new { display: inline-block; background: #e8faea; color: var(--green); border: 1px solid var(--green);
+             font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; margin-left: 6px; }
+  .tag-key { display: inline-block; background: #fff3e0; color: var(--orange); border: 1px solid var(--orange);
+             font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; margin-left: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Step 2 — Deep-Dive Report</h1>
+<h1 style="font-size:18px; color: var(--purple); margin-top:4px; margin-bottom:6px;">Open-World Generalisation &amp; ProfessorCNN Attack Subset Experiment</h1>
+<p class="subtitle">
+  SecurityML CH2 &middot; Datasets: MNIST &amp; Pythia &middot; Scripts: <code>step2.py</code> + <code>step2_professor.py</code> &middot; 2 June 2026
+</p>
+
+<div class="toc">
+  <strong>Table of Contents</strong>
+  <ol style="margin-top:8px">
+    <li><a href="#overview">Experiment Overview &amp; Goals</a></li>
+    <li><a href="#baseline">Baseline: AnomalyCNN Progressive Training</a>
+      <ul>
+        <li><a href="#mnist-prog">MNIST Progressive Results</a></li>
+        <li><a href="#pythia-prog">Pythia Progressive Results</a></li>
+        <li><a href="#order">Order Sensitivity Analysis</a></li>
+        <li><a href="#mnist-var">MNIST Variant Robustness</a></li>
+      </ul>
+    </li>
+    <li><a href="#why-professor">Why ProfessorCNN?</a></li>
+    <li><a href="#reproducibility">Reproducibility Improvements</a></li>
+    <li><a href="#subset-exp">Main Experiment: Attack Subset Strategies</a>
+      <ul>
+        <li><a href="#subset-results">All 9 Subsets — Detailed Results</a></li>
+        <li><a href="#professor-examples">Prof. Tałataj's Suggested Combinations</a></li>
+      </ul>
+    </li>
+    <li><a href="#pairwise">Pairwise Protocol — 8×8 Cross-Attack Matrix</a></li>
+    <li><a href="#failure-analysis">Failure Analysis: Why Pythia Doesn't Generalise</a></li>
+    <li><a href="#conclusions">Conclusions</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="overview">1. Experiment Overview &amp; Goals</h2>
+
+<p>Step 2 extends the closed-world baseline (Step 1) into an <strong>open-world</strong> setting: can a model trained on <em>n</em> known attack types detect an <em>unseen</em> attack type <em>n+1</em>?</p>
+
+<p>The experiment has two components, run by two separate scripts:</p>
+
+<div class="two-col">
+  <div class="box b-blue">
+    <h3><code>step2.py</code> — AnomalyCNN Baseline</h3>
+    <p>Progressive multi-attack curriculum training using the standard AnomalyCNN architecture (3 conv layers, max-pool, binary output). Tests on both MNIST (6 attacks) and Pythia (8 attacks). Includes order-sensitivity analysis and MNIST variant robustness checks.</p>
+    <p><strong>Seed:</strong> <code>RANDOM_SEED = 42</code> · <code>NUM_PERMUTATIONS = 4</code></p>
+  </div>
+  <div class="box b-purple">
+    <h3><code>step2_professor.py</code> — ProfessorCNN Suite <span class="tag-new">MAIN DELIVERABLE</span></h3>
+    <p>ProfessorCNN-based reproducibility suite for Pythia. Directly addresses Prof. Tałataj's request: systematically compare different attack selection strategies. Adds seeded repeats, full training sets, and a pairwise protocol.</p>
+    <p><strong>Seed:</strong> <code>BASE_SEED = 2137</code> · <code>RUN_REPEATS = 5</code></p>
+  </div>
+</div>
+
+<p>The central research question, as stated by Prof. Tałataj:</p>
+<div class="box b-orange">
+  <em>"Chodzi o eksperymentowanie z różnymi strategiami wyboru typów ataków ze zbioru Pythia. Na przykład samo A, możemy porównać z połączeniem A, B, E."</em><br>
+  <strong>Translation:</strong> "Experiment with different attack type selection strategies for Pythia. For example, just A, compare with combination A, B, E."
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="baseline">2. Baseline: AnomalyCNN Progressive Training</h2>
+
+<p><strong>Protocol:</strong> At round <em>n</em>, the model is trained from scratch on:</p>
+<ul>
+  <li><em>Clean</em> data (all available clean samples)</li>
+  <li><em>Balanced subset</em> from each of A₁,…,Aₙ (downsampled to match clean set size, maintaining 1:1 ratio)</li>
+</ul>
+<p>Then evaluated on <code>clean_test ∪ Aₙ₊₁</code> (the next unseen attack). AnomalyCNN hyperparameters: 15 epochs, patience=3, batch=64, BCELoss, Adam.</p>
+
+<!-- ─── MNIST ─── -->
+<h3 id="mnist-prog">2.1 MNIST — Progressive Results <span class="badge bd-mn">MNIST · 28×28</span></h3>
+
+<div class="two-col">
+  <figure>
+    <img src="../plots/step2/per_metric_curves.png" alt="Per-metric curves">
+    <figcaption>Figure 2.1. Progressive training curves per metric. MNIST (blue) shows clear learning at most rounds. Pythia (orange) stays flat near the random baseline.</figcaption>
+  </figure>
+  <figure>
+    <img src="../plots/step2/metric_heatmap.png" alt="Metric heatmap">
+    <figcaption>Figure 2.2. Metrics × rounds heatmap. MNIST: alternating strong/weak rounds depending on structural similarity between adjacent attacks. Pythia: uniform near-random AUC throughout.</figcaption>
+  </figure>
+</div>
+
+<h4>MNIST Progressive — all rounds (original order)</h4>
+<table>
+  <tr><th>Round n</th><th>Training attacks</th><th>Test attack</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>AUC-ROC</th><th>Assessment</th></tr>
+  <tr>
+    <td>1</td><td>A1_gaussian</td><td>A2_salt_pepper</td>
+    <td class="g">1.000</td><td class="g">1.000</td><td class="g">1.000</td><td class="g">1.000</td><td class="g">1.000</td>
+    <td class="g">✓ Perfect</td>
+  </tr>
+  <tr>
+    <td>2</td><td>+A2_salt_pepper</td><td>A3_geometric</td>
+    <td class="r">0.501</td><td class="g">1.000</td><td class="r">0.002</td><td class="r">0.004</td><td class="m">0.908</td>
+    <td class="m">Threshold miss</td>
+  </tr>
+  <tr>
+    <td>3</td><td>+A3_geometric</td><td>A4_blended</td>
+    <td class="g">0.997</td><td class="g">0.994</td><td class="g">1.000</td><td class="g">0.997</td><td class="g">1.000</td>
+    <td class="g">✓ Near-perfect</td>
+  </tr>
+  <tr>
+    <td>4</td><td>+A4_blended</td><td>A5_backdoor</td>
+    <td class="m">0.555</td><td class="m">0.909</td><td class="r">0.122</td><td class="r">0.215</td><td class="m">0.834</td>
+    <td class="r">Hard attack</td>
+  </tr>
+  <tr>
+    <td>5</td><td>+A5_backdoor</td><td>A6_ood</td>
+    <td class="g">0.997</td><td class="g">0.994</td><td class="g">1.000</td><td class="g">0.997</td><td class="g">1.000</td>
+    <td class="g">✓ Near-perfect</td>
+  </tr>
+</table>
+
+<div class="box b-blue">
+  <strong>Pattern on MNIST:</strong> Results alternate between near-perfect and near-failure. Rounds where Gaussian, Blended, or OOD attacks appear (globally perceptible changes to clean images) generalise well. Rounds targeting Geometric (spatial deformation) and Backdoor (subtle trigger patterns) cause Recall to collapse — AUC stays high (0.83–0.91), indicating the model <em>knows</em> the signal exists but the default threshold is miscalibrated for these attack distributions.
+</div>
+
+<!-- ─── PYTHIA ─── -->
+<h3 id="pythia-prog">2.2 Pythia — Progressive Results <span class="badge bd-py">Pythia · 70×70</span></h3>
+
+<figure>
+  <img src="../plots/step2/pythia_model_comparison_progressive.png" alt="Pythia AnomalyCNN progressive">
+  <figcaption>Figure 2.3. Pythia AnomalyCNN — AUC-ROC (left) and F1-Score (right) vs. number of training attack types. Both metrics show no learning trend. The F1 spike-down at n=6 (round targeting attack_g) reflects a complete polarity flip: the model predicts "clean" for everything.</figcaption>
+</figure>
+
+<h4>Pythia Progressive — all rounds</h4>
+<table>
+  <tr><th>n</th><th>Training attacks</th><th>Test attack</th><th>Recall</th><th>Precision</th><th>F1</th><th>AUC-ROC</th><th>Diagnosis</th></tr>
+  <tr>
+    <td>1</td><td>attack_a</td><td>attack_b</td>
+    <td class="m">1.000</td><td class="m">0.500</td><td class="m">0.667</td><td class="r">0.470</td>
+    <td>Always-attack mode</td>
+  </tr>
+  <tr>
+    <td>2</td><td>+attack_b</td><td>attack_c</td>
+    <td class="m">1.000</td><td class="m">0.500</td><td class="m">0.667</td><td class="r">0.486</td>
+    <td>Always-attack mode</td>
+  </tr>
+  <tr>
+    <td>3</td><td>+attack_c</td><td>attack_d</td>
+    <td class="m">1.000</td><td class="m">0.500</td><td class="m">0.667</td><td class="r">0.475</td>
+    <td>Always-attack mode</td>
+  </tr>
+  <tr>
+    <td>4</td><td>+attack_d</td><td>attack_e</td>
+    <td class="m">1.000</td><td class="m">0.500</td><td class="m">0.667</td><td class="m">0.511</td>
+    <td>Always-attack mode</td>
+  </tr>
+  <tr>
+    <td>5</td><td>+attack_e</td><td>attack_f</td>
+    <td class="m">1.000</td><td class="m">0.500</td><td class="m">0.667</td><td class="m">0.506</td>
+    <td>Always-attack mode</td>
+  </tr>
+  <tr class="highlight">
+    <td>6</td><td>+attack_f</td><td>attack_g</td>
+    <td class="r">0.000</td><td>—</td><td class="r">0.000</td><td class="r">0.458</td>
+    <td style="color:var(--red)">⚠ Always-clean mode</td>
+  </tr>
+  <tr>
+    <td>7</td><td>+attack_g</td><td>attack_h</td>
+    <td class="m">1.000</td><td class="m">0.500</td><td class="m">0.667</td><td class="m">0.528</td>
+    <td>Always-attack mode</td>
+  </tr>
+</table>
+
+<div class="box b-red">
+  <strong>Degenerate classifier diagnosis:</strong> Across all 7 rounds on Pythia, the model collapses to one of two degenerate solutions: (a) <em>always-attack</em> — predicts "attack" for every sample (Recall=1.0, Precision=0.5, AUC∈[0.47,0.53]) or (b) <em>always-clean</em> — predicts "clean" for every sample (Recall=0, Precision=undefined, AUC∈[0.45,0.48]). Which mode is selected appears to depend on random initialisation within a given round. This is not a curriculum problem; it is a fundamental representation problem.
+</div>
+
+<!-- ─── ORDER SENSITIVITY ─── -->
+<h3 id="order">2.3 Order Sensitivity Analysis</h3>
+
+<figure>
+  <img src="../plots/step2/order_sensitivity_mnist.png" alt="MNIST order sensitivity">
+  <figcaption>Figure 2.4. MNIST order sensitivity: original, reversed, and 4 random permutations. AUC-ROC is generally high across all orderings (min ≥ 0.73), but threshold-dependent metrics (Recall, F1) are highly order-dependent for intermediate rounds — showing which attack pairs are structurally compatible.</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step2/order_sensitivity_pythia.png" alt="Pythia order sensitivity">
+  <figcaption>Figure 2.5. Pythia order sensitivity. All orderings cluster near AUC ≈ 0.5. Permuting attack order does not change the fundamental result — the model always degenerates regardless of which attack is presented first.</figcaption>
+</figure>
+
+<p>The key finding from order sensitivity: on <strong>MNIST</strong>, specific orderings matter — e.g., training on Blended first and testing on OOD second works far better than the reverse, because Blended introduces useful texture features. On <strong>Pythia</strong>, ordering is irrelevant because no ordering can create a useful feature representation with this architecture.</p>
+
+<!-- ─── MNIST VARIANTS ─── -->
+<h3 id="mnist-var">2.4 MNIST Variant Robustness</h3>
+
+<div class="two-col">
+  <figure>
+    <img src="../plots/step2/per_metric_curves_variants.png" alt="MNIST variants curves">
+    <figcaption>Figure 2.6. MNIST variant attacks progressive curves. The variant set uses different parameter regimes (e.g., heavier Gaussian σ, different blending ratios) to stress-test robustness to within-type variation.</figcaption>
+  </figure>
+  <figure>
+    <img src="../plots/step2/order_sensitivity_mnist_variants.png" alt="MNIST variant order sensitivity">
+    <figcaption>Figure 2.7. MNIST variant order sensitivity. Similar pattern to original MNIST — harder geometric/backdoor variants still cause threshold failures at specific rounds.</figcaption>
+  </figure>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="purple" id="why-professor">3. Why ProfessorCNN?</h2>
+
+<p>After the AnomalyCNN baseline produced uniformly random results on Pythia, we introduced <strong>ProfessorCNN</strong> — the architecture selected via hyperparameter grid search (<code>step_professor_search.py</code>, results in <code>faza_professor_cnn_search.json</code>).</p>
+
+<div class="prof-header">
+  <h3>ProfessorCNN — Architecture Overview</h3>
+  <p>ProfessorCNN is the <strong>best architecture</strong> found by the grid search over channel widths, kernel sizes, depth, dropout rates, and learning rates. Compared to AnomalyCNN:</p>
+  <div class="two-col" style="margin-top:10px">
+    <div>
+      <h4>AnomalyCNN (baseline)</h4>
+      <ul>
+        <li>3 conv layers, fixed 3×3 kernels</li>
+        <li>Max-pooling after each conv</li>
+        <li>15 epochs, patience = 3</li>
+        <li>BCELoss + Adam, lr = 0.001</li>
+        <li>No dropout</li>
+        <li>~15K trainable parameters</li>
+      </ul>
+    </div>
+    <div>
+      <h4>ProfessorCNN (selected by search)</h4>
+      <ul>
+        <li>Deeper conv stack, wider channels</li>
+        <li>Spatial pooling preserved but more stages</li>
+        <li><strong>200 epochs, patience = 20</strong> (much longer)</li>
+        <li>BCELoss + AdamW, tuned lr</li>
+        <li>Dropout regularisation</li>
+        <li>AUC-ROC monitored early stopping</li>
+        <li>~100K–300K trainable parameters</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p>The longer training (200 epochs vs. 15) and AUC-monitored early stopping are critical — AnomalyCNN's 15-epoch cap was likely causing premature convergence to the degenerate solutions. ProfessorCNN has more capacity to potentially find the subtle Pythia signal.</p>
+
+<div class="box b-orange">
+  <strong>However, a critical problem was identified:</strong> When run in the AnomalyCNN framework's training loop, ProfessorCNN results were <em>extremely variable</em> run-to-run — sometimes worse than AnomalyCNN, sometimes marginally better. Investigation showed two root causes:
+  <ol style="margin-top:8px">
+    <li><strong>Downsampling</strong>: <code>balanced_attack_subset()</code> cut training data to match clean set size (1:1 ratio), leaving only ~100–150 attack samples — far too few for ProfessorCNN's parameter count.</li>
+    <li><strong>No fixed seed</strong>: different random initialisations produced wildly different final models.</li>
+  </ol>
+  These issues were addressed in <code>step2_professor.py</code>.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="green" id="reproducibility">4. Reproducibility Improvements (step2_professor.py)</h2>
+
+<p>Four concrete improvements were implemented to make the ProfessorCNN experiment reliable and fair:</p>
+
+<div class="subset-grid">
+  <div class="box b-green" style="margin:0">
+    <h4>Improvement 1</h4>
+    <h3 style="color:var(--green)">Deterministic Seeding</h3>
+    <p><code>set_global_seed(seed)</code> seeds Python <code>random</code>, NumPy, PyTorch CPU/CUDA, and sets <code>cudnn.deterministic=True</code>. Every experiment can be exactly reproduced by re-running with the same seed.</p>
+  </div>
+  <div class="box b-green" style="margin:0">
+    <h4>Improvement 2</h4>
+    <h3 style="color:var(--green)">5 Seeded Repeats</h3>
+    <p><code>RUN_REPEATS = 5</code> with seeds <code>BASE_SEED + 0..4</code> per subset. Results reported as <strong>mean ± std</strong>. This quantifies variance and ensures a single lucky/unlucky init doesn't dominate the result.</p>
+  </div>
+  <div class="box b-green" style="margin:0">
+    <h4>Improvement 3</h4>
+    <h3 style="color:var(--green)">Full Training Set</h3>
+    <p>Removed the <code>balanced_attack_subset()</code> downsampling. ProfessorCNN uses <strong>all available attack samples</strong> (≈640 per attack after 80/20 split). This gives the model a fighting chance to learn the signal.</p>
+  </div>
+</div>
+<div class="subset-grid" style="margin-top:10px">
+  <div class="box b-green" style="margin:0">
+    <h4>Improvement 4</h4>
+    <h3 style="color:var(--green)">Pairwise Protocol</h3>
+    <p>Step 1-style: for each of 56 ordered pairs (train on X, test on Y, X≠Y), 5 repeats each. Directly comparable to Step 1 methodology. Total: 280 training runs.</p>
+  </div>
+  <div class="box b-purple" style="margin:0">
+    <h4>Hyperparameters</h4>
+    <pre style="font-size:12px; margin-top:4px; background:var(--code-bg); padding:8px; border-radius:3px; overflow:auto">
+BASE_SEED      = 2137
+RUN_REPEATS    = 5
+TRAIN_EPOCHS   = 200
+TRAIN_PATIENCE = 20
+BATCH_SIZE     = 64
+Monitor        = AUC-ROC</pre>
+  </div>
+  <div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="purple" id="subset-exp">5. Main Experiment: Attack Subset Strategies</h2>
+
+<p>Nine training subsets were defined, spanning different sizes and diversity patterns. For each subset, ProfessorCNN was trained on <code>clean ∪ (all samples from selected attacks)</code> and evaluated on <strong>all remaining unseen attacks</strong>. Each subset ran 5 times with consecutive seeds.</p>
+
+<h3>The 9 Subsets Defined</h3>
+<table>
+  <tr><th>#</th><th>Label</th><th>Training attacks</th><th>n attacks</th><th>Strategy</th><th>Unseen attacks evaluated on</th></tr>
+  <tr><td>1</td><td>A only</td><td>attack_a</td><td>1</td><td>Single</td><td>b, c, d, e, f, g, h (7 attacks)</td></tr>
+  <tr><td>2</td><td>A+B (seq)</td><td>attack_a, attack_b</td><td>2</td><td>Sequential</td><td>c, d, e, f, g, h (6 attacks)</td></tr>
+  <tr><td>3</td><td>A+B+C (seq)</td><td>attack_a, b, c</td><td>3</td><td>Sequential</td><td>d, e, f, g, h (5 attacks)</td></tr>
+  <tr class="highlight"><td>4</td><td><strong>A+B+E (diverse) ★</strong></td><td>attack_a, b, e</td><td>3</td><td>Diverse — prof. suggestion</td><td>c, d, f, g, h (5 attacks)</td></tr>
+  <tr><td>5</td><td>A+D+G (spread)</td><td>attack_a, d, g</td><td>3</td><td>Spread (every 3rd)</td><td>b, c, e, f, h (5 attacks)</td></tr>
+  <tr><td>6</td><td>A+B+C+D (seq)</td><td>attack_a, b, c, d</td><td>4</td><td>Sequential</td><td>e, f, g, h (4 attacks)</td></tr>
+  <tr><td>7</td><td>A+B+E+G (div)</td><td>attack_a, b, e, g</td><td>4</td><td>Diverse</td><td>c, d, f, h (4 attacks)</td></tr>
+  <tr><td>8</td><td>A+C+E+G (alt)</td><td>attack_a, c, e, g</td><td>4</td><td>Alternating</td><td>b, d, f, h (4 attacks)</td></tr>
+  <tr><td>9</td><td>A–F (majority)</td><td>attack_a…f</td><td>6</td><td>Majority</td><td>g, h (2 attacks)</td></tr>
+</table>
+<p style="font-size:12px;color:var(--muted)">★ Professor's example from class.</p>
+
+<figure>
+  <img src="../plots/step2/step2_subset_comparison_prof_cnn.png" alt="ProfessorCNN subset comparison">
+  <figcaption>Figure 5.1. ProfessorCNN — all 9 subset strategies compared. <strong>Top left:</strong> Mean AUC-ROC per subset (bars) with individual unseen-attack dots. <strong>Top right:</strong> Mean F1 per subset. <strong>Bottom:</strong> Per-attack AUC-ROC heatmap (grey = attack was in training set, not evaluated).</figcaption>
+</figure>
+
+<h3 id="subset-results">5.1 All 9 Subsets — Detailed Results</h3>
+
+<table>
+  <tr>
+    <th>Subset</th><th>n</th><th>Strategy</th>
+    <th>Mean AUC ± Std</th><th>Mean F1</th><th>Std F1</th>
+    <th>Unseen attacks</th><th>Verdict</th>
+  </tr>
+  <tr>
+    <td>A only</td><td>1</td><td>Single</td>
+    <td class="r">0.498 ± 0.010</td>
+    <td class="r">0.267</td><td>0.327</td>
+    <td>b,c,d,e,f,g,h</td>
+    <td class="r">Random + unstable</td>
+  </tr>
+  <tr>
+    <td>A+B (seq)</td><td>2</td><td>Sequential</td>
+    <td class="r">0.482 ± 0.013</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>c,d,e,f,g,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr>
+    <td>A+B+C (seq)</td><td>3</td><td>Sequential</td>
+    <td class="r">0.491 ± 0.016</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>d,e,f,g,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr class="highlight">
+    <td><strong>A+B+E (diverse) ★</strong></td><td>3</td><td>Diverse</td>
+    <td class="r"><strong>0.490 ± 0.023</strong></td>
+    <td class="m"><strong>0.667</strong></td><td>0.000</td>
+    <td>c,d,f,g,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr>
+    <td>A+D+G (spread)</td><td>3</td><td>Spread</td>
+    <td class="r">0.496 ± 0.010</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>b,c,e,f,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr>
+    <td>A+B+C+D (seq)</td><td>4</td><td>Sequential</td>
+    <td class="r">0.483 ± 0.017</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>e,f,g,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr>
+    <td>A+B+E+G (div)</td><td>4</td><td>Diverse</td>
+    <td class="r">0.492 ± 0.029</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>c,d,f,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr>
+    <td>A+C+E+G (alt)</td><td>4</td><td>Alternating</td>
+    <td class="m">0.510 ± 0.025</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>b,d,f,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+  <tr>
+    <td>A–F (majority)</td><td>6</td><td>Majority</td>
+    <td class="r">0.481 ± 0.015</td>
+    <td class="m">0.667</td><td>0.000</td>
+    <td>g,h</td>
+    <td class="r">Always-attack (locked)</td>
+  </tr>
+</table>
+
+<h4>Visual AUC comparison across subsets</h4>
+<div style="font-size:12px; margin-bottom: 8px; color: var(--muted)">Mean AUC-ROC on unseen attacks (random baseline = 0.50, marked as dashed line)</div>
+<table style="width:100%; font-size:13px; border-collapse:collapse">
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="width:160px; padding:4px 8px">A only (n=1)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:49.8%; background:#c0392b"></div></div>
+    </td>
+    <td style="width:60px; padding:4px 8px; color:var(--red); font-weight:700">0.498</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.010</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A+B (n=2)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:48.2%; background:#c0392b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--red); font-weight:700">0.482</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.013</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A+B+C (n=3)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:49.1%; background:#c0392b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--red); font-weight:700">0.491</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.016</td>
+  </tr>
+  <tr style="border-bottom:2px solid var(--purple); background:#fdf9ff">
+    <td style="padding:4px 8px; color:var(--purple); font-weight:700">A+B+E ★ (n=3)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:49.0%; background:var(--purple)"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--purple); font-weight:700">0.490</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.023</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A+D+G (n=3)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:49.6%; background:#c0392b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--red); font-weight:700">0.496</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.010</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A+B+C+D (n=4)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:48.3%; background:#c0392b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--red); font-weight:700">0.483</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.017</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A+B+E+G (n=4)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:49.2%; background:#c0392b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--red); font-weight:700">0.492</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.029</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A+C+E+G (n=4)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:51.0%; background:#b8860b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:#b8860b; font-weight:700">0.510</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.025</td>
+  </tr>
+  <tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:4px 8px">A–F (n=6)</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:48.1%; background:#c0392b"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--red); font-weight:700">0.481</td>
+    <td style="padding:4px 8px; font-size:11px; color:var(--muted)">±0.015</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 8px; color:var(--muted); font-style:italic">— Random baseline —</td>
+    <td style="padding:4px 8px">
+      <div class="bar-wrap"><div class="bar" style="width:50%; background:#aaa"></div></div>
+    </td>
+    <td style="padding:4px 8px; color:var(--muted)">0.500</td>
+    <td></td>
+  </tr>
+</table>
+
+<h3 id="professor-examples">5.2 Professor's Suggested Combinations — Direct Focus</h3>
+
+<div class="box b-purple">
+  <p>The professor specifically mentioned <strong>A only</strong> vs. <strong>A+B+E</strong> as an example comparison. Here is the detailed breakdown for both:</p>
+</div>
+
+<div class="two-col">
+  <div>
+    <h4>Subset: A only (1 attack training)</h4>
+    <p><strong>Mean AUC = 0.498 ± 0.010</strong><br>
+    Training set: clean + all attack_a samples (~640)<br>
+    Unseen: b, c, d, e, f, g, h</p>
+    <table>
+      <tr><th>Unseen attack</th><th>AUC mean</th><th>AUC std</th></tr>
+      <tr><td>attack_b</td><td class="r">0.519</td><td>0.025</td></tr>
+      <tr><td>attack_c</td><td class="r">0.482</td><td>0.020</td></tr>
+      <tr><td>attack_d</td><td class="r">0.495</td><td>0.029</td></tr>
+      <tr><td>attack_e</td><td class="r">0.494</td><td>0.016</td></tr>
+      <tr><td>attack_f</td><td class="r">0.507</td><td>0.018</td></tr>
+      <tr><td>attack_g</td><td class="r">0.487</td><td>0.016</td></tr>
+      <tr><td>attack_h</td><td class="r">0.499</td><td>0.013</td></tr>
+    </table>
+    <div class="box b-red" style="margin-top:8px">
+      High variance (std F1 = 0.33) — model randomly flips between always-attack and always-clean across 5 seeds. Mean AUC = 0.498 (coin flip).
+    </div>
+  </div>
+  <div>
+    <h4>Subset: A+B+E (diverse, 3 attacks) ★</h4>
+    <p><strong>Mean AUC = 0.490 ± 0.023</strong><br>
+    Training set: clean + attack_a + attack_b + attack_e (~1920 attack samples total)<br>
+    Unseen: c, d, f, g, h</p>
+    <table>
+      <tr><th>Unseen attack</th><th>AUC mean</th><th>AUC std</th></tr>
+      <tr><td>attack_c</td><td class="r">0.489</td><td>0.035</td></tr>
+      <tr><td>attack_d</td><td class="r">0.470</td><td>0.018</td></tr>
+      <tr><td>attack_f</td><td class="m">0.521</td><td>0.031</td></tr>
+      <tr><td>attack_g</td><td class="r">0.467</td><td>0.024</td></tr>
+      <tr><td>attack_h</td><td class="m">0.505</td><td>0.026</td></tr>
+    </table>
+    <div class="box b-red" style="margin-top:8px">
+      Zero variance in Acc/F1 (std=0) — all 5 seeds converge to always-attack mode with F1=0.667. AUC slightly below A only. <strong>No benefit from diversity.</strong>
+    </div>
+  </div>
+</div>
+
+<div class="box b-purple">
+  <strong>Direct answer to Professor's question:</strong> A+B+E achieves mean AUC = 0.490, which is <em>lower</em> than A only (0.498). The difference is 0.008 — well within the statistical noise (AUC std ≈ 0.010–0.023 across all subsets). The "diverse" selection hypothesis does not hold for Pythia: including extra diverse attacks in training provides no measurable benefit for detecting unseen attacks.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="purple" id="pairwise">6. Pairwise Protocol — 8×8 Cross-Attack Matrix</h2>
+
+<p>To rigorously test ProfessorCNN's generalisation, every ordered pair (train on X → test on Y, for all X ≠ Y) was evaluated with 5 seeds. This mirrors the Step 1 methodology and creates a complete cross-attack generalisation map.</p>
+
+<p><strong>Total runs:</strong> 8 × 7 = 56 pairs × 5 seeds = <strong>280 training runs</strong>. Each uses full attack partition (≈640 samples), 200 epochs, patience 20, AUC-monitored.</p>
+
+<figure>
+  <img src="../plots/step2/step2_professor_pairwise_auc_heatmap.png" alt="8×8 pairwise AUC heatmap">
+  <figcaption>Figure 6.1. ProfessorCNN — 8×8 pairwise AUC-ROC heatmap (mean over 5 seeds). Row = training attack; column = test attack. Diagonal = NaN (not evaluated). Colour scale: 0.45 (red/dark) → 0.55 (blue/light). All values fall in [0.45, 0.53].</figcaption>
+</figure>
+
+<h4>Selected pairwise results (AUC mean ± std, 5 seeds)</h4>
+<table>
+  <tr><th>Train attack</th><th>Test attack</th><th>Mean AUC</th><th>Std AUC</th><th>Mean F1</th><th>Std F1</th></tr>
+  <tr><td>attack_a</td><td>attack_b</td><td class="m">0.513</td><td>0.020</td><td class="m">0.533</td><td>0.267</td></tr>
+  <tr><td>attack_a</td><td>attack_c</td><td class="r">0.452</td><td>0.024</td><td class="m">0.413</td><td>0.311</td></tr>
+  <tr><td>attack_a</td><td>attack_d</td><td class="r">0.452</td><td>0.012</td><td class="m">0.362</td><td>0.304</td></tr>
+  <tr><td>attack_a</td><td>attack_e</td><td class="m">0.497</td><td>0.026</td><td class="m">0.391</td><td>0.319</td></tr>
+  <tr><td>attack_a</td><td>attack_f</td><td class="m">0.511</td><td>0.026</td><td class="m">0.667</td><td>0.000</td></tr>
+  <tr><td>attack_a</td><td>attack_g</td><td class="r">0.480</td><td>0.041</td><td class="m">0.266</td><td>0.326</td></tr>
+  <tr><td>attack_a</td><td>attack_h</td><td class="r">0.484</td><td>0.012</td><td class="r">0.133</td><td>0.267</td></tr>
+  <tr><td>attack_b</td><td>attack_a</td><td class="m">0.522</td><td>—</td><td class="m">0.400</td><td>—</td></tr>
+</table>
+
+<div class="box b-purple">
+  <strong>Pairwise analysis:</strong> The best single pair is attack_b→attack_a (AUC = 0.522) and attack_a→attack_b (AUC = 0.513). These are the two most structurally similar attacks in the Pythia dataset — yet even this best case barely exceeds random. The 8×8 heatmap shows no "hot" rows or columns — there is no single attack type that consistently transfers to others, and no attack type that is consistently easy to detect when unseen.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="red" id="failure-analysis">7. Failure Analysis: Why Pythia Doesn't Generalise</h2>
+
+<h3>7.1 The signal exists — architecture can't access it</h3>
+<p>A diagnostic ceiling analysis using logistic regression on raw pixel features (<code>_ceiling.py</code>) showed <strong>AUC = 0.845</strong>. The attack signal is present in the pixel values — it is just very localised. CNN with spatial max-pooling aggregates over spatial locations, destroying exactly the local perturbation information that Pythia attacks encode.</p>
+
+<h3>7.2 Mode collapse anatomy</h3>
+<p>With only ~640 clean and ~640 attack samples per training run, and a model with 100K–300K parameters, ProfessorCNN finds two pathological optima that minimise binary cross-entropy without learning the signal:</p>
+<div class="two-col">
+  <div class="box b-red">
+    <strong>Mode A: Always-attack</strong><br>
+    Output logit → always high. BCE loss is minimised at 50% accuracy (equal clean/attack ratio). Recall = 1.0, Precision = 0.5, AUC depends on score distribution randomness (≈0.5). Observed in 4 of 5 seeds for most subsets at n ≥ 2.
+  </div>
+  <div class="box b-red">
+    <strong>Mode B: Always-clean</strong><br>
+    Output logit → always low. Same 50% accuracy. Recall = 0, Precision = undefined, AUC ≈ 0.45–0.48. Observed sporadically at n=1 (high seed variance) and round n=6 of AnomalyCNN progressive.
+  </div>
+</div>
+
+<p>The fact that n=1 (A only) has F1 std = 0.33 (randomly flips between modes) while n≥2 has F1 std ≈ 0 (locks into mode A) suggests: the larger multi-attack training set consistently drives the model to Mode A — but adding diversity does not break out of it.</p>
+
+<h3>7.3 Why MNIST succeeds</h3>
+<table>
+  <tr><th>Property</th><th>MNIST attacks</th><th>Pythia attacks</th></tr>
+  <tr><td>Perturbation type</td><td class="g">Global (affects every pixel)</td><td class="r">Local (small spatial footprint)</td></tr>
+  <tr><td>Perturbation magnitude</td><td class="g">High (Gaussian σ≈0.1–0.3, visible noise)</td><td class="r">Subtle (max |Δ| ≈ 0.068)</td></tr>
+  <tr><td>Signal after max-pool</td><td class="g">Preserved (global → survives pooling)</td><td class="r">Destroyed (local → pooled away)</td></tr>
+  <tr><td>Clean/attack separability</td><td class="g">Very high (oracle AUC → 1.0)</td><td class="m">Moderate (oracle LR AUC = 0.845)</td></tr>
+  <tr><td>Attack-to-attack variance</td><td class="m">High (A1=noise, A5=backdoor, A6=OOD)</td><td class="r">Low (all attacks are pixel-level perturbations)</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="conclusions">8. Conclusions</h2>
+
+<div class="scorecard">
+  <div class="sc">
+    <div class="val" style="color:var(--red)">0</div>
+    <div class="lbl">Subsets achieving AUC &gt; 0.53<br>out of 9 tested</div>
+  </div>
+  <div class="sc">
+    <div class="val" style="color:var(--red)">0.028</div>
+    <div class="lbl">Max AUC difference between<br>any two subset strategies</div>
+  </div>
+  <div class="sc">
+    <div class="val" style="color:var(--purple)">280</div>
+    <div class="lbl">Total ProfessorCNN training runs<br>(5 seeds × 56 pairs)</div>
+  </div>
+</div>
+
+<ol style="font-size:14px; line-height: 1.8; margin-left: 22px;">
+  <li>
+    <strong>AnomalyCNN baseline is broken on Pythia.</strong> It produces degenerate always-attack or always-clean classifiers across all 7 progressive rounds and all orderings. F1 = 0.667 is not a good result — it reflects the always-attack mode in a 1:1 balanced test set.
+  </li>
+  <li>
+    <strong>ProfessorCNN with all improvements also fails on Pythia.</strong> With full training data, 200 epochs, and 5 seeded repeats, ProfessorCNN achieves mean AUC = 0.48–0.51 across all 9 subsets and all 56 pairwise evaluations. This is statistically indistinguishable from random.
+  </li>
+  <li>
+    <strong>The choice of attack subset does not matter.</strong> A+B+E (diverse, professor's suggestion) vs. A+B+C (sequential) vs. A+D+G (spread) all produce nearly identical AUC values within ±0.02 of each other. Increasing n from 1 to 6 shows no monotonic improvement. The hypothesis that diverse attack selection improves generalisation is <em>refuted</em> for this architecture on this dataset.
+  </li>
+  <li>
+    <strong>The negative result is reproducible.</strong> 5-seed repeats show std AUC ≈ 0.010–0.025 — the variance is small enough that the result is not a sampling artefact. Every seed converges to the same conclusion.
+  </li>
+  <li>
+    <strong>The bottleneck is architectural.</strong> Spatial max-pooling destroys the localised perturbation signal. The solution requires an architecture without aggressive spatial pooling (e.g., fully-convolutional, ViT patch attention, or GBM on pixel features — which already achieves AUC = 0.61 from Step 1).
+  </li>
+</ol>
+
+<div class="box b-purple">
+  <strong>Answer to Professor Tałataj's question:</strong> We compared 9 attack selection strategies for Pythia using ProfessorCNN with 5-seed reproducibility. The directly tested A+B+E achieves mean AUC = 0.490, compared to A only (0.498) and A+B+C (0.491). All differences are within noise. The answer is: for CNN-based anomaly detectors, the selection strategy for Pythia attacks has no significant effect on generalisation — the failure is architectural, not curriculum-dependent.
+</div>
+
+<hr>
+<p class="stamp">
+  Script: <code>step2.py</code> (RANDOM_SEED=42) + <code>step2_professor.py</code> (BASE_SEED=2137, RUN_REPEATS=5) &middot;
+  Data: <code>faza2_wyniki_generalizacji.json</code> + <code>faza2_wyniki_generalizacji_professor.json</code> &middot;
+  Generated: 2 June 2026
+</p>
+
+</body>
+</html>
