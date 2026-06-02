@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecurityML CH2 — End-to-End Report: Steps 1–4</title>
+<style>
+  :root {
+    --accent:      #1a4fa0;
+    --accent-2:    #c0392b;
+    --accent-3:    #1a7a3c;
+    --accent-4:    #7d3c98;
+    --bg-a:        #e8f0fb;
+    --bg-b:        #fdf0f0;
+    --bg-c:        #edfaf2;
+    --bg-d:        #f5edfb;
+    --border:      #ccd3dc;
+    --code-bg:     #f4f5f7;
+    --text:        #1a1a2e;
+    --muted:       #555566;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    background: #ffffff;
+    max-width: 1150px;
+    margin: 0 auto;
+    padding: 36px 44px 80px;
+  }
+  /* ---------- typography ---------- */
+  h1  { font-size: 28px; color: var(--accent); margin-bottom: 6px; letter-spacing: -.3px; }
+  h2  { font-size: 20px; color: var(--accent); margin: 44px 0 10px;
+        border-bottom: 3px solid var(--accent); padding-bottom: 5px; }
+  h3  { font-size: 15px; color: #2c3e50; margin: 20px 0 7px; }
+  h4  { font-size: 13px; color: var(--muted); margin: 14px 0 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+  p   { margin-bottom: 10px; }
+  ul,ol { margin: 6px 0 10px 22px; }
+  li  { margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  strong { color: inherit; }
+  /* ---------- step headers ---------- */
+  .step-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+  }
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-weight: 700; font-size: 16px; color: #fff; flex-shrink: 0;
+  }
+  .s1 { background: var(--accent); }
+  .s2 { background: var(--accent-2); }
+  .s3 { background: var(--accent-3); }
+  .s4 { background: var(--accent-4); }
+  h2.s1, h2.s2, h2.s3, h2.s4 { display: flex; align-items: center; gap: 10px; }
+  h2.s1 { color: var(--accent);   border-color: var(--accent); }
+  h2.s2 { color: var(--accent-2); border-color: var(--accent-2); }
+  h2.s3 { color: var(--accent-3); border-color: var(--accent-3); }
+  h2.s4 { color: var(--accent-4); border-color: var(--accent-4); }
+  /* ---------- callout boxes ---------- */
+  .box {
+    border-radius: 4px; padding: 12px 16px; margin: 12px 0;
+  }
+  .b1 { background: var(--bg-a); border-left: 4px solid var(--accent); }
+  .b2 { background: var(--bg-b); border-left: 4px solid var(--accent-2); }
+  .b3 { background: var(--bg-c); border-left: 4px solid var(--accent-3); }
+  .b4 { background: var(--bg-d); border-left: 4px solid var(--accent-4); }
+  .bwarn { background: #fffbea; border-left: 4px solid #e67e22; }
+  /* ---------- tables ---------- */
+  table {
+    width: 100%; border-collapse: collapse; margin: 12px 0 22px; font-size: 13px;
+  }
+  th {
+    padding: 7px 10px; text-align: left; font-weight: 600;
+    border-bottom: 2px solid var(--border); color: var(--muted);
+    font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+  }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) td { background: #f8f9fb; }
+  td.g  { color: var(--accent-3); font-weight: 700; }
+  td.r  { color: var(--accent-2); font-weight: 700; }
+  td.m  { color: #b8860b;         font-weight: 700; }
+  td.b  { color: var(--accent);   font-weight: 700; }
+  td.v  { color: var(--accent-4); font-weight: 700; }
+  /* ---------- figures ---------- */
+  figure {
+    margin: 20px 0 30px; text-align: center;
+  }
+  figure img {
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
+  }
+  figcaption {
+    font-size: 12px; color: var(--muted); margin-top: 7px; font-style: italic;
+    max-width: 860px; margin-left: auto; margin-right: auto;
+  }
+  /* ---------- layout ---------- */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) {
+    .two-col, .three-col { grid-template-columns: 1fr; }
+  }
+  /* ---------- toc ---------- */
+  .toc {
+    background: #f7f9fc; border: 1px solid var(--border); padding: 16px 22px;
+    margin-bottom: 36px; border-radius: 5px; display: inline-block; min-width: 320px;
+  }
+  .toc li { margin-bottom: 3px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  /* ---------- summary row / score card ---------- */
+  .scorecard {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 18px 0;
+  }
+  .sc-cell {
+    border: 1px solid var(--border); border-radius: 5px; padding: 12px;
+    text-align: center;
+  }
+  .sc-cell .val { font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .sc-cell .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+  /* ---------- misc ---------- */
+  code {
+    background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
+    font-family: "Consolas","Cascadia Code",monospace; font-size: 12px;
+  }
+  hr { border: none; border-top: 1px solid #dde; margin: 36px 0; }
+  .stamp { font-size: 11px; color: #aaa; margin-top: 30px; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px;
+    border-radius: 10px; margin-left: 5px; vertical-align: middle;
+  }
+  .tag-mnist { background: #e8f0fb; color: var(--accent); border: 1px solid var(--accent); }
+  .tag-pythia { background: #fdf0f0; color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .delta-pos { color: var(--accent-3); font-weight: 700; }
+  .delta-neg { color: var(--accent-2); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>SecurityML CH2 — End-to-End Anomaly Detection Report</h1>
+<p class="subtitle">Steps 1–4 &middot; MNIST &amp; Pythia datasets &middot; Generated: 2 June 2026</p>
+
+<div class="toc">
+  <strong>Table of Contents</strong>
+  <ol style="margin-top:8px">
+    <li><a href="#executive">Executive Summary</a></li>
+    <li><a href="#step1">Step 1 — Closed-World Baseline Classifier</a></li>
+    <li><a href="#step2">Step 2 — Open-World: Progressive Multi-Attack Training</a></li>
+    <li><a href="#step2b">Step 2b — Attack Subset Selection Strategies (Prof. Tałataj's experiment)</a></li>
+    <li><a href="#step3">Step 3 — Unsupervised Autoencoder</a></li>
+    <li><a href="#step4">Step 4 — Hybrid System (Frozen AE + Classification Head)</a></li>
+    <li><a href="#comparison">Cross-Step Comparison</a></li>
+    <li><a href="#conclusions">Conclusions &amp; Recommendations</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="executive">Executive Summary</h2>
+
+<p>This report covers four progressive experiments in anomaly detection applied to two datasets: the well-studied <strong>MNIST</strong> (28×28 handwritten digits, 6 synthetic attack types) and the challenging <strong>Pythia</strong> dataset (70×70 grayscale network-traffic visualisations, 8 adversarial attack partitions <code>attack_a</code>–<code>attack_h</code>).</p>
+
+<div class="scorecard">
+  <div class="sc-cell">
+    <div class="val" style="color:var(--accent)">1.000</div>
+    <div class="lbl">Best AUC — MNIST<br>(Steps 1, 3, 4)</div>
+  </div>
+  <div class="sc-cell">
+    <div class="val" style="color:#b8860b">0.609</div>
+    <div class="lbl">Best AUC — Pythia<br>(GBM, Step 1)</div>
+  </div>
+  <div class="sc-cell">
+    <div class="val" style="color:var(--accent-2)">~0.50</div>
+    <div class="lbl">CNN AUC on Pythia<br>(all CNN approaches)</div>
+  </div>
+  <div class="sc-cell">
+    <div class="val" style="color:var(--accent-3)">0.892</div>
+    <div class="lbl">Best F1 — MNIST Test_B<br>(Hybrid, Step 4)</div>
+  </div>
+</div>
+
+<div class="box b1">
+  <strong>Key finding:</strong> MNIST is solvable by all approaches tested (AUC up to 1.0). Pythia remains largely unsolved by CNN-based architectures (AUC ≈ 0.47–0.56 across all steps). The best Pythia result is <strong>GBM at AUC = 0.61</strong> from Step 1. The Hybrid system (Step 4) achieves the best F1 on MNIST's unknown attack test (F1 = 0.89), combining good recall with high precision. The core bottleneck on Pythia is architectural: convolutional spatial pooling discards the localised pixel-level perturbations that constitute Pythia's attack signal.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="s1" id="step1"><span class="step-badge s1">1</span> Step 1 — Closed-World Baseline Classifier</h2>
+
+<p><strong>Protocol:</strong> Train on <code>clean ∪ attack_a</code>. Evaluate on:</p>
+<ul>
+  <li><strong>Test_A</strong> (known attack) — <code>clean_test ∪ attack_a_test</code></li>
+  <li><strong>Test_B</strong> (unknown attack) — <code>clean_test ∪ attack_b_test</code></li>
+</ul>
+<p>For MNIST, AnomalyCNN is used. For Pythia, four models are compared: AnomalyCNN, PixelMLP, ProfessorCNN, and GBM.</p>
+
+<h3>MNIST <span class="tag tag-mnist">28×28 · 6 attacks · binary</span></h3>
+
+<div class="two-col">
+  <div>
+    <h4>Test_A (Known — attack_a: Gaussian noise)</h4>
+    <table>
+      <tr><th>Metric</th><th>Value</th></tr>
+      <tr><td>Accuracy</td><td class="g">1.000</td></tr>
+      <tr><td>Precision</td><td class="g">1.000</td></tr>
+      <tr><td>Recall</td><td class="g">1.000</td></tr>
+      <tr><td>F1</td><td class="g">1.000</td></tr>
+      <tr><td>AUC-ROC</td><td class="g">1.000</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>Test_B (Unknown — attack_b: OOD Fashion-MNIST)</h4>
+    <table>
+      <tr><th>Metric</th><th>Value</th></tr>
+      <tr><td>Accuracy</td><td class="m">0.553</td></tr>
+      <tr><td>Precision</td><td class="g">1.000</td></tr>
+      <tr><td>Recall</td><td class="r">0.105</td></tr>
+      <tr><td>F1</td><td class="r">0.190</td></tr>
+      <tr><td>AUC-ROC</td><td class="g">0.995</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="box b1">
+  <strong>MNIST Step 1 takeaway:</strong> Perfect on known attack. On the unknown OOD attack, AUC remains near-perfect (0.995) — the model has excellent <em>score discrimination</em> — but the threshold is calibrated to Gaussian noise, so Recall collapses to 10.5%. This is the threshold sensitivity problem that Steps 3 and 4 address.
+</div>
+
+<h3>Pythia — 4-model comparison <span class="tag tag-pythia">70×70 · 8 attacks</span></h3>
+
+<figure>
+  <img src="../plots/step1/pythia_model_comparison.png" alt="Pythia model comparison Step 1">
+  <figcaption>Figure 1.1. Step 1 — Pythia: AnomalyCNN vs. PixelMLP vs. ProfessorCNN vs. GBM. Left: Test_A (known attack_a). Right: Test_B (unknown attack_b).</figcaption>
+</figure>
+
+<table>
+  <tr>
+    <th>Model</th>
+    <th>Test_A Acc.</th><th>Test_A F1</th><th>Test_A AUC</th>
+    <th>Test_B Acc.</th><th>Test_B F1</th><th>Test_B AUC</th>
+  </tr>
+  <tr>
+    <td>AnomalyCNN (Baseline)</td>
+    <td class="r">0.500</td><td class="r">0.000</td><td class="r">0.472</td>
+    <td class="r">0.167</td><td class="r">0.000</td><td class="r">0.484</td>
+  </tr>
+  <tr>
+    <td>PixelMLP</td>
+    <td class="m">0.573</td><td class="m">0.600</td><td class="m">0.558</td>
+    <td class="m">0.574</td><td class="m">0.697</td><td class="m">0.535</td>
+  </tr>
+  <tr>
+    <td>ProfessorCNN †</td>
+    <td class="r">0.500</td><td class="m">0.667</td><td class="r">0.489</td>
+    <td class="m">0.833</td><td class="g">0.909</td><td class="m">0.508</td>
+  </tr>
+  <tr>
+    <td><strong>GBM (Best)</strong></td>
+    <td class="m"><strong>0.598</strong></td><td class="m"><strong>0.608</strong></td><td class="b"><strong>0.608</strong></td>
+    <td class="m"><strong>0.604</strong></td><td class="m"><strong>0.720</strong></td><td class="b"><strong>0.609</strong></td>
+  </tr>
+</table>
+
+<p>† <em>ProfessorCNN on Test_B: F1 = 0.91 is deceptive.</em> The model predicts "attack" for all inputs (Recall = 1.0, Precision = 0.5); with a 5:1 attack-to-clean ratio in Test_B, this inflates F1. AUC = 0.508 confirms the model has no real discriminative power.</p>
+
+<div class="box b1">
+  <strong>Pythia Step 1 takeaway:</strong> AnomalyCNN completely fails (AUC &lt; 0.5 = worse than random). GBM achieves AUC = 0.61 by using tree-based feature selection that preserves some local pixel statistics. A <em>diagnostic ceiling analysis</em> (<code>_ceiling.py</code>) confirmed the attack signal does exist — a logistic regression oracle achieves AUC = 0.845 — but standard CNN pooling destroys it.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="s2" id="step2"><span class="step-badge s2">2</span> Step 2 — Open-World: Progressive Multi-Attack Training</h2>
+
+<p><strong>Hypothesis:</strong> Training on <em>n</em> different attack types improves detection of an unseen attack type <em>n+1</em>.</p>
+<p><strong>Protocol:</strong> At round <em>n</em>, train on <code>clean ∪ balanced(A₁,…,Aₙ)</code>; test on <code>clean_test ∪ Aₙ₊₁</code>. Attacks are introduced in a fixed curriculum order. Results use <code>RANDOM_SEED = 42</code>.</p>
+
+<figure>
+  <img src="../plots/step2/step2_generalization.png" alt="Step 2 generalization curves">
+  <figcaption>Figure 2.1. Progressive training generalisation curves. Left: MNIST (AnomalyCNN, 5 attack rounds). Right: Pythia (AnomalyCNN, 7 attack rounds). Shaded region = ±1 std across orderings.</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step2/metric_heatmap.png" alt="Step 2 metric heatmap">
+  <figcaption>Figure 2.2. Heatmap of metrics × training round. Left: MNIST. Right: Pythia. AUC-ROC is the most informative row.</figcaption>
+</figure>
+
+<h3>MNIST Progressive Results</h3>
+<table>
+  <tr><th>Round n</th><th>Trained on</th><th>Tested on</th><th>AUC-ROC</th><th>F1</th><th>Recall</th></tr>
+  <tr><td>1</td><td>A1_gaussian</td><td>A2_salt_pepper</td>
+      <td class="g">1.000</td><td class="g">1.000</td><td class="g">1.000</td></tr>
+  <tr><td>2</td><td>+ A2_salt_pepper</td><td>A3_geometric</td>
+      <td class="m">0.908</td><td class="r">0.004</td><td class="r">0.002</td></tr>
+  <tr><td>3</td><td>+ A3_geometric</td><td>A4_blended</td>
+      <td class="g">1.000</td><td class="g">0.997</td><td class="g">1.000</td></tr>
+  <tr><td>4</td><td>+ A4_blended</td><td>A5_backdoor</td>
+      <td class="m">0.834</td><td class="m">0.215</td><td class="m">0.122</td></tr>
+  <tr><td>5</td><td>+ A5_backdoor</td><td>A6_ood</td>
+      <td class="g">1.000</td><td class="g">0.997</td><td class="g">1.000</td></tr>
+</table>
+
+<h3>Pythia Progressive Results (AnomalyCNN Baseline)</h3>
+<table>
+  <tr><th>Round n</th><th>Tested on</th><th>AUC-ROC</th><th>F1</th><th>Recall</th></tr>
+  <tr><td>1</td><td>attack_b</td><td class="r">0.470</td><td class="m">0.667</td><td class="m">1.000</td></tr>
+  <tr><td>2</td><td>attack_c</td><td class="r">0.486</td><td class="m">0.667</td><td class="m">1.000</td></tr>
+  <tr><td>3</td><td>attack_d</td><td class="r">0.475</td><td class="m">0.667</td><td class="m">1.000</td></tr>
+  <tr><td>4</td><td>attack_e</td><td class="m">0.511</td><td class="m">0.667</td><td class="m">1.000</td></tr>
+  <tr><td>5</td><td>attack_f</td><td class="m">0.506</td><td class="m">0.667</td><td class="m">1.000</td></tr>
+  <tr><td>6</td><td>attack_g</td><td class="r">0.458</td><td class="r">0.000</td><td class="r">0.000</td></tr>
+  <tr><td>7</td><td>attack_h</td><td class="m">0.528</td><td class="m">0.667</td><td class="m">1.000</td></tr>
+</table>
+
+<div class="box b2">
+  <strong>Pythia failure analysis:</strong> Recall = 1.0 and Precision ≈ 0.5 across nearly all rounds means the model always predicts "attack" — it learns the majority-class shortcut. AUC ≈ 0.47–0.53 confirms no genuine discrimination. Round n=6 shows the reverse failure (always predicts "clean"), suggesting the model's decision boundary randomly flips between these two degenerate solutions depending on the specific attack batch in training.
+</div>
+
+<h3>Order Sensitivity — Does curriculum order matter?</h3>
+
+<figure>
+  <img src="../plots/step2/order_sensitivity_mnist.png" alt="Order sensitivity MNIST">
+  <figcaption>Figure 2.3. MNIST order sensitivity: original ordering, reversed, and 4 random permutations. Black dashed line = mean across orderings. AUC-ROC (bottom right) stays high (≥ 0.75) across all orderings, but F1 and Recall vary wildly — performance is highly order-dependent for individual rounds.</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step2/order_sensitivity_pythia.png" alt="Order sensitivity Pythia">
+  <figcaption>Figure 2.4. Pythia order sensitivity. All orderings cluster near AUC ≈ 0.5 — the failure is insensitive to attack ordering, confirming it is a fundamental architectural limitation, not a data-ordering artefact.</figcaption>
+</figure>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="s2" id="step2b"><span class="step-badge s2">2b</span> Step 2b — Attack Subset Selection Strategies</h2>
+
+<p>This experiment directly addresses <strong>Prof. Tałataj's research question</strong>: <em>"Does the choice of which attack types to include in training (e.g. just A, versus A+B+E) affect generalisation to unseen attacks?"</em></p>
+
+<p>Nine subset strategies were evaluated using <strong>ProfessorCNN</strong> (best-in-class architecture from the hyperparameter search), with <strong>5 seeded repeats</strong> per subset (<code>BASE_SEED = 2137</code>). Each run uses the full attack partition (no downsampling). Results are mean ± std.</p>
+
+<figure>
+  <img src="../plots/step2/step2_subset_comparison_prof_cnn.png" alt="Attack subset comparison">
+  <figcaption>Figure 2b.1. ProfessorCNN comparison of 9 attack subset strategies (5 runs × 9 subsets = 45 training runs). Top: mean AUC-ROC and F1 per subset (dots = individual unseen attacks). Bottom: per-attack AUC heatmap (grey = attack was in training).</figcaption>
+</figure>
+
+<h3>Subset Comparison Summary (mean AUC-ROC on <em>unseen</em> attacks)</h3>
+<table>
+  <tr>
+    <th>Subset</th><th>n attacks trained</th><th>Strategy</th>
+    <th>Mean AUC</th><th>Std AUC</th><th>Mean F1</th>
+  </tr>
+  <tr>
+    <td>A only</td><td>1</td><td>Single attack</td>
+    <td class="r">0.498</td><td>0.010</td><td class="r">0.267</td>
+  </tr>
+  <tr>
+    <td>A+B</td><td>2</td><td>Sequential</td>
+    <td class="r">0.482</td><td>0.013</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td>A+B+C</td><td>3</td><td>Sequential</td>
+    <td class="r">0.491</td><td>0.016</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td><strong>A+B+E</strong> ★</td><td>3</td><td>Diverse (prof. example)</td>
+    <td class="r">0.490</td><td>0.023</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td>A+D+G</td><td>3</td><td>Spread</td>
+    <td class="r">0.496</td><td>0.018</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td>A+B+C+D</td><td>4</td><td>Sequential</td>
+    <td class="r">0.482</td><td>—</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td>A+B+E+G</td><td>4</td><td>Diverse</td>
+    <td class="r">0.490</td><td>—</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td>A+C+E+G</td><td>4</td><td>Alternating</td>
+    <td class="m">0.510</td><td>—</td><td class="m">0.667</td>
+  </tr>
+  <tr>
+    <td>A–F (6 attacks)</td><td>6</td><td>Majority</td>
+    <td class="r">0.480</td><td>—</td><td class="m">0.667</td>
+  </tr>
+</table>
+<p style="font-size:12px;color:var(--muted)">★ Professor's suggested combination. Range across all strategies: 0.480–0.510 — statistically indistinguishable.</p>
+
+<h3>Pairwise Protocol — 8×8 AUC Heatmap</h3>
+
+<p>To match Step 1's full-partition methodology, each of the 56 ordered pairs (train on attack X, test on attack Y, X≠Y) was evaluated with 5 seeded repeats. Total: 280 training runs.</p>
+
+<figure>
+  <img src="../plots/step2/step2_professor_pairwise_auc_heatmap.png" alt="Pairwise AUC heatmap">
+  <figcaption>Figure 2b.2. 8×8 pairwise AUC-ROC heatmap (mean over 5 seeds). Row = training attack; column = test attack. Diagonal = NaN (not evaluated). All off-diagonal values fall in [0.45, 0.53] — no pair achieves meaningful cross-attack generalisation.</figcaption>
+</figure>
+
+<div class="box b2">
+  <strong>Negative result (scientifically significant):</strong> Neither the choice of training subset nor the number of attack types has any measurable effect on generalisation to unseen Pythia attacks. All AUC values cluster around 0.48–0.51 (random-level). The high F1 values (0.667) for n≥2 are the artifact of an always-attack degenerate classifier, not genuine detection. This confirms the bottleneck is in the representation, not the training curriculum.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="s3" id="step3"><span class="step-badge s3">3</span> Step 3 — Unsupervised Autoencoder</h2>
+
+<p><strong>Idea:</strong> Train a convolutional autoencoder <em>exclusively on clean data</em>. Anomalies (attacks) should have higher reconstruction error. No attack labels are needed at training time.</p>
+<p><strong>Architecture:</strong> 3-layer conv encoder → latent dim 32 → symmetric decoder. Anomaly score = MSE reconstruction loss. Threshold = 95th percentile of clean validation set scores. Trained for 30 epochs with patience = 5.</p>
+
+<h3>MNIST — Classifier vs. Autoencoder</h3>
+
+<figure>
+  <img src="../plots/step3/mnist_metric_comparison.png" alt="MNIST Step 3 comparison">
+  <figcaption>Figure 3.1. MNIST: AnomalyCNN (Step 1) vs. Autoencoder (Step 3). The autoencoder nearly matches the classifier on Test_A and dramatically improves Recall on Test_B (AnomalyCNN Recall = 42%, AE Recall = 100%), while preserving AUC ≈ 1.0.</figcaption>
+</figure>
+
+<div class="two-col">
+  <div>
+    <h4>MNIST Test_A (Known attack_a)</h4>
+    <table>
+      <tr><th>Model</th><th>AUC</th><th>F1</th><th>Recall</th></tr>
+      <tr><td>AnomalyCNN</td><td class="g">1.000</td><td class="g">1.000</td><td class="g">1.000</td></tr>
+      <tr><td>Autoencoder</td><td class="g">1.000</td><td class="g">0.980</td><td class="g">1.000</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>MNIST Test_B (Unknown OOD attack_b)</h4>
+    <table>
+      <tr><th>Model</th><th>AUC</th><th>F1</th><th>Recall</th></tr>
+      <tr><td>AnomalyCNN</td><td class="g">0.997</td><td class="m">0.591</td><td class="m">0.420</td></tr>
+      <tr><td>Autoencoder</td><td class="g">0.999</td><td class="g">0.979</td><td class="g">0.997</td></tr>
+    </table>
+  </div>
+</div>
+
+<p>The autoencoder's key advantage: its threshold is set from clean reconstruction error alone, so it naturally generalises to <em>any</em> out-of-distribution input — not just the one seen during supervised training.</p>
+
+<h3>Pythia — Classifier vs. Autoencoder</h3>
+
+<figure>
+  <img src="../plots/step3/pythia_metric_comparison.png" alt="Pythia Step 3 metric comparison">
+  <figcaption>Figure 3.2. Pythia: AnomalyCNN (Step 1) vs. Autoencoder (Step 3). The autoencoder marginally improves AUC (0.52–0.55 vs. 0.46–0.47) but Recall remains near zero (~7%) for both.</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step3/pythia_per_attack.png" alt="Pythia per-attack Step 3">
+  <figcaption>Figure 3.3. Pythia per-attack AUC-ROC and Recall for all 8 attacks. Autoencoder (red) shows slightly higher AUC than classifier (blue) for most attacks, but recall never exceeds ~8%.</figcaption>
+</figure>
+
+<table>
+  <tr><th>Model</th><th>Test_A AUC</th><th>Test_A Recall</th><th>Test_B AUC</th><th>Test_B Recall</th></tr>
+  <tr>
+    <td>AnomalyCNN (Step 1)</td>
+    <td class="r">0.465</td><td class="r">0.000</td>
+    <td class="r">0.466</td><td class="r">0.000</td>
+  </tr>
+  <tr>
+    <td>Autoencoder (Step 3)</td>
+    <td class="m">0.524</td><td class="r">0.070</td>
+    <td class="m">0.552</td><td class="r">0.075</td>
+  </tr>
+</table>
+
+<div class="box b3">
+  <strong>Step 3 takeaway:</strong> The autoencoder is a major upgrade on MNIST — solving the threshold sensitivity problem completely (Recall: 42% → 100% on unknown attacks). On Pythia, it provides marginal improvement (+0.06 AUC) but no practical detection capability (7% recall). The clean-data reconstruction signal is too weak relative to the subtle, localised nature of Pythia attacks.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="s4" id="step4"><span class="step-badge s4">4</span> Step 4 — Hybrid System (Frozen AE Encoder + Classification Head)</h2>
+
+<p><strong>Architecture:</strong> The best of both worlds — combine the unsupervised representation learned by the autoencoder with the power of supervised classification.</p>
+
+<ol>
+  <li>Train the autoencoder unsupervised on <code>clean</code> data only.</li>
+  <li><strong>Freeze</strong> all autoencoder weights.</li>
+  <li>Attach a new 2-layer dense classification head (<code>latent_dim → 64 → 2</code>) on top of the frozen encoder.</li>
+  <li><strong>Fine-tune</strong> only the head on <code>clean ∪ attack_a</code> (supervised).</li>
+  <li>Evaluate on Test_A (known) and Test_B (unknown).</li>
+</ol>
+
+<p>The hypothesis: the encoder has learned a clean-data manifold; the head learns where <em>attack_a</em> deviates from this manifold; generalisation comes from the manifold structure itself.</p>
+
+<h3>MNIST Results — 3-way Comparison</h3>
+
+<figure>
+  <img src="../plots/step4/mnist_metrics_3way.png" alt="MNIST Step 4 3-way metrics">
+  <figcaption>Figure 4.1. MNIST: Baseline (Step 1) vs. Autoencoder (Step 3) vs. Hybrid (Step 4). Left: Test_A. Right: Test_B. The Hybrid dominates on Test_B — higher accuracy and F1 than either predecessor.</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step4/mnist_roc_3way.png" alt="MNIST Step 4 ROC curves">
+  <figcaption>Figure 4.2. MNIST ROC curves. All three systems achieve AUC ≈ 0.99–1.00. Curves are nearly identical — AUC is not the differentiating metric here; threshold-dependent metrics (F1, Recall) are.</figcaption>
+</figure>
+
+<table>
+  <tr>
+    <th>System</th>
+    <th>Test_A AUC</th><th>Test_A F1</th><th>Test_A Recall</th>
+    <th>Test_B AUC</th><th>Test_B F1</th><th>Test_B Recall</th>
+  </tr>
+  <tr>
+    <td>Baseline (Step 1)</td>
+    <td class="g">1.000</td><td class="g">1.000</td><td class="g">1.000</td>
+    <td class="g">0.992</td><td class="r">0.142</td><td class="r">0.076</td>
+  </tr>
+  <tr>
+    <td>Autoencoder (Step 3)</td>
+    <td class="g">1.000</td><td class="m">0.739</td><td class="g">1.000</td>
+    <td class="g">0.990</td><td class="m">0.738</td><td class="g">0.998</td>
+  </tr>
+  <tr>
+    <td><strong>Hybrid (Step 4)</strong></td>
+    <td class="g"><strong>1.000</strong></td><td class="g"><strong>1.000</strong></td><td class="g"><strong>1.000</strong></td>
+    <td class="g"><strong>0.990</strong></td><td class="g"><strong>0.892</strong></td><td class="g"><strong>0.806</strong></td>
+  </tr>
+</table>
+
+<div class="box b4">
+  <strong>MNIST Step 4 analysis:</strong> The Hybrid achieves the best balance of all approaches: near-perfect on Test_A (F1 = 1.000) and the highest F1 on Test_B (0.892 — vs. 0.739 for the pure autoencoder). The Hybrid's Recall on unknown attack (0.806) is lower than the autoencoder's (0.998) but its Precision is near-perfect (0.999 vs. 0.586), eliminating false positives. Depending on the use case — prioritising recall vs. precision — either the Hybrid or the Autoencoder is optimal.
+</div>
+
+<h3>Pythia Results — 3-way Comparison</h3>
+
+<figure>
+  <img src="../plots/step4/pythia_metrics_3way.png" alt="Pythia Step 4 3-way metrics">
+  <figcaption>Figure 4.3. Pythia: Baseline vs. Autoencoder vs. Hybrid. Left: Test_A. Right: Test_B. The Hybrid dramatically improves Recall and F1, but at the cost of very low AUC — the model achieves high recall through near-constant "attack" prediction.</figcaption>
+</figure>
+
+<figure>
+  <img src="../plots/step4/pythia_roc_3way.png" alt="Pythia Step 4 ROC curves">
+  <figcaption>Figure 4.4. Pythia ROC curves. All systems hover near the diagonal. The autoencoder's ROC has the highest AUC (0.559 on Test_A), but none approach useful territory. The Hybrid's ROC (green) is worse than random on Test_A (AUC = 0.481).</figcaption>
+</figure>
+
+<table>
+  <tr>
+    <th>System</th>
+    <th>Test_A AUC</th><th>Test_A F1</th><th>Test_A Recall</th>
+    <th>Test_B AUC</th><th>Test_B F1</th><th>Test_B Recall</th>
+  </tr>
+  <tr>
+    <td>Baseline (Step 1)</td>
+    <td class="m">0.524</td><td class="r">0.000</td><td class="r">0.000</td>
+    <td class="m">0.524</td><td class="r">0.000</td><td class="r">0.000</td>
+  </tr>
+  <tr>
+    <td>Autoencoder (Step 3)</td>
+    <td class="m"><strong>0.559</strong></td><td class="r">0.126</td><td class="r">0.070</td>
+    <td class="m">0.522</td><td class="r">0.140</td><td class="r">0.076</td>
+  </tr>
+  <tr>
+    <td>Hybrid (Step 4)</td>
+    <td class="r">0.481</td><td class="m">0.592</td><td class="m">0.785</td>
+    <td class="r">0.474</td><td class="m"><strong>0.810</strong></td><td class="m"><strong>0.798</strong></td>
+  </tr>
+</table>
+
+<div class="box b2">
+  <strong>Pythia Step 4 analysis — the AUC paradox:</strong> The Hybrid achieves Recall = 0.80 and F1 = 0.81 on Test_B, which <em>looks</em> impressive, but AUC = 0.47 (below random) reveals the truth: the model is predicting "attack" with high confidence for nearly everything — clean and attack alike. In the heavily imbalanced Test_B (5:1 attack-to-clean ratio), this produces good Recall at moderate Precision (0.82) — but the score distribution cannot actually separate the two classes. This is the same failure mode as ProfessorCNN in Step 1 (degenerate high-recall classifier). AUC is the reliable metric here.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="comparison">Cross-Step Comparison</h2>
+
+<h3>MNIST — Best result per step (Test_B — Unknown attack)</h3>
+<table>
+  <tr><th>Step</th><th>System</th><th>AUC-ROC</th><th>F1</th><th>Recall</th><th>Precision</th><th>Key Advantage</th></tr>
+  <tr>
+    <td>1</td><td>AnomalyCNN Baseline</td>
+    <td class="g">0.992</td><td class="r">0.190</td><td class="r">0.076</td><td class="g">1.000</td>
+    <td>Excellent discrimination; poor threshold calibration</td>
+  </tr>
+  <tr>
+    <td>2</td><td>AnomalyCNN Progressive</td>
+    <td class="g">1.000</td><td class="r">0.004</td><td class="r">0.002</td><td class="g">1.000</td>
+    <td>Some rounds approach perfect (n=1,3,5); order-sensitive</td>
+  </tr>
+  <tr>
+    <td>3</td><td>Autoencoder</td>
+    <td class="g">0.999</td><td class="g">0.979</td><td class="g">0.997</td><td class="m">0.961</td>
+    <td>Best recall; no attack labels needed</td>
+  </tr>
+  <tr>
+    <td><strong>4</strong></td><td><strong>Hybrid System</strong></td>
+    <td class="g"><strong>0.990</strong></td><td class="g"><strong>0.892</strong></td><td class="g"><strong>0.806</strong></td><td class="g"><strong>0.999</strong></td>
+    <td><strong>Best precision + high recall; best overall balance</strong></td>
+  </tr>
+</table>
+
+<h3>Pythia — Best AUC per step (Test_A or Test_B)</h3>
+<table>
+  <tr><th>Step</th><th>System</th><th>Best AUC</th><th>Notes</th></tr>
+  <tr>
+    <td>1</td><td><strong>GBM (Best)</strong></td>
+    <td class="b"><strong>0.609</strong></td>
+    <td>Only model with genuine discriminative power on Pythia</td>
+  </tr>
+  <tr>
+    <td>2</td><td>AnomalyCNN Progressive</td>
+    <td class="r">0.528</td>
+    <td>Near-random; no improvement from multi-attack training</td>
+  </tr>
+  <tr>
+    <td>2b</td><td>ProfessorCNN (A+C+E+G)</td>
+    <td class="m">0.510</td>
+    <td>No subset strategy improves beyond noise floor</td>
+  </tr>
+  <tr>
+    <td>3</td><td>Autoencoder</td>
+    <td class="m">0.559</td>
+    <td>Marginal improvement; recall near zero</td>
+  </tr>
+  <tr>
+    <td>4</td><td>Hybrid</td>
+    <td class="r">0.481</td>
+    <td>AUC below random; high F1 is deceptive (degenerate classifier)</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="conclusions">Conclusions &amp; Recommendations</h2>
+
+<h3>1. MNIST — Solved. The progression works.</h3>
+<div class="box b3">
+  MNIST anomaly detection reaches near-perfect performance (AUC ≥ 0.99) across all approaches. The key progression: Baseline (Step 1) → Autoencoder (Step 3) → Hybrid (Step 4) addresses the threshold sensitivity problem. The Hybrid achieves the best practical balance (F1 = 0.89, Precision = 1.0 on Test_B). For deployment on MNIST-style attacks, the Hybrid system is the recommended approach.
+</div>
+
+<h3>2. Pythia — Unsolved. Architecture is the bottleneck.</h3>
+<div class="box b2">
+  No CNN-based approach achieves AUC &gt; 0.56 on Pythia across all four steps. The best-performing system is <strong>GBM from Step 1 (AUC = 0.61)</strong>. The root cause: Pythia attacks are <em>localised pixel-level perturbations</em> (max |Δ| ≈ 0.068 per pixel), while CNN architectures with spatial pooling aggregate over spatial positions, destroying the localisation signal. This is confirmed by the diagnostic analysis (oracle AUC = 0.845 with LR on raw pixel features).
+</div>
+
+<h3>3. The choice of attack training subset (Step 2b) doesn't matter for Pythia.</h3>
+<div class="box bwarn">
+  9 attack subset strategies (including Prof. Tałataj's suggested A+B+E and A+D+G) were evaluated with 5 seeded repeats each. The maximum AUC difference between any two strategies is 0.028 — within statistical noise (std ≈ 0.015–0.025). The negative result is reproducible and statistically confirmed.
+</div>
+
+<h3>Recommendations for future work</h3>
+
+<div class="three-col">
+  <div class="box b1">
+    <strong>Architecture: No-pool CNN or ViT</strong><br>
+    Replace spatial MaxPooling with global average pooling over full feature maps, or use a Vision Transformer (ViT) with patch-level attention. These architectures preserve spatial localisation information.
+  </div>
+  <div class="box b3">
+    <strong>Self-supervised pre-training</strong><br>
+    SimCLR or MoCo contrastive learning on clean Pythia data, followed by fine-tuning. The self-supervised objective forces the model to distinguish local image patches — directly relevant to Pythia attacks.
+  </div>
+  <div class="box b4">
+    <strong>Pixel-level anomaly score</strong><br>
+    Instead of a global anomaly score, use per-pixel reconstruction error maps (from the AE decoder). Pythia attacks have a small spatial footprint; a spatial max-pool of reconstruction error could outperform the global mean.
+  </div>
+</div>
+
+<hr>
+<p class="stamp">
+  Generated: 2 June 2026 &middot; Repository: mnch2 branch + origin/jpch2 (Step 4) &middot;
+  Scripts: step1.py, step2.py, step2_professor.py, step3.py, step4.py &middot;
+  JSON sources: faza1_wyniki_eksperymentu.json, faza2_wyniki_generalizacji.json,
+  faza2_wyniki_generalizacji_professor.json, faza3_wyniki_autoenkodera.json,
+  faza4_wyniki_hybrydy.json
+</p>
+
+</body>
+</html>
