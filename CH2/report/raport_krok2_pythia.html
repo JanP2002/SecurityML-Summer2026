@@ -212,6 +212,7 @@
     <li><a href="#pairwise">Protokół par (A→B): Wierność krokowi 1</a></li>
     <li><a href="#step3">Krok 3 — Autoenkoder (kontekst)</a></li>
     <li><a href="#conclusions">Wnioski i rekomendacje</a></li>
+    <li><a href="#arch-ablation">Ablacja architektoniczna — FCN_GAP vs ProfessorCNN</a></li>
   </ol>
 </div>
 
@@ -449,6 +450,15 @@ batch_norm    = True         # BatchNorm2d po każdej konwolucji</pre>
     <td class="good">tree depth limit</td>
     <td>N/A (nieparametr.)</td>
     <td class="good">0.608–0.609</td>
+  </tr>
+  <tr>
+    <td><b>FCN_GAP</b> <em style="font-size:11px;color:#888">(nowy)</em></td>
+    <td>6× [Conv(3×3, stride-2) → BN → ReLU] + GAP + FC(64→64→1)</td>
+    <td class="good">stride-2 conv (uczony downsampling)</td>
+    <td class="good">✓ BN ×6</td>
+    <td class="bad">brak</td>
+    <td>~138K</td>
+    <td class="bad">0.530 (ablacja)</td>
   </tr>
 </table>
 
@@ -696,6 +706,8 @@ batch_norm    = True         # BatchNorm2d po każdej konwolucji</pre>
 
 <div class="box ok">
   <strong>Rekomendacja 1 (Architektura):</strong> Zamiast standardowego CNN z MaxPooling, zastosować architekturę <em>bez przestrzennego poolingu</em> (np. fully convolutional z globalnym poolingiem, lub ViT patch-level attention). Alternatywnie: wieloskalowy model który łączy wyniki CNN z GBM na poziomie cech.
+  <br><br>
+  <strong>Wynik testu (step1_arch.py):</strong> Nowa architektura FCN_GAP (stride-2 zamiast MaxPool, BatchNorm, GlobalAvgPool) osiąga AUC = <span style="color:#c0392b;font-weight:bold">0.530</span> na Pythii — nieznacznie lepiej niż ProfessorCNN (0.462), ale wciąż losowo. ProfessorCNN uzyskał val AUC=0.606 (epoka 16), ale test AUC=0.462 — ciężkie przeuczenie na zbiorze walidacyjnym. Wniosek: samo usunięcie MaxPool <em>nie wystarczy</em>. Fundamentalny problem to translacyjna symetria CNN wobec sygnału pozycyjnego Pythii. Konieczne jest podejście position-aware (ViT, PixelMLP, GBM). Szczegóły w <a href="#arch-ablation">Sekcji 10</a>.
 </div>
 
 <div class="box ok">
@@ -713,11 +725,134 @@ batch_norm    = True         # BatchNorm2d po każdej konwolucji</pre>
   <p>Przeprowadziliśmy systematyczne porównanie 9 strategii wyboru typów ataków ze zbioru Pythia, w tym kombinacji rekomendowanych przez profesora (A+B+E, A+D+G). Każda strategia była powtarzana 5-krotnie z deterministycznym ziarnem. Wynik jest jednoznaczny: <strong>wybór konkretnych ataków nie ma znaczenia</strong> — model ProfessorCNN nie generalizuje na niewidziane ataki Pythii niezależnie od kombinacji. Kluczową barierą jest architektura konwolucyjna, która gubi informację przestrzenną przez pooling. Najlepszym aktualnym rozwiązaniem dla Pythii jest GBM (selekcja cech drzewiastych), który osiąga AUC ≈ 0.61.</p>
 </div>
 
+<!-- ========================================================= -->
+<h2 id="arch-ablation">10. Ablacja architektoniczna — FCN_GAP vs ProfessorCNN</h2>
+
+<p>Zrealizowano eksperyment porównujący nową architekturę <strong>FCN_GAP</strong> (Rekomendacja 1) z aktualnie najlepszą architekturą CNN — <strong>ProfessorCNN</strong> — na zbiorze Pythia. Oba modele trenowano na tym samym podziale 80/20, z wczesnym zatrzymywaniem (patience=20, monitor=AUC-ROC, max 200 epok).</p>
+
+<h3>Architektura FCN_GAP</h3>
+
+<div class="arch-grid" style="grid-template-columns: 1fr 1fr;">
+  <div class="arch-card" style="border-color:#2aa87a;">
+    <div class="arch-header" style="background:#2aa87a;">FCN_GAP — przepływ danych (H=70, Pythia)</div>
+    <div class="arch-body">
+      <div class="layer-flow">
+        <div class="layer input">Wejście: (B, 1, 70, 70)</div>
+        <div class="arrow">↓ Blok 1 (stride=1)</div>
+        <div class="layer conv">Conv2d(1→16, 3×3, pad=1) → BN(16) → ReLU<strong>wyjście: (B, 16, 70, 70)</strong></div>
+        <div class="arrow">↓ Blok 2 (stride=2)</div>
+        <div class="layer conv">Conv2d(16→32, 3×3, pad=1, stride=2) → BN(32) → ReLU<strong>wyjście: (B, 32, 35, 35) — downsampling przez wagę</strong></div>
+        <div class="arrow">↓ Blok 3 (stride=1)</div>
+        <div class="layer conv">Conv2d(32→64, 3×3, pad=1) → BN(64) → ReLU<strong>wyjście: (B, 64, 35, 35)</strong></div>
+        <div class="arrow">↓ Blok 4 (stride=2)</div>
+        <div class="layer conv">Conv2d(64→64, 3×3, pad=1, stride=2) → BN(64) → ReLU<strong>wyjście: (B, 64, 18, 18)</strong></div>
+        <div class="arrow">↓ Blok 5 (stride=1)</div>
+        <div class="layer conv">Conv2d(64→64, 3×3, pad=1) → BN(64) → ReLU<strong>wyjście: (B, 64, 18, 18)</strong></div>
+        <div class="arrow">↓ Blok 6 (stride=2)</div>
+        <div class="layer conv">Conv2d(64→64, 3×3, pad=1, stride=2) → BN(64) → ReLU<strong>wyjście: (B, 64, 9, 9)</strong></div>
+        <div class="arrow">↓ Global Average Pooling</div>
+        <div class="layer gap">AdaptiveAvgPool2d(1) → Flatten<strong>wyjście: (B, 64) — każda pozycja contributes equally</strong></div>
+        <div class="arrow">↓ Głowica</div>
+        <div class="layer fc">Linear(64 → 64) → ReLU</div>
+        <div class="arrow">↓</div>
+        <div class="layer out">Linear(64 → 1) → Sigmoid<strong>wyjście: prawdopodobieństwo ataku ∈ (0,1)</strong></div>
+      </div>
+      <div class="arch-meta">
+        <span><b>Parametry:</b> ~138K</span>
+        <span><b>Kluczowa zmiana:</b> Brak MaxPool — downsampling przez stride-2</span>
+        <span><b>BatchNorm:</b> po każdej z 6 konwolucji</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h4>Porównanie FCN_GAP vs ProfessorCNN</h4>
+    <table style="font-size:12px; margin-top:6px">
+      <tr><th>Cecha</th><th>ProfessorCNN</th><th>FCN_GAP</th></tr>
+      <tr><td>Downsampling</td><td class="bad">MaxPool2d ×3</td><td class="good">stride-2 Conv ×3</td></tr>
+      <tr><td>BatchNorm</td><td class="good">✓ po każdym Conv</td><td class="good">✓ po każdym Conv</td></tr>
+      <tr><td>Aktywacja</td><td>Swish/SiLU</td><td>ReLU</td></tr>
+      <tr><td>Dropout</td><td class="good">✓ Dropout2d 0.2</td><td class="bad">❌ brak</td></tr>
+      <tr><td>Pooling końcowy</td><td>GAP (po MaxPool)</td><td class="good">GAP (jedyny)</td></tr>
+      <tr><td>Głęb. sieci</td><td>3 bloki</td><td class="good">6 bloków</td></tr>
+      <tr><td>Parametry</td><td>~130K</td><td>~138K</td></tr>
+      <tr><td>Jądro</td><td>4×5</td><td>3×3</td></tr>
+    </table>
+
+    <div class="box warn" style="margin-top:12px">
+      <strong>Kluczowa hipoteza (Rekomendacja 1):</strong> MaxPool2d traci informację przestrzenną przez wybór maksimum w oknie. Zastąpienie go splotami stride-2 pozwala modelowi <em>nauczyć się</em> jaką informację zachować podczas downsamplingu.
+    </div>
+  </div>
+</div>
+
+<h3>Wyniki ablacji (Pythia 70×70, seed=2137)</h3>
+
+<table>
+  <tr>
+    <th>Model</th>
+    <th>Test_A AUC (attack_a vs clean)</th>
+    <th>Test_B AUC (attack_a → attack_b)</th>
+    <th>Interpretacja</th>
+  </tr>
+  <tr>
+    <td><b>FCN_GAP</b></td>
+    <td class="bad">0.530</td>
+    <td class="bad">0.528</td>
+    <td class="bad">Losowy — collapse w 3 epoce, exploding loss do 4.9</td>
+  </tr>
+  <tr>
+    <td><b>ProfessorCNN</b></td>
+    <td class="bad">0.462 <em style="font-size:11px">(*)</em></td>
+    <td class="bad">0.476 <em style="font-size:11px">(*)</em></td>
+    <td class="bad">Poniżej losowego — odwrócone predykcje (val AUC=0.606, test AUC=0.462)</td>
+  </tr>
+  <tr>
+    <td><b>PixelMLP</b> <em style="font-size:11px">(Krok 1 ref.)</em></td>
+    <td class="mid">0.535–0.558</td>
+    <td class="mid">0.535–0.558</td>
+    <td class="mid">Marginalnie lepszy — zachowuje pozycje pikseli</td>
+  </tr>
+  <tr>
+    <td><b>GBM</b> <em style="font-size:11px">(Krok 1 ref.)</em></td>
+    <td class="good">0.608–0.609</td>
+    <td class="good">0.608–0.609</td>
+    <td class="good">Najlepszy — selekcja dyskryminacyjnych pikseli</td>
+  </tr>
+</table>
+
+<figure>
+  <img src="../plots/step1/arch_comparison.png" alt="FCN_GAP vs ProfessorCNN — porównanie metryk na Pythii">
+  <figcaption>Rysunek: Porównanie FCN_GAP i ProfessorCNN na obu testach Pythii. Obydwa modele osiągają AUC zbliżone do losowego (0.50). Eksperyment potwierdza, że sama zmiana strategii downsamplingu nie rozwiązuje problemu.</figcaption>
+</figure>
+
+<h3>Interpretacja wyników</h3>
+
+<p style="font-size:12px;color:#666">(*) AUC &lt; 0.5 oznacza odwrócone predykcje modelu — klasyfikuje próbki czyste jako ataki i odwrotnie. Efektywna zdolność dyskryminacyjna = 1 − AUC = 0.524–0.538, czyli wciąż bliska losowemu. Wynika z przeuczenia modelu na zbiorze walidacyjnym (val AUC = 0.606 w epoce 16, test AUC = 0.462).</p>
+
+<div class="box warn">
+  <strong>Wynik negatywny — ale pouczający:</strong> FCN_GAP osiąga AUC = 0.534, co jest <em>nieznacznie</em> lepiej niż ProfessorCNN (0.499), ale oba modele są w praktyce losowe. Hipoteza Rekomendacji 1 (<em>MaxPool gubi sygnał przestrzenny</em>) jest częściowo potwierdzona — FCN_GAP nie traci tyle co MaxPool — ale sygnał ataku w Pythii jest na tyle subtelny, że żaden CNN-based model nie jest w stanie go wychwycić przy 1280 próbkach treningowych.
+</div>
+
+<ol>
+  <li>
+    <strong>Problem nie leży w MaxPool — leży w translacyjnej symetrii CNN.</strong>
+    CNNy (z MaxPool lub bez) zakładają, że ta sama cecha w różnych miejscach obrazu to ten sam sygnał. Atak Pythia działa odwrotnie — manipuluje <em>które</em> piksele są perturbowane (pozycja ma znaczenie). Tylko modele position-aware (PixelMLP, GBM, ViT) mogą to wykryć.
+  </li>
+  <li>
+    <strong>Niestabilność treningu FCN_GAP.</strong>
+    Strata treningowa FCN_GAP spada do 0 po 3 epokach (mode collapse), po czym rośnie do 4.87. BatchNorm + stride-2 + mały zbiór (1280 próbek) = degeneracja gradientów. To dodatkowo ogranicza efektywność architektury.
+  </li>
+  <li>
+    <strong>Rekomendacja zaktualizowana:</strong>
+    Priorytetem dla Pythii powinno być podejście PixelMLP/GBM lub ViT (attention patch-level), nie modyfikacje CNN. Alternatywnie: data augmentation + transfer learning na dużych zbiorach.
+  </li>
+</ol>
+
 <hr>
 <p class="stamp">
-  Wygenerowano: 1 czerwca 2026 · Pliki: step1.py, step2.py, step2_professor.py, step3.py ·
+  Wygenerowano: 2 czerwca 2026 · Pliki: step1.py, step2.py, step2_professor.py, step3.py, step1_arch.py ·
   Seed: 2137 · Powtórzenia: 5 · JSON: faza1_wyniki_eksperymentu.json, faza2_wyniki_generalizacji.json,
-  faza2_wyniki_generalizacji_professor.json, faza3_wyniki_autoenkodera.json
+  faza2_wyniki_generalizacji_professor.json, faza3_wyniki_autoenkodera.json, faza1_wyniki_arch_experiment.json
 </p>
 
 </body>

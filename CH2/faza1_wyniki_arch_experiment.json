@@ -1,0 +1,42 @@
+{
+    "FCN_GAP": {
+        "Test_A": {
+            "Accuracy": 0.5,
+            "Precision": 0.0,
+            "Recall": 0.0,
+            "F1_Score": 0.0,
+            "AUC_ROC": 0.53025
+        },
+        "Test_B": {
+            "Accuracy": 0.16666666666666666,
+            "Precision": 0.0,
+            "Recall": 0.0,
+            "F1_Score": 0.0,
+            "AUC_ROC": 0.5279
+        }
+    },
+    "ProfessorCNN": {
+        "Test_A": {
+            "Accuracy": 0.5,
+            "Precision": 0.5,
+            "Recall": 1.0,
+            "F1_Score": 0.6666666666666666,
+            "AUC_ROC": 0.4615875
+        },
+        "Test_B": {
+            "Accuracy": 0.8333333333333334,
+            "Precision": 0.8333333333333334,
+            "Recall": 1.0,
+            "F1_Score": 0.9090909090909091,
+            "AUC_ROC": 0.4763975
+        }
+    },
+    "timestamp": "2026-06-02 22:35:27",
+    "config": {
+        "RANDOM_SEED": 2137,
+        "PYTHIA_EPOCHS": 200,
+        "PYTHIA_PATIENCE": 20,
+        "early_stopping": "AUC-based (monitor_auc=True)",
+        "dataset": "Pythia 70x70"
+    }
+}

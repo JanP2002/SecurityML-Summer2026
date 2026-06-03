@@ -597,6 +597,98 @@ class AnomalyCNN(nn.Module):
 
 
 # ===========================================================================
+# FCN_GAP  (Recommendation 1 — no MaxPooling, stride-2 convs + Global Avg Pool)
+# ===========================================================================
+
+class FCN_GAP(nn.Module):
+    """Fully Convolutional binary anomaly detector — *no* MaxPooling.
+
+    Motivation (Recommendation 1 — Architecture):
+        AnomalyCNN uses ``MaxPool2d`` which discards spatial position
+        information (retains only the strongest activation in each 2x2
+        window).  For datasets where the attack signal is a subtle
+        positional perturbation (e.g. Pythia), this pooling destroys
+        discriminative information before it reaches the classifier.
+
+        FCN_GAP replaces MaxPool with **stride-2 convolutions** (learned
+        downsampling that can preserve any pattern the filters detect) and
+        uses **Global Average Pooling** (``AdaptiveAvgPool2d(1)``) to
+        aggregate spatial features so that every position contributes
+        equally to the final representation.
+
+    Architecture::
+
+        Conv(1->16,  3x3, p=1)        BN  ReLU           [H   x W  ]
+        Conv(16->32, 3x3, p=1, s=2)   BN  ReLU           [H/2 x W/2]
+        Conv(32->64, 3x3, p=1)        BN  ReLU
+        Conv(64->64, 3x3, p=1, s=2)   BN  ReLU           [H/4 x W/4]
+        Conv(64->64, 3x3, p=1)        BN  ReLU
+        Conv(64->64, 3x3, p=1, s=2)   BN  ReLU           [H/8 x W/8]
+        AdaptiveAvgPool2d(1) -> Flatten -> (B, 64)
+        Linear(64 -> 64) -> ReLU -> Linear(64 -> 1) -> Sigmoid
+
+    Key differences vs ``AnomalyCNN``:
+
+    * No ``MaxPool2d`` — downsampling via stride-2 Conv (learned, not fixed)
+    * BatchNorm after every conv — stable gradients without pooling regularisation
+    * GAP head — all spatial positions contribute equally to classification
+    * Fewer FC parameters (64-head vs 576->128 for 28x28 input)
+
+    Parameters
+    ----------
+    input_size : int
+        Kept for API compatibility; ``AdaptiveAvgPool2d`` handles any size.
+    """
+
+    def __init__(self, input_size: int = 28):
+        super().__init__()
+
+        self.features = nn.Sequential(
+            # Block 1 — full resolution
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=True),
+            # Block 2 — stride-2 (replaces MaxPool)
+            nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=2),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            # Block 3
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            # Block 4 — stride-2
+            nn.Conv2d(64, 64, kernel_size=3, padding=1, stride=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            # Block 5
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            # Block 6 — stride-2
+            nn.Conv2d(64, 64, kernel_size=3, padding=1, stride=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+        )
+
+        # Global Average Pooling: (B, 64, h, w) -> (B, 64, 1, 1)
+        self.gap = nn.AdaptiveAvgPool2d(1)
+
+        self.classifier = nn.Sequential(
+            nn.Linear(64, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 1),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.features(x)
+        x = self.gap(x)
+        x = x.view(x.size(0), -1)   # (B, 64)
+        x = self.classifier(x)
+        return x
+
+
+# ===========================================================================
 # PROFESSOR CNN  (Pythia — professor-suggested configurable architecture)
 # ===========================================================================
 

@@ -147,8 +147,9 @@
         <li><a href="#professor-examples">Prof. Tałataj's Suggested Combinations</a></li>
       </ul>
     </li>
+    <li><a href="#mnist-subsets">MNIST Subset Generalisation (AnomalyCNN)</a></li>
     <li><a href="#pairwise">Pairwise Protocol — 8×8 Cross-Attack Matrix</a></li>
-    <li><a href="#failure-analysis">Failure Analysis: Why Pythia Doesn't Generalise</a></li>
+    <li><a href="#failure-analysis">Failure Analysis: Why Pythia Doesn’t Generalise</a></li>
     <li><a href="#conclusions">Conclusions</a></li>
   </ol>
 </div>
@@ -638,7 +639,87 @@ Monitor        = AUC-ROC</pre>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<h2 class="purple" id="pairwise">6. Pairwise Protocol — 8×8 Cross-Attack Matrix</h2>
+<h2 class="green" id="mnist-subsets">6. MNIST Subset Generalisation (AnomalyCNN)</h2>
+
+<p>To understand whether the Pythia failure is dataset-specific or architectural, the same 9-subset experiment was run on <strong>MNIST</strong> using <strong>AnomalyCNN</strong> (the simplest model). MNIST uses 10,000 samples and 6 custom attacks (A1–A6), contrasted with Pythia’s 1,280 samples and 8 positional attacks.</p>
+
+<div class="box b-green">
+  <strong>Key contrast with Pythia:</strong> Where ProfessorCNN on Pythia achieves AUC ≈ 0.49–0.51 (random) across all 9 subsets, AnomalyCNN on MNIST routinely achieves AUC = 1.000 on easy attacks. The architecture is not broken — the dataset is the problem.
+</div>
+
+<div class="box b-warn">
+  <strong>Note:</strong> Only 1 seed (seed=2137) was completed before time constraints stopped the 5-seed run. Results below are from a single run and do not include mean ± std. Directional findings are consistent with Repeat 1 behaviour.
+</div>
+
+<h3>MNIST Attack Definitions (A1–A6)</h3>
+<table>
+  <tr><th>ID</th><th>Attack name</th><th>Description</th></tr>
+  <tr><td>A1</td><td>Gaussian noise</td><td>Additive Gaussian noise (σ=0.4) on all pixels</td></tr>
+  <tr><td>A2</td><td>Salt &amp; pepper</td><td>Random pixel flips to 0 or 1 (p=0.1)</td></tr>
+  <tr><td>A3</td><td>Geometric</td><td>Random rotation + translation</td></tr>
+  <tr><td>A4</td><td>Blended</td><td>Alpha-blending with random image (invisible)</td></tr>
+  <tr><td class="r"><b>A5</b></td><td class="r"><b>Backdoor</b></td><td>Small trigger patch in fixed position</td></tr>
+  <tr><td>A6</td><td>OOD replacement</td><td>Replace MNIST sample with FashionMNIST image</td></tr>
+</table>
+
+<h3>Results — AUC-ROC by Subset (seed=2137)</h3>
+<table>
+  <tr><th>Subset</th><th>Train attacks</th><th>Unseen attack</th><th>AUC-ROC</th><th>Note</th></tr>
+  <tr><td rowspan="5"><b>1. A1 only</b></td><td rowspan="5">A1 (Gaussian)</td><td>A2 salt&amp;pepper</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td>A3 geometric</td><td class="m">0.882</td><td>—</td></tr>
+  <tr><td>A4 blended</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td class="r"><b>A5 backdoor</b></td><td class="r"><b>0.409</b></td><td class="r">⚠ below random</td></tr>
+  <tr><td>A6 OOD</td><td class="g">0.986</td><td>—</td></tr>
+  <tr><td rowspan="4"><b>2. A1+A2 (seq)</b></td><td rowspan="4">A1, A2</td><td>A3 geometric</td><td class="m">0.780</td><td>—</td></tr>
+  <tr><td>A4 blended</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td class="r"><b>A5 backdoor</b></td><td class="r"><b>0.622</b></td><td class="r">Improving but still weak</td></tr>
+  <tr><td>A6 OOD</td><td class="g">0.977</td><td>—</td></tr>
+  <tr><td rowspan="3"><b>3. A1+A2+A3 (seq)</b></td><td rowspan="3">A1, A2, A3</td><td>A4 blended</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td class="r"><b>A5 backdoor</b></td><td class="r"><b>0.831</b></td><td>Still hardest</td></tr>
+  <tr><td>A6 OOD</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td rowspan="3"><b>4. A1+A2+A5 (diverse)</b></td><td rowspan="3">A1, A2, A5</td><td>A3 geometric</td><td class="m">0.745</td><td class="r">Training collapse (loss →5.29)</td></tr>
+  <tr><td>A4 blended</td><td class="m">0.859</td><td>—</td></tr>
+  <tr><td>A6 OOD</td><td class="m">0.935</td><td>—</td></tr>
+  <tr><td rowspan="3"><b>5. A1+A3+A5 (spread)</b></td><td rowspan="3">A1, A3, A5</td><td>A2 salt&amp;pepper</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td>A4 blended</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td>A6 OOD</td><td class="g">1.000</td><td>Best 3-attack subset</td></tr>
+  <tr><td rowspan="2"><b>6. A1+A2+A3+A4 (seq)</b></td><td rowspan="2">A1, A2, A3, A4</td><td class="r"><b>A5 backdoor</b></td><td class="r"><b>0.647</b></td><td class="r">4 attacks trained, still weak</td></tr>
+  <tr><td>A6 OOD</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td rowspan="2"><b>7. A1+A2+A5+A6 (div)</b></td><td rowspan="2">A1, A2, A5, A6</td><td>A3 geometric</td><td class="g">0.973</td><td>Including A5 helps A3 detection</td></tr>
+  <tr><td>A4 blended</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td rowspan="2"><b>8. A1+A3+A5+A6 (alt)</b></td><td rowspan="2">A1, A3, A5, A6</td><td>A2 salt&amp;pepper</td><td class="g">0.996</td><td>—</td></tr>
+  <tr><td>A4 blended</td><td class="g">1.000</td><td>—</td></tr>
+  <tr><td><b>9. A1–A5 (majority)</b></td><td>A1, A2, A3, A4, A5</td><td>A6 OOD</td><td class="g">1.000</td><td>—</td></tr>
+</table>
+
+<h3>Key Findings</h3>
+
+<div class="two-col">
+  <div class="box b-red">
+    <strong>A5 (backdoor) is uniquely hard.</strong> Even training on 4 attacks including A5 yields only AUC = 0.647. When A5 is included in training without careful balancing, the model collapses (loss → 5.29 in epoch 2, early stopping at epoch 6). This is the only MNIST attack that resists detection.
+  </div>
+  <div class="box b-green">
+    <strong>Everything else generalises easily on MNIST.</strong> A4 (blended) and A6 (OOD) consistently reach AUC = 1.000 from even a single-attack training set. A2 (salt&amp;pepper) and A3 (geometric) are harder but still well above random (≥0.78).
+  </div>
+</div>
+
+<div class="box b-blue">
+  <strong>Contrast with Pythia:</strong> On MNIST, subset diversity <em>does</em> help for backdoor attacks — A1+A3+A5 (spread) beats A1+A2+A3 (sequential) by allowing the model to see more diverse pixel patterns. The A5_backdoor AUC trajectory with more training data: <b>0.409 → 0.622 → 0.831 → 0.647</b> (non-monotonic). This confirms A5’s trigger is sufficiently stealthy that more attacks in training can sometimes hurt (by diluting the relevant signal).
+</div>
+
+<h3>MNIST vs Pythia — Why CNN Works on One But Not the Other</h3>
+<table>
+  <tr><th>Property</th><th>MNIST</th><th>Pythia</th></tr>
+  <tr><td>Dataset size</td><td class="g">10,000 samples</td><td class="r">1,280 samples</td></tr>
+  <tr><td>Attack signal</td><td class="g">Global (noise, OOD, blending)</td><td class="r">Positional (localised pixel changes)</td></tr>
+  <tr><td>CNN amenability</td><td class="g">High — translation-equivariant features sufficient</td><td class="r">Low — position information destroyed by pooling</td></tr>
+  <tr><td>Best AUC (any subset)</td><td class="g">1.000</td><td class="r">0.510</td></tr>
+  <tr><td>Hardest attack</td><td class="m">A5 backdoor (0.41–0.83)</td><td class="r">All attacks (≈0.50)</td></tr>
+  <tr><td>Does diversity help?</td><td class="m">Partially (for backdoor)</td><td class="r">No (±0.02 range)</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 class="purple" id="pairwise">7. Pairwise Protocol — 8×8 Cross-Attack Matrix</h2>
 
 <p>To rigorously test ProfessorCNN's generalisation, every ordered pair (train on X → test on Y, for all X ≠ Y) was evaluated with 5 seeds. This mirrors the Step 1 methodology and creates a complete cross-attack generalisation map.</p>
 
@@ -667,7 +748,7 @@ Monitor        = AUC-ROC</pre>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<h2 class="red" id="failure-analysis">7. Failure Analysis: Why Pythia Doesn't Generalise</h2>
+<h2 class="red" id="failure-analysis">8. Failure Analysis: Why Pythia Doesn’t Generalise</h2>
 
 <h3>7.1 The signal exists — architecture can't access it</h3>
 <p>A diagnostic ceiling analysis using logistic regression on raw pixel features (<code>_ceiling.py</code>) showed <strong>AUC = 0.845</strong>. The attack signal is present in the pixel values — it is just very localised. CNN with spatial max-pooling aggregates over spatial locations, destroying exactly the local perturbation information that Pythia attacks encode.</p>
@@ -698,7 +779,7 @@ Monitor        = AUC-ROC</pre>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<h2 id="conclusions">8. Conclusions</h2>
+<h2 id="conclusions">9. Conclusions</h2>
 
 <div class="scorecard">
   <div class="sc">
@@ -739,9 +820,9 @@ Monitor        = AUC-ROC</pre>
 
 <hr>
 <p class="stamp">
-  Script: <code>step2.py</code> (RANDOM_SEED=42) + <code>step2_professor.py</code> (BASE_SEED=2137, RUN_REPEATS=5) &middot;
+  Script: <code>step2.py</code> (RANDOM_SEED=42) + <code>step2_professor.py</code> (BASE_SEED=2137, RUN_REPEATS=5) + <code>step2_mnist_subset.py</code> (seed=2137, 1 run) &middot;
   Data: <code>faza2_wyniki_generalizacji.json</code> + <code>faza2_wyniki_generalizacji_professor.json</code> &middot;
-  Generated: 2 June 2026
+  Updated: 3 June 2026
 </p>
 
 </body>

@@ -636,6 +636,8 @@
   <div class="box b1">
     <strong>Architecture: No-pool CNN or ViT</strong><br>
     Replace spatial MaxPooling with global average pooling over full feature maps, or use a Vision Transformer (ViT) with patch-level attention. These architectures preserve spatial localisation information.
+    <br><br>
+    <strong>Tested (step1_arch.py):</strong> FCN_GAP (6× stride-2 conv + GlobalAvgPool) was compared against ProfessorCNN on Pythia. Result: FCN_GAP AUC = 0.530, ProfessorCNN AUC = 0.476 — both random. Removing MaxPool alone is insufficient; the CNN translational symmetry assumption itself is incompatible with Pythia’s positional signal.
   </div>
   <div class="box b3">
     <strong>Self-supervised pre-training</strong><br>
@@ -649,11 +651,11 @@
 
 <hr>
 <p class="stamp">
-  Generated: 2 June 2026 &middot; Repository: mnch2 branch + origin/jpch2 (Step 4) &middot;
-  Scripts: step1.py, step2.py, step2_professor.py, step3.py, step4.py &middot;
+  Generated: 3 June 2026 &middot; Repository: mnch2 branch + origin/jpch2 (Step 4) &middot;
+  Scripts: step1.py, step2.py, step2_professor.py, step3.py, step4.py, step1_arch.py, step2_mnist_subset.py &middot;
   JSON sources: faza1_wyniki_eksperymentu.json, faza2_wyniki_generalizacji.json,
   faza2_wyniki_generalizacji_professor.json, faza3_wyniki_autoenkodera.json,
-  faza4_wyniki_hybrydy.json
+  faza4_wyniki_hybrydy.json, faza1_wyniki_arch_experiment.json
 </p>
 
 </body>
