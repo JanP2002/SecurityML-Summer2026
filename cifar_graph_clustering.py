@@ -114,6 +114,10 @@ class Config:
     # bogatszy deskryptor węzła (mini-HOG na superpiksel) — kolejne usprawnienie
     rich_features: bool = False
     n_orient_bins: int = 6
+    # mocniejszy warunek krawędzi: podobny kolor ORAZ podobna tekstura (typy *tex)
+    edge_texture: bool = False
+    n_spectral: int = 16            # liczba wartości własnych w sygnaturze spektralnej
+    label_rich: bool = False        # seed WL po pełnym deskryptorze (kolor+tekstura), nie samym kolorze
     # ewaluacja
     cv_folds: int = 5
     n_jobs: int = -1
@@ -198,8 +202,8 @@ def build_pixel_graph(image: np.ndarray, cfg: Config) -> nx.Graph:
     else:
         offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    # 1) zbierz wszystkie sąsiedztwa przestrzenne i ich odległości koloru
-    cand = []                       # (u, v, dist)
+    # 1) zbierz wszystkie sąsiedztwa przestrzenne: odległość koloru i tekstury
+    cand = []                       # (u, v, dist_koloru, dist_tekstury)
     best_neighbor = {}              # u -> (v, weight) najbardziej podobny sąsiad
     for i in range(H):
         for j in range(W):
@@ -209,16 +213,18 @@ def build_pixel_graph(image: np.ndarray, cfg: Config) -> nx.Graph:
                 if 0 <= ni < H and 0 <= nj < W:
                     v = ni * W + nj
                     d = float(np.sqrt(np.sum((lab[i, j] - lab[ni, nj]) ** 2)))
+                    dt = abs(float(grad[i, j] - grad[ni, nj]))
                     if u < v:
-                        cand.append((u, v, d))
+                        cand.append((u, v, d, dt))
                     w = float(np.exp(-d * d / (2 * cfg.sigma_pixel ** 2)))
                     if u not in best_neighbor or w > best_neighbor[u][1]:
                         best_neighbor[u] = (v, w)
 
-    # 2) twardy próg (warunek 2): zostaw tylko krawędzie wewnątrzobiektowe
-    tau = _threshold(np.array([d for *_, d in cand]), cfg)
-    for u, v, d in cand:
-        if d <= tau:
+    # 2) twardy próg: krawędź wewnątrzobiektowa = podobny kolor (--edge-texture: ORAZ tekstura)
+    tau = _threshold(np.array([d for _, _, d, _ in cand]), cfg)
+    tau_t = _threshold(np.array([dt for *_, dt in cand]), cfg) if cfg.edge_texture else None
+    for u, v, d, dt in cand:
+        if d <= tau and (tau_t is None or dt <= tau_t):
             G.add_edge(u, v, weight=float(np.exp(-d * d / (2 * cfg.sigma_pixel ** 2))))
     _ensure_connected(G, best_neighbor)
     return G
@@ -300,6 +306,16 @@ def build_slic_graph(image: np.ndarray, cfg: Config) -> nx.Graph:
                 boundary[pair] = boundary.get(pair, 0) + 1
     max_b = max(boundary.values()) if boundary else 1
 
+    # tekstura na superpiksel (do mocniejszego warunku krawędzi, typy *tex): średnia
+    # magnituda gradientu kanału L — gładkie niebo vs poszarpane zwierzę.
+    grad_lbl = {}
+    if cfg.edge_texture:
+        Lt = rgb2lab(image)[:, :, 0]
+        gyt, gxt = np.gradient(Lt)
+        magt = np.sqrt(gxt ** 2 + gyt ** 2)
+        for lbl in np.unique(labels):
+            grad_lbl[int(lbl)] = float(magt[labels == lbl].mean())
+
     # --- bogatszy deskryptor węzła (--rich-features): mini-HOG na superpiksel ---
     # Histogram orientacji gradientu (ważony magnitudą) w obrębie superpiksela —
     # graf-natywny odpowiednik HOG, żeby `combo`/`hyb` rywalizowały strukturą, a nie
@@ -327,15 +343,17 @@ def build_slic_graph(image: np.ndarray, cfg: Config) -> nx.Graph:
     cand, best_neighbor = [], {}
     for (u, v), blen in boundary.items():
         d = float(np.linalg.norm(G.nodes[u]["features"][:3] - G.nodes[v]["features"][:3]))
-        cand.append((u, v, d, blen))
+        dt = abs(grad_lbl.get(u, 0.0) - grad_lbl.get(v, 0.0)) if cfg.edge_texture else 0.0
+        cand.append((u, v, d, blen, dt))
         w = float(np.exp(-d * d / (2 * cfg.sigma_feat ** 2)))
         for a, b in ((u, v), (v, u)):
             if a not in best_neighbor or w > best_neighbor[a][1]:
                 best_neighbor[a] = (b, w)
 
-    tau = _threshold(np.array([d for *_, d in cand]), cfg)
-    for u, v, d, blen in cand:
-        if d <= tau:
+    tau = _threshold(np.array([d for _, _, d, _, _ in cand]), cfg)
+    tau_t = _threshold(np.array([dt for *_, dt in cand]), cfg) if cfg.edge_texture else None
+    for u, v, d, blen, dt in cand:
+        if d <= tau and (tau_t is None or dt <= tau_t):
             color_w = float(np.exp(-d * d / (2 * cfg.sigma_feat ** 2)))
             G.add_edge(u, v, weight=(blen / max_b) * color_w)
     _ensure_connected(G, best_neighbor)
@@ -343,6 +361,19 @@ def build_slic_graph(image: np.ndarray, cfg: Config) -> nx.Graph:
 
 
 GRAPH_BUILDERS = {"pixel": build_pixel_graph, "patch": build_patch_graph, "slic": build_slic_graph}
+
+
+def base_gt(gt: str) -> str:
+    """Bazowy typ grafu bez sufiksu '-tex' (np. 'slictex' -> 'slic')."""
+    return gt[:-3] if gt.endswith("tex") else gt
+
+
+def make_graph(image, gt: str, cfg: Config) -> nx.Graph:
+    """Buduje graf danego typu. Sufiks 'tex' = mocniejszy warunek krawędzi
+    (podobny kolor ORAZ tekstura) — jako NOWY typ obok oryginalnego, nic nie tracimy."""
+    tex = gt.endswith("tex")
+    c = replace(cfg, edge_texture=True) if tex else cfg
+    return GRAPH_BUILDERS[base_gt(gt)](image, c)
 
 
 # ============================================================================
@@ -389,12 +420,12 @@ def aggregate_streams(G: nx.Graph, node_emb: np.ndarray, method: str, image_shap
 
 
 def _pooling_for(graph_type: str) -> str:
-    return {"pixel": "spatial_quadrants", "slic": "weighted_mean"}.get(graph_type, "mean")
+    return {"pixel": "spatial_quadrants", "slic": "weighted_mean"}.get(base_gt(graph_type), "mean")
 
 
 def process_single_image(idx, image, label, graph_type, cfg: Config):
     try:
-        G = GRAPH_BUILDERS[graph_type](image, cfg)
+        G = make_graph(image, graph_type, cfg)
         emb = node2vec_embeddings(G, cfg)
         struct, attr = aggregate_streams(G, emb, _pooling_for(graph_type), image.shape)
         return (idx, np.asarray(struct, np.float32), np.asarray(attr, np.float32),
@@ -412,7 +443,7 @@ def process_single_image(idx, image, label, graph_type, cfg: Config):
 # ============================================================================
 def _build_one_graph(image, label, graph_type, cfg: Config):
     try:
-        G = GRAPH_BUILDERS[graph_type](image, cfg)
+        G = make_graph(image, graph_type, cfg)
         return G, int(label)
     except Exception as e:
         print(f"  [!] graf ({graph_type}): {type(e).__name__}: {e}", file=sys.stderr)
@@ -428,12 +459,19 @@ def build_graphs(images, labels, graph_type, cfg: Config):
 
 
 def assign_color_labels(graphs, cfg: Config):
-    """Globalny KMeans na kolorach węzłów (pierwsze 3 cechy) -> dyskretna etykieta
-    'label' na węzeł (wspólny słownik kolorów dla całego korpusu) -> seed dla WL."""
-    per_graph = [(list(G.nodes()),
-                  np.array([np.atleast_1d(G.nodes[n]["features"])[:3] for n in G.nodes()]))
-                 for G in graphs]
+    """Globalny KMeans na cechach węzłów -> dyskretna etykieta 'label' (wspólny
+    słownik dla korpusu) -> seed dla WL/graph2vec. Domyślnie kwantyzacja po samym
+    KOLORZE (pierwsze 3 cechy); przy `--label-rich` po CAŁYM (zestandaryzowanym)
+    deskryptorze (kolor+tekstura+kształt) — bogatszy seed dla struktury."""
+    def vec(G, n):
+        f = np.atleast_1d(G.nodes[n]["features"]).astype(float)
+        return f if cfg.label_rich else f[:3]
+    per_graph = [(list(G.nodes()), np.array([vec(G, n) for n in G.nodes()])) for G in graphs]
     stacked = np.vstack([c for _, c in per_graph])
+    if cfg.label_rich:                       # standaryzacja, by tekstura/kształt nie ginęły przy kolorze
+        mu, sd = stacked.mean(0), stacked.std(0) + 1e-6
+        stacked = (stacked - mu) / sd
+        per_graph = [(nodes, (cols - mu) / sd) for nodes, cols in per_graph]
     rng = np.random.default_rng(cfg.seed)
     sample = stacked[rng.choice(len(stacked), min(20000, len(stacked)), replace=False)]
     km = KMeans(n_clusters=cfg.n_color_bins, n_init=5, random_state=cfg.seed).fit(sample)
@@ -516,6 +554,32 @@ def topo_matrix(graphs) -> np.ndarray:
     return np.vstack([graph_topo_features(G) for G in graphs])
 
 
+def spectral_features(G: nx.Graph, k: int) -> np.ndarray:
+    """Sygnatura spektralna: k najmniejszych wartości własnych znormalizowanego
+    Laplasjanu. Graf-natywny, klasyczny deskryptor kształtu/łączności grafu
+    (liczba bliskich zeru wartości ≈ liczba komponentów — komplementarne do `topo`)."""
+    n = G.number_of_nodes()
+    if n < 2:
+        return np.zeros(k)
+    L = nx.normalized_laplacian_matrix(G)
+    if n <= 400:
+        vals = np.linalg.eigvalsh(L.toarray())
+    else:
+        try:
+            from scipy.sparse.linalg import eigsh
+            vals = eigsh(L.asfptype(), k=min(k, n - 2), which="SM", return_eigenvectors=False)
+        except Exception:
+            vals = np.linalg.eigvalsh(L.toarray())
+    vals = np.sort(np.real(vals))[:k]
+    if len(vals) < k:
+        vals = np.pad(vals, (0, k - len(vals)), constant_values=(vals[-1] if len(vals) else 0.0))
+    return vals
+
+
+def spectral_matrix(graphs, k) -> np.ndarray:
+    return np.vstack([spectral_features(G, k) for G in graphs])
+
+
 # ============================================================================
 # BASELINE'Y
 # ============================================================================
@@ -583,6 +647,8 @@ def _cache_key(graph_type, cfg: Config, n, extra=()) -> str:
              cfg.patch_size, cfg.stride, cfg.k_neighbors, cfg.knn_radius, cfg.seed, n, *extra]
     if cfg.rich_features:   # tylko gdy włączone -> nie unieważnia istniejących cache'y "plain"
         parts += ["rich", cfg.n_orient_bins]
+    if cfg.label_rich:
+        parts += ["lblrich"]
     h = hashlib.md5("|".join(map(str, parts)).encode()).hexdigest()[:10]
     return f"{graph_type}_{h}"
 
@@ -615,10 +681,11 @@ def build_graph_reps(images, labels, graph_type, cfg: Config):
     cdir = os.path.join(cfg.out_dir, "cache"); os.makedirs(cdir, exist_ok=True)
     key = _cache_key("rep_" + graph_type, cfg, len(images),
                      extra=(cfg.wl_iterations, cfg.g2v_dim, cfg.g2v_epochs, cfg.n_color_bins))
-    paths = {s: os.path.join(cdir, f"{key}_{s}.npy") for s in ("wl", "g2v", "attr", "topo", "y")}
+    cols = ("wl", "g2v", "attr", "topo", "spec", "y")
+    paths = {s: os.path.join(cdir, f"{key}_{s}.npy") for s in cols}
     if all(os.path.exists(p) for p in paths.values()):
         print(f"  [rep-{graph_type}] wczytano z cache ({key})")
-        return tuple(np.load(paths[s]) for s in ("wl", "g2v", "attr", "topo", "y"))
+        return tuple(np.load(paths[s]) for s in cols)
 
     t0 = time.time()
     graphs, y = build_graphs(images, labels, graph_type, cfg)
@@ -627,11 +694,12 @@ def build_graph_reps(images, labels, graph_type, cfg: Config):
     Xg2v = embed_graph2vec(graphs, cfg)
     Xattr = attr_pool_matrix(graphs, graph_type, cfg)
     Xtopo = topo_matrix(graphs)
-    print(f"  [rep-{graph_type}] {len(graphs)} grafów, wl{Xwl.shape[1]}d / "
-          f"g2v{Xg2v.shape[1]}d / attr{Xattr.shape[1]}d / topo{Xtopo.shape[1]}d, {time.time()-t0:.1f}s")
-    np.save(paths["wl"], Xwl); np.save(paths["g2v"], Xg2v); np.save(paths["attr"], Xattr)
-    np.save(paths["topo"], Xtopo); np.save(paths["y"], y)
-    return Xwl, Xg2v, Xattr, Xtopo, y
+    Xspec = spectral_matrix(graphs, cfg.n_spectral)
+    print(f"  [rep-{graph_type}] {len(graphs)} grafów, wl{Xwl.shape[1]}d / g2v{Xg2v.shape[1]}d / "
+          f"attr{Xattr.shape[1]}d / topo{Xtopo.shape[1]}d / spec{Xspec.shape[1]}d, {time.time()-t0:.1f}s")
+    for s, arr in zip(cols, (Xwl, Xg2v, Xattr, Xtopo, Xspec, y)):
+        np.save(paths[s], arr)
+    return Xwl, Xg2v, Xattr, Xtopo, Xspec, y
 
 
 # ============================================================================
@@ -793,32 +861,39 @@ def run(cfg: Config, graph_types):
         for w in cfg.weights:
             add(f"n2v-{gt}", w, fuse(Xs, Xa, w), y, scale=False)
 
-        # --- metody 2-5 (całografowe WL / graph2vec + topo + combo + hybryda) ---
-        Xwl, Xg2v, Xattr, Xtopo, y = build_graph_reps(images, labels, gt, cfg_plain)
+        # --- metody 2-6 (całografowe WL / graph2vec + topo + spec + combo + gnat + hybryda) ---
+        Xwl, Xg2v, Xattr, Xtopo, Xspec, y = build_graph_reps(images, labels, gt, cfg_plain)
         add(f"wl-{gt}", float("nan"), Xwl, y, scale=True)
         add(f"g2v-{gt}", float("nan"), Xg2v, y, scale=True)
         add(f"topo-{gt}", float("nan"), Xtopo, y, scale=True)   # czysto strukturalne (fragmentacja)
+        add(f"spec-{gt}", float("nan"), Xspec, y, scale=True)   # sygnatura spektralna (Laplasjan)
         for w in cfg.weights:
             add(f"combo-{gt}", w, fuse(Xg2v, Xattr, w), y, scale=False)
         # gnat = GRAF-NATYWNE: struktura (graph2vec ⊕ topo) ⊕ atrybuty węzła. ZERO HOG.
         Xstruct = np.hstack([Xg2v, Xtopo])
         for w in cfg.weights:
             add(f"gnat-{gt}", w, fuse(Xstruct, Xattr, w), y, scale=False)
+        # gspec = gnat + sygnatura spektralna w bloku struktury (też ZERO HOG)
+        Xstruct_s = np.hstack([Xg2v, Xtopo, Xspec])
+        for w in cfg.weights:
+            add(f"gspec-{gt}", w, fuse(Xstruct_s, Xattr, w), y, scale=False)
         morpho[gt] = (fuse(Xg2v, Xattr, 0.5), y)   # combo w=0.5 do wizualizacji
         if len(Xhog_all) == len(y):
             for w in cfg.weights:
                 add(f"hyb-{gt}", w, fuse(Xg2v, Xhog_all, w), y, scale=False)
 
-        # --- metoda 6 (NOWE USPRAWNIENIE): bogatszy deskryptor węzła (mini-HOG) ---
-        # combo+r / gnat+r liczone na grafie z deskryptorem orientacji gradientu na
-        # superpiksel — czy struktura grafowa może rywalizować z HOG BEZ pożyczania HOG.
+        # --- metoda 7 (NOWE USPRAWNIENIE): bogatszy deskryptor węzła (mini-HOG) ---
+        # combo+r / gnat+r / gspec+r liczone na grafie z deskryptorem orientacji gradientu
+        # na superpiksel — czy struktura grafowa rywalizuje z HOG BEZ pożyczania HOG.
         if cfg.rich_features:
-            _, Xg2v_r, Xattr_r, Xtopo_r, y = build_graph_reps(images, labels, gt, replace(cfg, rich_features=True))
+            _, Xg2v_r, Xattr_r, Xtopo_r, Xspec_r, y = build_graph_reps(images, labels, gt, replace(cfg, rich_features=True))
             Xstruct_r = np.hstack([Xg2v_r, Xtopo_r])
+            Xstruct_sr = np.hstack([Xg2v_r, Xtopo_r, Xspec_r])
             for w in cfg.weights:
                 add(f"combo+r-{gt}", w, fuse(Xg2v_r, Xattr_r, w), y, scale=False)
                 add(f"gnat+r-{gt}", w, fuse(Xstruct_r, Xattr_r, w), y, scale=False)
-            morpho[gt] = (fuse(Xstruct_r, Xattr_r, 0.5), y)
+                add(f"gspec+r-{gt}", w, fuse(Xstruct_sr, Xattr_r, w), y, scale=False)
+            morpho[gt] = (fuse(Xstruct_sr, Xattr_r, 0.5), y)
             if len(Xhog_all) == len(y):
                 for w in cfg.weights:
                     add(f"hyb+r-{gt}", w, fuse(Xg2v_r, Xhog_all, w), y, scale=False)
@@ -861,7 +936,9 @@ def run(cfg: Config, graph_types):
 
 def main():
     ap = argparse.ArgumentParser(description="CIFAR-10 jako grafy (Node2Vec) — Lista 3.")
-    ap.add_argument("--graph-type", choices=["pixel", "patch", "slic", "all"], default="all")
+    ap.add_argument("--graph-type", nargs="+",
+                    choices=["pixel", "patch", "slic", "pixeltex", "slictex", "all"], default=["all"],
+                    help="jeden lub kilka typów grafu; sufiks 'tex' = mocniejszy warunek krawędzi (kolor ORAZ tekstura)")
     ap.add_argument("--classes", type=int, nargs="+", default=None,
                     help="podzbiór klas 0-9 (domyślnie wszystkie 10)")
     ap.add_argument("--per-class", type=int, default=None, help="liczba obrazów na klasę")
@@ -877,6 +954,8 @@ def main():
     ap.add_argument("--wl-iter", type=int, default=None, help="liczba iteracji WL (graph2vec)")
     ap.add_argument("--g2v-dim", type=int, default=None, help="wymiar embeddingu graph2vec")
     ap.add_argument("--n-orient-bins", type=int, default=None, help="kubełki histogramu orientacji (mini-HOG)")
+    ap.add_argument("--label-rich", action="store_true",
+                    help="seed WL/graph2vec po pełnym deskryptorze węzła (kolor+tekstura), nie samym kolorze")
     ap.add_argument("--data-dir", default="./data")
     ap.add_argument("--out-dir", default="results_cifar")
     args = ap.parse_args()
@@ -884,7 +963,7 @@ def main():
     cfg = Config(data_dir=args.data_dir, out_dir=args.out_dir, classes=args.classes,
                  per_class=args.per_class, num_samples=args.num_samples,
                  tau=args.tau, edge_quantile=args.edge_quantile, plots=args.plots,
-                 rich_features=args.rich_features)
+                 rich_features=args.rich_features, label_rich=args.label_rich)
     if args.weights is not None:
         cfg.weights = args.weights
     if args.wl_iter is not None:
@@ -895,7 +974,10 @@ def main():
         cfg.n_orient_bins = args.n_orient_bins
     if cfg.per_class is None and cfg.num_samples is None:
         cfg.per_class = 80  # rozsądny domyślny rozmiar na klasę
-    gts = ["pixel", "patch", "slic"] if args.graph_type == "all" else [args.graph_type]
+    gts = []
+    for g in args.graph_type:
+        gts.extend(["pixel", "patch", "slic"] if g == "all" else [g])
+    seen = set(); gts = [g for g in gts if not (g in seen or seen.add(g))]  # unikalne, kolejność
     run(cfg, gts)
 
 

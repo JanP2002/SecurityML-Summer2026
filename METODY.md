@@ -19,6 +19,11 @@ więc graf rozpada się na regiony ~obiekty.
 | **pixel** (`build_pixel_graph`) | piksel (przestrzeń LAB) | sąsiedztwo 4- lub 8-kierunkowe, **odcięte progiem** odległości koloru LAB | Gauss z odległości LAB |
 | **patch** (`build_patch_graph`) | nakładający się patch (mean⊕std) | siatka 4-sąsiedzka **+** kNN **ograniczone przestrzennie** (okno `knn_radius`), obie rodziny progowane | Gauss z odległości cech |
 | **slic** (`build_slic_graph`) | superpiksel SLIC (mean⊕std) | sąsiedztwo superpikseli z detekcji granic, odcięte progiem różnicy średniego koloru | (długość granicy / max) × podobieństwo koloru |
+| **`*tex`** (`pixeltex` / `slictex`, przez `make_graph`) | jak wyżej | **mocniejszy warunek** (próba #1): krawędź tylko gdy podobny kolor **ORAZ** podobna tekstura (magnituda gradientu); osobny typ obok bazowego | jak wyżej |
+
+**Próba graf-natywna #1 (typy `*tex`):** mocniejszy warunek krawędzi w duchu „ten sam
+obiekt" (kolor + tekstura). Wynik: **nie pomógł** (lekko gorzej; zyskała tylko `topo`).
+Zostawiony jako osobny typ grafu.
 
 **Próg krawędzi** (`_threshold`): adaptacyjny **kwantyl** rozkładu odległości per obraz
 (`--edge-quantile`, domyślnie 0.6 — zostaje ~60% najbardziej „wewnątrzobiektowych"
@@ -47,7 +52,14 @@ zawsze miał gdzie chodzić (warunek bliskości zachowany).
 | **WL** (`embed_wl`) | całografowy | feature map jądra Weisfeiler–Lehman (zliczanie wzorców) → `TruncatedSVD` do gęstej postaci |
 | **graph2vec** (`embed_graph2vec`) | całografowy | te same wzorce WL, ale **uczone** gęsto przez Doc2Vec |
 | **topo** (`graph_topo_features`) | całografowy | czyste cechy STRUKTURALNE (bez koloru): liczba i rozkład rozmiarów komponentów po przecięciu krawędzi, stopnie, klasteryzacja, asortatywność |
+| **spec** (`spectral_features`) | całografowy | próba #2: sygnatura spektralna — k najmniejszych wartości własnych znormalizowanego Laplasjanu |
 | **pooling atrybutów** | węzeł→agregacja | pooling samych cech węzła (kolor/tekstura) — „strumień atrybutowy" |
+
+**Seed WL** (`assign_color_labels`): inicjalne etykiety dla WL/graph2vec to skwantowany
+(globalny KMeans) **kolor** węzła. **Próba graf-natywna #3 (`--label-rich`):** seed po
+pełnym deskryptorze (kolor **+ tekstura/kształt**). Wynik: **pomogło** — `g2v` 0.62→0.66,
+`wl` 0.58→0.63 (ARI ~podwojone). **Próba #2 (spektralna):** osobno albo doklejona do bloku
+struktury (`gspec`) — **nie pomogła**.
 
 `topo` bezpośrednio koduje skutek warunku Krzysztofa: po przecięciu krawędzi na granicach
 obiektów obraz rozpada się na komponenty, a ich **liczba i rozmiary** są graf-natywnym
@@ -84,9 +96,11 @@ Nic nie usuwamy — każde podejście to osobny wiersz, żeby było widać post�
 | `wl-<gt>` | WL (SVD) | całografowy, liczony |
 | `g2v-<gt>` | graph2vec | całografowy, uczony |
 | `topo-<gt>` | cechy strukturalne grafu | **czysto strukturalny** (bez koloru) |
+| `spec-<gt>` | sygnatura spektralna Laplasjanu | strukturalny (próba #2; słaby sam) |
 | `combo-<gt>` | graph2vec ⊕ atrybuty, waga `w` | **czysto grafowy** (struktura+kolor) |
 | `combo+r-<gt>` | jak combo, ale z bogatym deskryptorem (mini-HOG) | czysto grafowy, mocniejszy |
 | `gnat-<gt>` / `gnat+r-<gt>` | (graph2vec ⊕ topo) ⊕ atrybuty, waga `w` | **graf-natywny max** (bez HOG) |
+| `gspec-<gt>` / `gspec+r-<gt>` | (graph2vec ⊕ topo ⊕ spec) ⊕ atrybuty | graf-natywny + spektrum (próba #2; ≈ gnat) |
 | `hyb-<gt>` | HOG ⊕ graph2vec, waga `w` | **hybryda** wygląd+struktura |
 | `hyb+r-<gt>` | HOG ⊕ graph2vec(bogaty) | hybryda, najlepsza |
 | `baseline-rgb` | średnie RGB (3 wym.) | baseline wyglądu |
