@@ -33,22 +33,28 @@ wyników, niezależna od jakości grafu.
 4. **Bogatszy deskryptor węzła** (`--rich-features`): histogram orientacji gradientu
    na superpiksel (graf-natywny mini-HOG) — żeby `combo` rywalizowało strukturą, a nie
    pożyczonym HOG. Metody `combo+r` / `hyb+r`.
+5. **Cechy topologiczne + metoda graf-natywna** (`topo`, `gnat`): czysto strukturalne
+   cechy grafu (liczba i rozkład rozmiarów KOMPONENTÓW po przecięciu krawędzi — wprost
+   skutek warunku Krzysztofa) oraz pełna fuzja graf-natywna `gnat` = graph2vec ⊕ topo ⊕
+   atrybuty węzła. **Zero globalnego HOG** — sprawdzamy, jak daleko zajdzie sama struktura.
 
 ## Historia usprawnień (co dało każde ulepszenie)
 
 Najlepsza dokładność na podzbiorze 3 klas (SLIC), krok po kroku — wykres
-[`fig_postep`](results_cifar/slic_rich/fig_postep_slic_0_1_8.png):
+[`fig_postep`](results_cifar/slic_gnat/fig_postep_slic_0_1_8.png):
 
-| krok | metoda | dokładność |
-|------|--------|:----------:|
-| 0. naiwna fuzja (rozcieńczenie) | `n2vflat` | 0.562 |
-| 1. rozdzielone strumienie + waga | `n2v`     | 0.593 |
-| 2. graph2vec (całografowy)       | `g2v`     | 0.613 |
-| 3. combo (g2v + kolor)           | `combo`   | 0.647 |
-| 4. combo + mini-HOG (bogaty węzeł) | `combo+r` | 0.665 |
-| 5. hybryda HOG + struktura       | `hyb`     | **0.737** ✅ |
+| krok | metoda | dokładność | HOG? |
+|------|--------|:----------:|:----:|
+| 0. naiwna fuzja (rozcieńczenie) | `n2vflat` | 0.562 | nie |
+| 1. rozdzielone strumienie + waga | `n2v`     | 0.593 | nie |
+| 2. graph2vec (całografowy)       | `g2v`     | 0.613 | nie |
+| 3. combo (g2v + kolor)           | `combo`   | 0.647 | nie |
+| 4. combo + mini-HOG (bogaty węzeł) | `combo+r` | 0.665 | nie |
+| 5. **graf-natywne** (g2v ⊕ topo ⊕ węzeł) | `gnat+r` | **0.680** | **nie** |
+| 6. hybryda HOG + struktura       | `hyb`     | **0.737** ✅ | tak |
 
-Każdy krok podnosi wynik; krok 5 przebija zarówno baseline HOG (0.733), jak i próg 0.7.
+Kroki 0–5 to czysta ścieżka grafowa (bez HOG) — sufit ~0.680, tuż pod baseline HOG (0.733).
+Krok 6 (dołożenie HOG) przebija HOG i próg 0.7, ale to już nie jest „czysto grafowe".
 
 **Dostrojenie (większy graph2vec + gęstszy mini-HOG + więcej danych)** podnosi najlepszą
 metodę jeszcze wyżej — `hyb+r-slic` = **0.768** vs HOG 0.749 (750 obrazów; `--wl-iter 3
@@ -59,22 +65,25 @@ metodę jeszcze wyżej — `hyb+r-slic` = **0.768** vs HOG 0.749 (750 obrazów; 
 
 ### Podzbiór 3 klas: airplane / automobile / ship (SLIC, 600 obrazów)
 
-| metoda          | dokładność (CV) | ARI (nienadzorowana) |
-|-----------------|:---------------:|:--------------------:|
-| **hyb-slic** (w=0.5)   | **0.737** ✅ | 0.081 |
-| baseline-hog           | 0.733        | 0.021 |
-| combo+r-slic (mini-HOG)| 0.665        | **0.148** |
-| combo-slic             | 0.647        | 0.138 |
-| n2v-slic               | 0.593        | 0.134 |
-| n2vflat-slic (rozcieńczenie) | 0.562  | 0.063 |
-| baseline-rgb           | 0.545        | 0.059 |
+| metoda          | dokładność (CV) | ARI (nienadzorowana) | HOG? |
+|-----------------|:---------------:|:--------------------:|:----:|
+| hyb-slic (w=0.5)       | **0.737** ✅ | 0.081 | tak |
+| baseline-hog           | 0.733        | 0.021 | tak |
+| **gnat+r-slic** (graf-natywne) | 0.680 | **0.148** | **nie** |
+| combo+r-slic (mini-HOG)| 0.665        | 0.148 | nie |
+| combo-slic             | 0.647        | 0.138 | nie |
+| n2v-slic               | 0.593        | 0.134 | nie |
+| n2vflat-slic (rozcieńczenie) | 0.562  | 0.063 | nie |
+| topo-slic (sama struktura) | 0.550    | 0.046 | nie |
+| baseline-rgb           | 0.545        | 0.059 | — |
 
-Próg losowy = 0.333. Wykresy w [`results_cifar/slic_rich/`](results_cifar/slic_rich/):
-[`fig_postep`](results_cifar/slic_rich/fig_postep_slic_0_1_8.png) (historia usprawnień),
-[`fig_porownanie`](results_cifar/slic_rich/fig_porownanie_0_1_8.png),
-[`fig_waga`](results_cifar/slic_rich/fig_waga_0_1_8.png),
-[`fig_acc_vs_ari`](results_cifar/slic_rich/fig_acc_vs_ari_0_1_8.png),
-[`fig_morfo`](results_cifar/slic_rich/fig_morfo_slic_0_1_8.png).
+Próg losowy = 0.333. `topo` (czyste cechy strukturalne, bez koloru) bije już baseline RGB.
+Wykresy w [`results_cifar/slic_gnat/`](results_cifar/slic_gnat/):
+[`fig_postep`](results_cifar/slic_gnat/fig_postep_slic_0_1_8.png) (historia usprawnień),
+[`fig_porownanie`](results_cifar/slic_gnat/fig_porownanie_0_1_8.png),
+[`fig_waga`](results_cifar/slic_gnat/fig_waga_0_1_8.png),
+[`fig_acc_vs_ari`](results_cifar/slic_gnat/fig_acc_vs_ari_0_1_8.png),
+[`fig_morfo`](results_cifar/slic_gnat/fig_morfo_slic_0_1_8.png).
 
 ### Ten sam podzbiór, graf PIXEL (240 obrazów)
 
@@ -106,10 +115,13 @@ Wykresy w [`results_cifar/slic_10class/`](results_cifar/slic_10class/) i
 - **Próg >0.7 osiągalny tylko na podzbiorze kilku klas** — i tam metoda hybrydowa
   (HOG ⊕ struktura grafu) **przebija sam HOG** (0.737 vs 0.733 na SLIC). Struktura
   grafu niesie sygnał, którego nie ma w samym wyglądzie.
-- **Czysto grafowe `combo`** na pikselach bije HOG (0.671 vs 0.667); na SLIC bogatszy
-  deskryptor (mini-HOG na węzeł) podniósł je z 0.647 do **0.665** — wciąż poniżej HOG,
-  ale to ono wygrywa **nienadzorowanie** (ARI/silhouette ≫ baseline'y). To jest
-  bezpośrednia odpowiedź na pytanie Listy 3: sygnał o klasie SIEDZI w strukturze.
+- **Ścieżka czysto grafowa (bez HOG)** dochodzi do **0.680** (`gnat+r` = graph2vec ⊕
+  topo ⊕ bogaty węzeł) — tuż pod HOG (0.733), bez pożyczania HOG. Co ważne, **same
+  cechy strukturalne `topo`** (liczba/rozmiary komponentów po przecięciu krawędzi)
+  dają 0.550 i biją już baseline RGB — czyli sama struktura grafu niesie sygnał o klasie.
+  Na pikselach czyste `combo` bije nawet HOG (0.671 vs 0.667). I to ścieżka grafowa
+  wygrywa **nienadzorowanie** (ARI ~0.15 vs ~0.02). Bezpośrednia odpowiedź na pytanie
+  Listy 3: sygnał o klasie SIEDZI w strukturze.
 - **Tylko struktura (w=1.0) jest najsłabsza** — Node2Vec + uśrednianie to znana słaba
   reprezentacja całego grafu (to samo widać na ENZYMES w `tu_graph_clustering.py`).
   Siła jest w *miksie* struktury z atrybutami.

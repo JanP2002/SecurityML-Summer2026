@@ -46,7 +46,12 @@ zawsze miał gdzie chodzić (warunek bliskości zachowany).
 | **Node2Vec + pooling** | węzeł→agregacja | spacery losowe (p, q) → Word2Vec na węzłach, potem pooling do wektora obrazu |
 | **WL** (`embed_wl`) | całografowy | feature map jądra Weisfeiler–Lehman (zliczanie wzorców) → `TruncatedSVD` do gęstej postaci |
 | **graph2vec** (`embed_graph2vec`) | całografowy | te same wzorce WL, ale **uczone** gęsto przez Doc2Vec |
+| **topo** (`graph_topo_features`) | całografowy | czyste cechy STRUKTURALNE (bez koloru): liczba i rozkład rozmiarów komponentów po przecięciu krawędzi, stopnie, klasteryzacja, asortatywność |
 | **pooling atrybutów** | węzeł→agregacja | pooling samych cech węzła (kolor/tekstura) — „strumień atrybutowy" |
+
+`topo` bezpośrednio koduje skutek warunku Krzysztofa: po przecięciu krawędzi na granicach
+obiektów obraz rozpada się na komponenty, a ich **liczba i rozmiary** są graf-natywnym
+sygnałem o klasie (sama `topo`, bez koloru, bije już baseline RGB).
 
 Całografowe (WL, graph2vec) dodano, bo Node2Vec+uśrednianie to znana **słaba**
 reprezentacja całego grafu (potwierdza to ENZYMES w `tu_graph_clustering.py`).
@@ -78,8 +83,10 @@ Nic nie usuwamy — każde podejście to osobny wiersz, żeby było widać post�
 | `n2v-<gt>` | Node2Vec ⊕ atrybuty, rozdzielone + waga `w` | poprawiony Node2Vec |
 | `wl-<gt>` | WL (SVD) | całografowy, liczony |
 | `g2v-<gt>` | graph2vec | całografowy, uczony |
+| `topo-<gt>` | cechy strukturalne grafu | **czysto strukturalny** (bez koloru) |
 | `combo-<gt>` | graph2vec ⊕ atrybuty, waga `w` | **czysto grafowy** (struktura+kolor) |
 | `combo+r-<gt>` | jak combo, ale z bogatym deskryptorem (mini-HOG) | czysto grafowy, mocniejszy |
+| `gnat-<gt>` / `gnat+r-<gt>` | (graph2vec ⊕ topo) ⊕ atrybuty, waga `w` | **graf-natywny max** (bez HOG) |
 | `hyb-<gt>` | HOG ⊕ graph2vec, waga `w` | **hybryda** wygląd+struktura |
 | `hyb+r-<gt>` | HOG ⊕ graph2vec(bogaty) | hybryda, najlepsza |
 | `baseline-rgb` | średnie RGB (3 wym.) | baseline wyglądu |

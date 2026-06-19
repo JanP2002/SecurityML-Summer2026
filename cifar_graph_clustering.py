@@ -491,6 +491,31 @@ def attr_pool_matrix(graphs, graph_type, cfg: Config) -> np.ndarray:
     return np.array(rows)
 
 
+def graph_topo_features(G: nx.Graph) -> np.ndarray:
+    """Czysto STRUKTURALNE cechy grafu (graf-natywne, bez koloru). Najważniejsze:
+    liczba i rozkład rozmiarów KOMPONENTÓW po przecięciu krawędzi — to bezpośredni
+    skutek warunku Krzysztofa (obraz rozpada się na regiony ~obiekty)."""
+    n, m = G.number_of_nodes(), G.number_of_edges()
+    if n == 0:
+        return np.zeros(13, float)
+    degs = np.array([d for _, d in G.degree()], float)
+    sizes = np.array([len(c) for c in nx.connected_components(G)], float)
+    try:
+        asr = nx.degree_assortativity_coefficient(G); asr = 0.0 if np.isnan(asr) else asr
+    except Exception:
+        asr = 0.0
+    return np.array([
+        n, m, m / n, nx.density(G) if n > 1 else 0.0,
+        len(sizes), sizes.mean(), sizes.std(), sizes.max(), sizes.max() / n,  # fragmentacja
+        degs.mean(), degs.std(),
+        nx.average_clustering(G) if n > 2 else 0.0, asr,
+    ], float)
+
+
+def topo_matrix(graphs) -> np.ndarray:
+    return np.vstack([graph_topo_features(G) for G in graphs])
+
+
 # ============================================================================
 # BASELINE'Y
 # ============================================================================
@@ -586,15 +611,14 @@ def build_features(images, labels, graph_type, cfg: Config):
 
 
 def build_graph_reps(images, labels, graph_type, cfg: Config):
-    """Całografowe reprezentacje (NOWE): zwraca (Xwl, Xg2v, Xattr, y). Cache na dysku."""
+    """Całografowe reprezentacje (NOWE): zwraca (Xwl, Xg2v, Xattr, Xtopo, y). Cache na dysku."""
     cdir = os.path.join(cfg.out_dir, "cache"); os.makedirs(cdir, exist_ok=True)
     key = _cache_key("rep_" + graph_type, cfg, len(images),
                      extra=(cfg.wl_iterations, cfg.g2v_dim, cfg.g2v_epochs, cfg.n_color_bins))
-    paths = {s: os.path.join(cdir, f"{key}_{s}.npy") for s in ("wl", "g2v", "attr", "y")}
+    paths = {s: os.path.join(cdir, f"{key}_{s}.npy") for s in ("wl", "g2v", "attr", "topo", "y")}
     if all(os.path.exists(p) for p in paths.values()):
         print(f"  [rep-{graph_type}] wczytano z cache ({key})")
-        return (np.load(paths["wl"]), np.load(paths["g2v"]),
-                np.load(paths["attr"]), np.load(paths["y"]))
+        return tuple(np.load(paths[s]) for s in ("wl", "g2v", "attr", "topo", "y"))
 
     t0 = time.time()
     graphs, y = build_graphs(images, labels, graph_type, cfg)
@@ -602,11 +626,12 @@ def build_graph_reps(images, labels, graph_type, cfg: Config):
     Xwl = embed_wl(graphs, cfg)
     Xg2v = embed_graph2vec(graphs, cfg)
     Xattr = attr_pool_matrix(graphs, graph_type, cfg)
+    Xtopo = topo_matrix(graphs)
     print(f"  [rep-{graph_type}] {len(graphs)} grafów, wl{Xwl.shape[1]}d / "
-          f"g2v{Xg2v.shape[1]}d / attr{Xattr.shape[1]}d, {time.time()-t0:.1f}s")
-    np.save(paths["wl"], Xwl); np.save(paths["g2v"], Xg2v)
-    np.save(paths["attr"], Xattr); np.save(paths["y"], y)
-    return Xwl, Xg2v, Xattr, y
+          f"g2v{Xg2v.shape[1]}d / attr{Xattr.shape[1]}d / topo{Xtopo.shape[1]}d, {time.time()-t0:.1f}s")
+    np.save(paths["wl"], Xwl); np.save(paths["g2v"], Xg2v); np.save(paths["attr"], Xattr)
+    np.save(paths["topo"], Xtopo); np.save(paths["y"], y)
+    return Xwl, Xg2v, Xattr, Xtopo, y
 
 
 # ============================================================================
@@ -695,8 +720,9 @@ def plot_progression(rows, gt, hog_acc, n_classes, path):
         (f"g2v-{gt}", "2. graph2vec\n(całografowy)"),
         (f"combo-{gt}", "3. combo\n(g2v+kolor)"),
         (f"combo+r-{gt}", "4. combo+mini-HOG\n(bogaty węzeł)"),
-        (f"hyb-{gt}", "5. hybryda\nHOG+g2v"),
-        (f"hyb+r-{gt}", "6. hybryda+r\nHOG+g2v+r"),
+        (f"gnat+r-{gt}", "5. graf-natywne\n(g2v+topo+węzeł)"),
+        (f"hyb-{gt}", "6. hybryda\nHOG+g2v"),
+        (f"hyb+r-{gt}", "7. hybryda+r\nHOG+g2v+r"),
     ]
     best = _best_by_method(rows, "acc")
     xs, ys, labs = [], [], []
@@ -767,25 +793,32 @@ def run(cfg: Config, graph_types):
         for w in cfg.weights:
             add(f"n2v-{gt}", w, fuse(Xs, Xa, w), y, scale=False)
 
-        # --- metody 2-5 (całografowe WL / graph2vec + combo + hybryda) ---
-        Xwl, Xg2v, Xattr, y = build_graph_reps(images, labels, gt, cfg_plain)
+        # --- metody 2-5 (całografowe WL / graph2vec + topo + combo + hybryda) ---
+        Xwl, Xg2v, Xattr, Xtopo, y = build_graph_reps(images, labels, gt, cfg_plain)
         add(f"wl-{gt}", float("nan"), Xwl, y, scale=True)
         add(f"g2v-{gt}", float("nan"), Xg2v, y, scale=True)
+        add(f"topo-{gt}", float("nan"), Xtopo, y, scale=True)   # czysto strukturalne (fragmentacja)
         for w in cfg.weights:
             add(f"combo-{gt}", w, fuse(Xg2v, Xattr, w), y, scale=False)
+        # gnat = GRAF-NATYWNE: struktura (graph2vec ⊕ topo) ⊕ atrybuty węzła. ZERO HOG.
+        Xstruct = np.hstack([Xg2v, Xtopo])
+        for w in cfg.weights:
+            add(f"gnat-{gt}", w, fuse(Xstruct, Xattr, w), y, scale=False)
         morpho[gt] = (fuse(Xg2v, Xattr, 0.5), y)   # combo w=0.5 do wizualizacji
         if len(Xhog_all) == len(y):
             for w in cfg.weights:
                 add(f"hyb-{gt}", w, fuse(Xg2v, Xhog_all, w), y, scale=False)
 
         # --- metoda 6 (NOWE USPRAWNIENIE): bogatszy deskryptor węzła (mini-HOG) ---
-        # combo+r / hyb+r liczone na grafie z deskryptorem orientacji gradientu na
+        # combo+r / gnat+r liczone na grafie z deskryptorem orientacji gradientu na
         # superpiksel — czy struktura grafowa może rywalizować z HOG BEZ pożyczania HOG.
         if cfg.rich_features:
-            _, Xg2v_r, Xattr_r, y = build_graph_reps(images, labels, gt, replace(cfg, rich_features=True))
+            _, Xg2v_r, Xattr_r, Xtopo_r, y = build_graph_reps(images, labels, gt, replace(cfg, rich_features=True))
+            Xstruct_r = np.hstack([Xg2v_r, Xtopo_r])
             for w in cfg.weights:
                 add(f"combo+r-{gt}", w, fuse(Xg2v_r, Xattr_r, w), y, scale=False)
-            morpho[gt] = (fuse(Xg2v_r, Xattr_r, 0.5), y)
+                add(f"gnat+r-{gt}", w, fuse(Xstruct_r, Xattr_r, w), y, scale=False)
+            morpho[gt] = (fuse(Xstruct_r, Xattr_r, 0.5), y)
             if len(Xhog_all) == len(y):
                 for w in cfg.weights:
                     add(f"hyb+r-{gt}", w, fuse(Xg2v_r, Xhog_all, w), y, scale=False)
