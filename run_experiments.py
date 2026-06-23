@@ -37,14 +37,20 @@ from sklearn.preprocessing import normalize
 
 # recepty metod (źródło-agnostyczne); 'sweep' -> przemiatamy wagę w
 METHODS = {
-    "topo":  {"struct": ["topo"],               "attr": False, "sweep": False, "w": 1.0},
-    "spec":  {"struct": ["spectral"],           "attr": False, "sweep": False, "w": 1.0},
-    "wl":    {"struct": ["wl"],                  "attr": False, "sweep": False, "w": 1.0},
-    "g2v":   {"struct": ["graph2vec"],           "attr": False, "sweep": False, "w": 1.0},
-    "n2v":   {"struct": ["node2vec"],            "attr": False, "sweep": False, "w": 1.0},
-    "attr":  {"struct": [],                      "attr": True,  "sweep": False, "w": 0.0},
-    "combo": {"struct": ["graph2vec"],           "attr": True,  "sweep": True},
-    "gnat":  {"struct": ["graph2vec", "topo"],   "attr": True,  "sweep": True},
+    "topo":     {"struct": ["topo"],             "attr": False, "sweep": False, "w": 1.0},
+    "spec":     {"struct": ["spectral"],         "attr": False, "sweep": False, "w": 1.0},
+    "wl":       {"struct": ["wl"],               "attr": False, "sweep": False, "w": 1.0},
+    "g2v":      {"struct": ["graph2vec"],         "attr": False, "sweep": False, "w": 1.0},
+    "n2v":      {"struct": ["node2vec"],          "attr": False, "sweep": False, "w": 1.0},
+    "netlsd":   {"struct": ["netlsd"],            "attr": False, "sweep": False, "w": 1.0},
+    "graphlet": {"struct": ["graphlet"],          "attr": False, "sweep": False, "w": 1.0},
+    "attr":     {"struct": [],                    "attr": True,  "sweep": False, "w": 0.0},
+    "combo":    {"struct": ["graph2vec"],          "attr": True,  "sweep": True},
+    "gnat":     {"struct": ["graph2vec", "topo"],  "attr": True,  "sweep": True},
+    # tylko dla grafów z obrazu (source=cifar/synth):
+    "rgb":      {"struct": ["rgb"],               "attr": False, "sweep": False, "w": 1.0},
+    "hog":      {"struct": ["hog"],               "attr": False, "sweep": False, "w": 1.0},
+    "hyb":      {"struct": ["graph2vec"], "second": "hog", "attr": False, "sweep": True},
 }
 DEFAULT_METHODS = ["topo", "wl", "g2v", "n2v", "attr", "combo", "gnat"]
 
@@ -86,8 +92,10 @@ def run(cfg: Config, method_names, privacy_curve: bool):
           f"|V| min/med/max = {min(sizes)}/{int(np.median(sizes))}/{max(sizes)}")
 
     strengths = cfg.obf_strengths if privacy_curve else [0.0]
-    needed = sorted({s for m in method_names for s in METHODS[m]["struct"]})
-    use_attr = any(METHODS[m]["attr"] for m in method_names)
+    needed = sorted({s for m in method_names
+                     for s in (METHODS[m]["struct"]
+                               + ([METHODS[m]["second"]] if METHODS[m].get("second") else []))})
+    use_attr = any(METHODS[m].get("attr") for m in method_names)
 
     rows = []
     rep_X = rep_y = None                               # do morfoprzestrzeni (strength=0)
@@ -104,16 +112,22 @@ def run(cfg: Config, method_names, privacy_curve: bool):
         for m in method_names:
             rec = METHODS[m]
             S = struct_unit(rec["struct"]) if rec["struct"] else None
+            if rec.get("second"):
+                second_unit = struct_unit([rec["second"]])      # np. HOG dla hybrydy
+            elif rec.get("attr"):
+                second_unit = attr_unit
+            else:
+                second_unit = None
             ws = cfg.weights if rec["sweep"] else [rec["w"]]
             method_rows, Xs_by_w = [], {}
             for w in ws:
                 parts = []
                 if S is not None and w > 0:
                     parts.append(w * S)
-                if rec["attr"] and attr_unit is not None and w < 1:
-                    parts.append((1 - w) * attr_unit)
+                if second_unit is not None and w < 1:
+                    parts.append((1 - w) * second_unit)
                 if not parts:
-                    parts = [S if S is not None else attr_unit]
+                    parts = [S if S is not None else second_unit]
                 X = np.hstack(parts); Xs_by_w[w] = X
                 pred = evaluate.cluster(X, cfg.cluster_algo, k, cfg)
                 um = evaluate.unsupervised_metrics(X, pred, y)

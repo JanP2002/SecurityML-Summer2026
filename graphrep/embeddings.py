@@ -134,12 +134,66 @@ def embed_node2vec(graphs, cfg: Config) -> np.ndarray:
     return np.vstack([_node2vec(G, cfg) for G in graphs])
 
 
+# --- NetLSD: sygnatura ciepła (permutacyjnie niezmiennicza, niezależna od rozmiaru) ---
+_NETLSD_TS = np.logspace(-2, 2, 32)
+
+
+def _netlsd(G: nx.Graph) -> np.ndarray:
+    """Ślad ciepła h(t)=Σ exp(-t·λ) po widmie znormalizowanego Laplasjanu, znormalizowany
+    przez |V|. Mocny, tani deskryptor CAŁEGO grafu — dobry do porównywania/klastrowania."""
+    n = G.number_of_nodes()
+    if n == 0 or G.number_of_edges() == 0:
+        return np.zeros(len(_NETLSD_TS))
+    L = np.asarray(nx.normalized_laplacian_matrix(G).todense())
+    ev = np.linalg.eigvalsh(L)
+    return np.array([np.exp(-t * ev).sum() for t in _NETLSD_TS], float) / n
+
+
+def embed_netlsd(graphs, cfg: Config) -> np.ndarray:
+    return np.vstack([_netlsd(G) for G in graphs])
+
+
+# --- Graphlety/motywy: liczności podgrafów 3- i 4-węzłowych (znormalizowane przez |V|) ---
+def _graphlets(G: nx.Graph) -> np.ndarray:
+    n = G.number_of_nodes()
+    if n == 0:
+        return np.zeros(5)
+    degs = np.array([d for _, d in G.degree()], float)
+    tri = sum(nx.triangles(G).values()) / 3.0                 # trójkąty (3-klika)
+    wedges = float(np.sum(degs * (degs - 1) / 2.0)) - 3.0 * tri   # ścieżki 2 (otwarte)
+    stars3 = float(np.sum(degs * (degs - 1) * (degs - 2) / 6.0))  # gwiazdy K1,3 (4-węzeł)
+    trans = nx.transitivity(G) if n > 2 else 0.0
+    sq = float(np.mean(list(nx.square_clustering(G).values()))) if n > 3 else 0.0  # 4-cykle
+    inv = 1.0 / n
+    return np.array([tri * inv, wedges * inv, stars3 * inv, trans, sq], float)
+
+
+def embed_graphlet(graphs, cfg: Config) -> np.ndarray:
+    return np.vstack([_graphlets(G) for G in graphs])
+
+
+# --- Baseline'y wyglądu (bez grafu): RGB-mean i HOG; liczone z obrazu i wpięte w G.graph ---
+def embed_rgb(graphs, cfg: Config) -> np.ndarray:
+    return np.vstack([np.asarray(G.graph.get("feat_rgb", np.zeros(3)), float) for G in graphs])
+
+
+def embed_hog(graphs, cfg: Config) -> np.ndarray:
+    dim = next((len(G.graph["feat_hog"]) for G in graphs if G.graph.get("feat_hog") is not None), 0)
+    if dim == 0:
+        return np.zeros((len(graphs), 1))
+    return np.vstack([np.asarray(G.graph["feat_hog"], float)
+                      if G.graph.get("feat_hog") is not None else np.zeros(dim) for G in graphs])
+
+
 STRUCT_EMBEDDERS = {
     "topo": embed_topo, "spectral": embed_spectral, "node2vec": embed_node2vec,
     "wl": embed_wl, "graph2vec": embed_graph2vec,
+    "netlsd": embed_netlsd, "graphlet": embed_graphlet,
+    "rgb": embed_rgb, "hog": embed_hog,
 }
 _SCHEME = {"topo": "standard_l2", "spectral": "standard_l2", "node2vec": "standard_l2",
-           "wl": "l2", "graph2vec": "l2"}
+           "wl": "l2", "graph2vec": "l2", "netlsd": "standard_l2", "graphlet": "standard_l2",
+           "rgb": "standard_l2", "hog": "standard_l2"}
 
 
 # ---------- normalizacja i fuzja ----------

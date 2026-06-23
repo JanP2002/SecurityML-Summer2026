@@ -78,11 +78,15 @@ Do wyboru w `--methods`:
 | `topo` | całografowy | cechy strukturalne (liczba/rozmiary komponentów, stopnie, cykle, asortatywność, klasteryzacja) |
 | `wl` | całografowy | feature map jądra Weisfeilera–Lehmana → TruncatedSVD |
 | `g2v` | całografowy | graph2vec (wzorce WL uczone gęsto przez Doc2Vec) |
+| `netlsd` | całografowy | sygnatura ciepła widma Laplasjanu (permutacyjnie niezmiennicza, niezależna od rozmiaru) |
+| `graphlet` | całografowy | liczności motywów 3- i 4-węzłowych (trójkąty, ścieżki, gwiazdy, 4-cykle) |
 | `spec` | całografowy | sygnatura spektralna (k najmniejszych wartości własnych Laplasjanu) |
 | `attr` | agregacja węzłów | pooling atrybutów węzła (mean ⊕ std) — strumień atrybutowy |
 | `n2v` | poziom węzła | node2vec + pooling — **kontrast** (osobna, niewyrównana przestrzeń na graf → słaby do klastrowania) |
 | `combo` | fuzja | `g2v ⊕ atrybuty`, waga `w` |
 | `gnat` | fuzja | `g2v ⊕ topo ⊕ atrybuty`, waga `w` |
+| `rgb` / `hog` | wygląd (bez grafu) | baseline'y obrazu (średnie RGB / HOG) — tylko `source=cifar/synth` |
+| `hyb` | fuzja | `HOG ⊕ g2v`, waga `w` — ile struktura dokłada ponad wygląd (tylko obraz) |
 
 Do klastrowania preferowane są reprezentacje **całografowe, permutacyjnie niezmiennicze**
 (`topo`, `wl`, `g2v`, `spec`). Fuzja miesza strumień strukturalny i atrybutowy wagą `w`

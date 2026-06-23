@@ -11,7 +11,7 @@ Krawędzie mają 'weight'. Dzięki temu embeddingi są niezależne od źródła.
 
 Źródła:
   tu     -> ENZYMES / PROTEINS_full (gotowe grafy, auto-pobieranie z mirrora GitHub)
-  cifar  -> obraz -> graf (pixel/patch/slic, warunek krawędzi)   [wymaga torchvision]
+  cifar  -> obraz -> graf (pixel/patch/slic, warunek krawędzi Krzysztofa)   [wymaga torchvision]
   synth  -> obrazy syntetyczne -> graf (ta sama ścieżka co cifar; do testów bez pobierania)
 
 Obfuskacja działa NA WYJŚCIU dowolnego źródła (i na obrazach, i na białkach) — to wspólne
@@ -82,7 +82,7 @@ def load_tu(name: str, root: str):
 
 
 # ============================================================================
-# ŹRÓDŁO 2/3: obraz -> graf  (warunek krawędzi: bliskość ORAZ podobieństwo)
+# ŹRÓDŁO 2/3: obraz -> graf  (warunek krawędzi Krzysztofa: bliskość ORAZ podobieństwo)
 # Buildery przeniesione z cifar_graph_clustering.py kolegów (z drobnym ujednoliceniem).
 # ============================================================================
 def _threshold(dists: np.ndarray, cfg: Config) -> float:
@@ -249,9 +249,18 @@ _BUILDERS = {"pixel": build_pixel_graph, "patch": build_patch_graph, "slic": bui
 
 def build_image_graphs(images, labels, cfg: Config):
     from joblib import Parallel, delayed
+    from skimage.feature import hog
     builder = _BUILDERS[cfg.graph_type]
-    graphs = Parallel(n_jobs=cfg.n2v_workers)(
-        delayed(builder)(img, cfg) for img in images)
+
+    def one(img):
+        G = builder(img, cfg)
+        # deskryptory wyglądu (baseline'y i hybryda) — wpięte na poziomie grafu
+        G.graph["feat_rgb"] = img.reshape(-1, 3).mean(0)
+        G.graph["feat_hog"] = hog(img, orientations=8, pixels_per_cell=(8, 8),
+                                  cells_per_block=(2, 2), channel_axis=-1)
+        return G
+
+    graphs = Parallel(n_jobs=cfg.n2v_workers)(delayed(one)(img) for img in images)
     return graphs, np.asarray(labels, dtype=int)
 
 
@@ -289,6 +298,7 @@ def synth_images(cfg: Config):
 # ============================================================================
 def _copy_with_nodes(G: nx.Graph) -> nx.Graph:
     H = nx.Graph()
+    H.graph.update(G.graph)
     H.add_nodes_from(G.nodes(data=True))
     return H
 
