@@ -44,6 +44,12 @@ METHODS = {
     "n2v":      {"struct": ["node2vec"],          "attr": False, "sweep": False, "w": 1.0},
     "netlsd":   {"struct": ["netlsd"],            "attr": False, "sweep": False, "w": 1.0},
     "graphlet": {"struct": ["graphlet"],          "attr": False, "sweep": False, "w": 1.0},
+    "fgsd":     {"struct": ["fgsd"],              "attr": False, "sweep": False, "w": 1.0},
+    "rand_ens": {"struct": ["rand_ens"],          "attr": False, "sweep": False, "w": 1.0},
+    # fuzje całografowych, permutacyjnie niezmienniczych deskryptorów (czysta struktura)
+    "wltopo":   {"struct": ["wl", "topo"],                       "attr": False, "sweep": False, "w": 1.0},
+    "sfuse":    {"struct": ["topo", "wl", "netlsd", "graphlet"], "attr": False, "sweep": False, "w": 1.0},
+    "sfuse2":   {"struct": ["topo", "netlsd", "graphlet"],       "attr": False, "sweep": False, "w": 1.0},
     "attr":     {"struct": [],                    "attr": True,  "sweep": False, "w": 0.0},
     "combo":    {"struct": ["graph2vec"],          "attr": True,  "sweep": True},
     "gnat":     {"struct": ["graph2vec", "topo"],  "attr": True,  "sweep": True},
@@ -56,14 +62,15 @@ DEFAULT_METHODS = ["topo", "wl", "g2v", "n2v", "attr", "combo", "gnat"]
 
 CSV_COLS = ["source", "dataset", "graph_type", "obf_method", "strength", "method", "w",
             "km_ARI", "km_NMI", "silhouette", "n_clusters", "noise",
-            "probe_acc", "probe_f1", "recon_r2", "dim"]
+            "probe_acc", "probe_f1", "recon_r2", "recon_nmse", "recon_leak", "dim"]
 
 
 def _cache_key(name, cfg: Config, strength, n) -> str:
     s = "|".join(map(str, [name, cfg.source, cfg.dataset, cfg.graph_type, cfg.obf_method,
                            round(strength, 4), n, cfg.seed, cfg.wl_iterations, cfg.g2v_dim,
                            cfg.doc2vec_epochs, cfg.n2v_dim, cfg.n2v_num_walks, cfg.spec_k,
-                           cfg.edge_quantile, cfg.rich_features, cfg.label_rich]))
+                           cfg.edge_quantile, cfg.rich_features, cfg.label_rich,
+                           cfg.rand_ens_m, cfg.rand_ens_base, cfg.rand_ens_method, cfg.rand_ens_p]))
     return hashlib.sha1(s.encode()).hexdigest()[:16]
 
 
@@ -138,11 +145,14 @@ def run(cfg: Config, method_names, privacy_curve: bool):
                     "km_ARI": um["ARI"], "km_NMI": um["NMI"], "silhouette": um["silhouette"],
                     "n_clusters": um["n_clusters"], "noise": um["noise"],
                     "probe_acc": pr["probe_acc"], "probe_f1": pr["probe_f1"],
-                    "recon_r2": float("nan"), "dim": X.shape[1]})
-            # atak rekonstrukcyjny tylko dla najlepszego w (oszczędność) 
+                    "recon_r2": float("nan"), "recon_nmse": float("nan"),
+                    "recon_leak": float("nan"), "dim": X.shape[1]})
+            # atak rekonstrukcyjny tylko dla najlepszego w (oszczędność)
             best = max(method_rows, key=lambda r: (r["probe_acc"] if not np.isnan(r["probe_acc"]) else -1))
             rr = evaluate.reconstruction_attack(Xs_by_w[best["w"]], target, cfg)
             best["recon_r2"] = rr["recon_r2"]
+            best["recon_nmse"] = rr["recon_nmse"]
+            best["recon_leak"] = rr["recon_leak"]
             rows.extend(method_rows)
             if strength == 0.0 and rep_X is None and m in ("combo", "g2v", "gnat"):
                 rep_X, rep_y = Xs_by_w[best["w"]], y
@@ -178,11 +188,17 @@ def main():
     ap.add_argument("--weights", type=float, nargs="+", default=None, help="wagi fuzji do przemiatania")
     ap.add_argument("--cluster-algo", choices=["kmeans", "spectral", "agglo", "hdbscan"], default="kmeans")
     ap.add_argument("--privacy-curve", action="store_true", help="przemiataj siłę obfuskacji")
-    ap.add_argument("--obf-method", choices=["rewire", "dropedge", "shortcuts", "er"], default="rewire")
+    ap.add_argument("--obf-method", choices=["rewire", "dropedge", "shortcuts", "er", "edp", "feature"], default="rewire")
     ap.add_argument("--obf-strengths", type=float, nargs="+", default=[0.0, 0.25, 0.5, 0.75, 1.0])
     ap.add_argument("--rich-features", action="store_true")
     ap.add_argument("--label-rich", action="store_true")
     ap.add_argument("--edge-quantile", type=float, default=0.6)
+    ap.add_argument("--n-segments", type=int, default=None, help="liczba superpikseli SLIC")
+    ap.add_argument("--compactness", type=float, default=None, help="zwartość SLIC")
+    ap.add_argument("--rand-ens-m", type=int, default=None, help="rand_ens: liczba losowych wariantów/obiekt")
+    ap.add_argument("--rand-ens-base", default=None, help="rand_ens: bazowy deskryptor (topo|wl|graph2vec|netlsd|graphlet|fgsd)")
+    ap.add_argument("--rand-ens-method", default=None, help="rand_ens: dropedge|shortcuts|er")
+    ap.add_argument("--rand-ens-p", type=float, default=None, help="rand_ens: siła losowania")
     ap.add_argument("--data-dir", default="data")
     ap.add_argument("--out-dir", default="results")
     args = ap.parse_args()
@@ -195,6 +211,18 @@ def main():
                  data_dir=args.data_dir, out_dir=args.out_dir)
     if args.weights:
         cfg.weights = args.weights
+    if args.n_segments is not None:
+        cfg.n_segments = args.n_segments
+    if args.compactness is not None:
+        cfg.compactness = args.compactness
+    if args.rand_ens_m is not None:
+        cfg.rand_ens_m = args.rand_ens_m
+    if args.rand_ens_base is not None:
+        cfg.rand_ens_base = args.rand_ens_base
+    if args.rand_ens_method is not None:
+        cfg.rand_ens_method = args.rand_ens_method
+    if args.rand_ens_p is not None:
+        cfg.rand_ens_p = args.rand_ens_p
     methods = args.methods or DEFAULT_METHODS
     run(cfg, methods, args.privacy_curve)
 

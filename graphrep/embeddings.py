@@ -172,6 +172,48 @@ def embed_graphlet(graphs, cfg: Config) -> np.ndarray:
     return np.vstack([_graphlets(G) for G in graphs])
 
 
+# --- FGSD: histogram spektralnych odległości biharmonicznych (Verma & Zhang 2017) ---
+# Permutacyjnie niezmienniczy deskryptor CAŁEGO grafu; mocny do porównywania struktury.
+_FGSD_BMAX = 50.0
+_FGSD_BINS = np.linspace(0.0, _FGSD_BMAX, 201)   # 200 binów
+
+
+def _fgsd(G: nx.Graph) -> np.ndarray:
+    n = G.number_of_nodes()
+    if n < 2 or G.number_of_edges() == 0:
+        return np.zeros(len(_FGSD_BINS) - 1)
+    L = np.asarray(nx.laplacian_matrix(G).todense(), float)
+    ev, V = np.linalg.eigh(L)
+    inv = np.where(ev > 1e-8, 1.0 / np.where(ev > 1e-8, ev, 1.0), 0.0)
+    P = (V * inv) @ V.T                              # pseudoinwersja Laplasjanu
+    d = np.diag(P)
+    S = d[:, None] + d[None, :] - 2.0 * P            # odległości biharmoniczne
+    vals = np.clip(S[np.triu_indices(n, 1)], 0.0, _FGSD_BMAX)
+    hist, _ = np.histogram(vals, bins=_FGSD_BINS)
+    return hist.astype(float) / max(1, len(vals))
+
+
+def embed_fgsd(graphs, cfg: Config) -> np.ndarray:
+    return np.vstack([_fgsd(G) for G in graphs])
+
+
+# --- rand_ens: ensembling losowych grafów jako REPREZENTACJA (pomysł z cifar_rand_graphs2) ---
+# Dla każdego obiektu generujemy M losowych wariantów jego STRUKTURY (dropedge/shortcuts/er),
+# liczymy bazowy deskryptor na każdym i UŚREDNIAMY → embedding obiektu. Etykiety/atrybuty
+# węzłów zachowane. Bazowy embedder liczony RAZ na korpusie M·N grafów, więc wl/graph2vec
+# dzielą wspólny słownik i bazę SVD (uśrednianie ma sens); topo/netlsd/... to per-graf.
+def embed_rand_ens(graphs, cfg: Config) -> np.ndarray:
+    from .data import obfuscate_graph
+    base = STRUCT_EMBEDDERS[cfg.rand_ens_base]
+    M, N = cfg.rand_ens_m, len(graphs)
+    rng = np.random.default_rng(cfg.seed)
+    big = []
+    for _ in range(M):
+        big.extend(obfuscate_graph(G, cfg.rand_ens_method, cfg.rand_ens_p, rng) for G in graphs)
+    X = base(big, cfg)                          # (M*N, dim) — jedna wspólna przestrzeń
+    return X.reshape(M, N, -1).mean(axis=0)     # uśrednienie po M wariantach → (N, dim)
+
+
 # --- Baseline'y wyglądu (bez grafu): RGB-mean i HOG; liczone z obrazu i wpięte w G.graph ---
 def embed_rgb(graphs, cfg: Config) -> np.ndarray:
     return np.vstack([np.asarray(G.graph.get("feat_rgb", np.zeros(3)), float) for G in graphs])
@@ -188,12 +230,13 @@ def embed_hog(graphs, cfg: Config) -> np.ndarray:
 STRUCT_EMBEDDERS = {
     "topo": embed_topo, "spectral": embed_spectral, "node2vec": embed_node2vec,
     "wl": embed_wl, "graph2vec": embed_graph2vec,
-    "netlsd": embed_netlsd, "graphlet": embed_graphlet,
+    "netlsd": embed_netlsd, "graphlet": embed_graphlet, "fgsd": embed_fgsd,
+    "rand_ens": embed_rand_ens,
     "rgb": embed_rgb, "hog": embed_hog,
 }
 _SCHEME = {"topo": "standard_l2", "spectral": "standard_l2", "node2vec": "standard_l2",
            "wl": "l2", "graph2vec": "l2", "netlsd": "standard_l2", "graphlet": "standard_l2",
-           "rgb": "standard_l2", "hog": "standard_l2"}
+           "fgsd": "l2", "rand_ens": "standard_l2", "rgb": "standard_l2", "hog": "standard_l2"}
 
 
 # ---------- normalizacja i fuzja ----------

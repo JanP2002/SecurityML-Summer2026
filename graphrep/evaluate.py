@@ -12,7 +12,7 @@ import numpy as np
 import networkx as nx
 
 from sklearn.cluster import KMeans, HDBSCAN, SpectralClustering, AgglomerativeClustering
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, RidgeCV
 from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedKFold, cross_val_score, cross_val_predict, KFold
@@ -80,16 +80,35 @@ def content_target(graphs) -> np.ndarray:
 
 
 def reconstruction_attack(X, target, cfg: Config) -> dict:
-    """Atak inwersyjny: czy z embeddingu da się odtworzyć treść obiektu?
-    Trenujemy MLP (CV) X -> target; R² ~ odwracalność (wyciek). Niżej = lepsza prywatność."""
+    """Atak inwersyjny: ile treści obiektu da się odtworzyć z embeddingu? Atakujący próbuje
+    DWÓCH modeli (CV) X -> target i bierze LEPSZY (max R²) — Ridge (stabilny, liniowy) oraz
+    MLP (nieliniowy). Raportujemy:
+      - recon_r2   : R² najlepszego ataku (może być <0, gdy embedding nie niesie treści);
+      - recon_nmse : znormalizowany MSE = MSE/Var(target) ∈ [0,∞), 1.0 = jak predykcja średnią;
+      - recon_leak : wyciek przycięty do [0,1] = clip(recon_r2, 0, 1) — 0 = brak wycieku,
+                     1 = pełna odwracalność. Naprawia artefakt mocno ujemnego R² (np. MLP
+                     rozbiegał się na 200-wym FGSD do -8.58); Ridge daje stabilną dolną granicę.
+    Niżej recon_leak = lepsza prywatność."""
+    nan = float("nan")
     if target is None or X.shape[0] < 6:
-        return {"recon_r2": float("nan")}
+        return {"recon_r2": nan, "recon_nmse": nan, "recon_leak": nan}
     Xs = StandardScaler().fit_transform(X)
-    Ts = StandardScaler().fit_transform(target)
-    mlp = MLPRegressor(hidden_layer_sizes=(64,), max_iter=300, random_state=cfg.seed)
+    Ts = StandardScaler().fit_transform(target)          # Var(każdej kolumny) = 1
     cv = KFold(n_splits=3, shuffle=True, random_state=cfg.seed)
-    try:
-        pred = cross_val_predict(mlp, Xs, Ts, cv=cv)
-        return {"recon_r2": float(r2_score(Ts, pred))}
-    except Exception:
-        return {"recon_r2": float("nan")}
+    # RidgeCV auto-dobiera regularyzację — bez tego słaby Ridge przeucza się na wysokowymiarowych
+    # deskryptorach (FGSD 200-wym) dając absurdalne R² (-8.58). Tu stabilna dolna granica.
+    models = {"ridge": RidgeCV(alphas=(0.1, 1.0, 10.0, 100.0, 1000.0)),
+              "mlp": MLPRegressor(hidden_layer_sizes=(64,), max_iter=300, random_state=cfg.seed)}
+    best_r2 = -np.inf
+    for mdl in models.values():
+        try:
+            pred = cross_val_predict(mdl, Xs, Ts, cv=cv)
+            best_r2 = max(best_r2, float(r2_score(Ts, pred)))
+        except Exception:
+            continue
+    if not np.isfinite(best_r2):
+        return {"recon_r2": nan, "recon_nmse": nan, "recon_leak": nan}
+    # Ts ma wariancję 1 na kolumnę → nMSE = 1 - R² (uśrednione po kolumnach przez r2 'uniform')
+    return {"recon_r2": best_r2,
+            "recon_nmse": float(1.0 - best_r2),
+            "recon_leak": float(np.clip(best_r2, 0.0, 1.0))}

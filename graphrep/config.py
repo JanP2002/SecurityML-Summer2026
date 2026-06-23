@@ -53,6 +53,12 @@ class Config:
     # --- spectral ---
     spec_k: int = 12
 
+    # --- rand_ens (reprezentacja: ensembling M losowych wariantów struktury + uśrednianie) ---
+    rand_ens_m: int = 10               # liczba losowych wariantów na obiekt
+    rand_ens_base: str = "topo"        # bazowy deskryptor: topo | wl | graph2vec | netlsd | graphlet | fgsd
+    rand_ens_method: str = "dropedge"  # losowanie struktury: dropedge | shortcuts | er
+    rand_ens_p: float = 0.5            # siła losowania (p dropedge / siła shortcuts)
+
     # --- obfuskacja (oś prywatność–użyteczność) ---
     obf_method: str = "rewire"         # rewire | dropedge | shortcuts | er
     obf_strengths: list[float] = field(default_factory=lambda: [0.0])

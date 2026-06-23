@@ -328,6 +328,23 @@ def obfuscate_graph(G: nx.Graph, method: str, strength: float, rng) -> nx.Graph:
             if not H.has_edge(u, v):
                 H.add_edge(int(u), int(v), weight=1.0)
         return H
+    if method == "edp":
+        # Randomized response na krawędziach = edge-DP. Dla każdej z C(n,2) par bit
+        # obecności krawędzi jest zachowany z p. (1-f) lub odwrócony z p. f, gdzie
+        # f = 0.5·strength. Wtedy ε = ln((1-f)/f): strength=0 → f=0 (ε=∞, brak zmian);
+        # strength=1 → f=0.5 (ε=0, pełny szum). Jeden, formalny parametr prywatności.
+        f = 0.5 * strength
+        H = _copy_with_nodes(G); nodes = list(H.nodes()); n = len(nodes)
+        existing = {tuple(sorted((int(u), int(v)))) for u, v in G.edges()}
+        for a in range(n):
+            ua = int(nodes[a])
+            for b in range(a + 1, n):
+                vb = int(nodes[b])
+                has = (min(ua, vb), max(ua, vb)) in existing
+                keep = (not has) if rng.random() < f else has
+                if keep:
+                    H.add_edge(ua, vb, weight=1.0)
+        return H
     if method == "er":
         # pełna losowość: Erdős–Rényi o tej samej liczbie węzłów i krawędzi (matched density)
         H = _copy_with_nodes(G); nodes = list(H.nodes()); m = G.number_of_edges()
@@ -342,8 +359,33 @@ def obfuscate_graph(G: nx.Graph, method: str, strength: float, rng) -> nx.Graph:
     raise ValueError(f"Nieznana metoda obfuskacji: {method}")
 
 
+def obfuscate_features(graphs, strength: float, rng) -> list:
+    """Obfuskacja TREŚCI (komplement edge-DP): kalibrowany szum gaussowski na cechach
+    węzłów. σ_d = strength · std_d (globalne odchylenie cechy d). Struktura nietknięta —
+    izoluje wkład prywatności na poziomie atrybutów. Etykiety ('label', seed WL) zostają,
+    bo są nadawane na czystych cechach przed obfuskacją; chronimy strumień atrybutowy."""
+    if strength <= 0:
+        return [G.copy() for G in graphs]
+    allf = [np.atleast_1d(d["features"]) for G in graphs
+            for _, d in G.nodes(data=True) if "features" in d]
+    if not allf:
+        return [G.copy() for G in graphs]
+    std = np.std(np.vstack(allf).astype(float), axis=0) + 1e-9
+    out = []
+    for G in graphs:
+        H = G.copy()
+        for n, d in H.nodes(data=True):
+            if "features" in d:
+                f = np.atleast_1d(d["features"]).astype(float)
+                H.nodes[n]["features"] = f + rng.normal(0.0, strength * std[:len(f)], size=len(f))
+        out.append(H)
+    return out
+
+
 def obfuscate(graphs, method: str, strength: float, seed: int = 42):
     rng = np.random.default_rng(seed)
+    if method == "feature":
+        return obfuscate_features(graphs, strength, rng)
     return [obfuscate_graph(G, method, strength, rng) for G in graphs]
 
 

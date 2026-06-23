@@ -1,0 +1,283 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage[margin=2.1cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=1.4em}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\newcommand{\rl}{\texttt{recon\_leak}}
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+
+\title{\vspace{-1.2cm}Reprezentacje grafowe jako obfuskacja danych:\\
+prywatno\'s\'c i klastrowalno\'s\'c na ENZYMES, PROTEINS i CIFAR}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-1.0cm}
+
+\section{Wprowadzenie i cel}
+Punktem wyj\'scia by\l o klastrowanie reprezentacji grafowych cz\k{a}steczek: ENZYMES (6 klas)
+i PROTEINS\_full (2 klasy), deskryptory ca\l ografowe (topo, WL, graph2vec, spektralne) plus
+sonda nadzorowana. Pytanie pierwotne: czy klasa jest zakodowana w strukturze grafu. R\'ownolegle
+powsta\l a \'scie\.zka obrazowa: CIFAR-10 $\to$ graf SLIC (w\k{e}ze\l\ = superpiksel,
+kraw\k{e}d\'z = blisko\'s\'c i podobny kolor), oraz pomys\l\ graf\'ow losowych (ER/dropedge)
+jako reprezentacji. Wcze\'sniej pokazali\'smy, \.ze klasa jest obecna w reprezentacji grafowej
+(sonda nadzorowana j\k{a} wykrywa), ale klastrowanie bez etykiet wydobywa ma\l o; to przyjmujemy
+za punkt wyj\'scia. W tej iteracji zmieniamy perspektyw\k{e} na \textbf{prywatno\'s\'c}: graf
+jako reprezentacja, kt\'ora ukrywa obiekt. Pytamy nie tylko, czy klasa jest wykrywalna bez
+etykiet (u\.zyteczno\'s\'c), ale te\.z ile da si\k{e} z reprezentacji odzyska\'c (odwracalno\'s\'c,
+atak rekonstrukcyjny). Wszystkie liczby policzyli\'smy na pe\l nych danych odpornym atakiem
+(RidgeCV+MLP); katalogi \texttt{results\_FINAL\_*}.
+
+\section{Co nowego w tej iteracji}
+\begin{itemize}
+\item \textbf{FGSD}: deskryptor strukturalny, histogram odleg\l o\'sci spektralnych
+(biharmonicznych) mi\k{e}dzy parami w\k{e}z\l\'ow. Zale\.zy tylko od topologii (zero cech
+w\k{e}z\l\'ow), wi\k{e}c „czysto strukturalny".
+\item \textbf{edge-DP} i \textbf{feature-DP}: dwa mechanizmy obfuskacji. edge-DP losowo
+przerzuca \emph{kraw\k{e}dzie} (si\l a $\varepsilon$), feature-DP dodaje szum gaussowski o
+odchyleniu $\sigma$ do \emph{cech w\k{e}z\l\'ow}. Dzia\l aj\k{a} na roz\l\k{a}cznych cz\k{e}\'sciach
+grafu, st\k{a}d „ortogonalne".
+\item \textbf{Odporny atak rekonstrukcyjny} (metryka $\rl\in[0,1]$): $R^2$ regresora, kt\'ory
+z embeddingu odtwarza tre\'s\'c obiektu, czyli u\'srednione cechy w\k{e}z\l\'ow (to samo, czym
+jest \texttt{attr}). Wy\.zej znaczy \l atwiej odtworzy\'c, czyli gorsza prywatno\'s\'c. Dla
+\texttt{attr} odtworzenie jest prawie to\.zsamo\'sci\k{a}, wi\k{e}c jego wyciek jest oczekiwany;
+istotne jest, \.ze deskryptory strukturalne tych cech nie odtwarzaj\k{a}. Bierzemy silniejszy
+z RidgeCV i MLP, co usuwa artefakt s\l abego MLP ($R^2=-8{,}58$ na FGSD).
+\item \textbf{Wizualny atak inwersyjny}: regresor odtwarza ca\l y obraz (kolor ka\.zdego
+superpiksela), nie tylko \'sredni\k{a} tre\'s\'c.
+\item \textbf{Oracle LDA}: rzut embeddingu na o\'s dyskryminuj\k{a}c\k{a} klasy. \emph{U\.zywa
+etykiet}, wi\k{e}c daje g\'orn\k{a} granic\k{e} separowalno\'sci, nie wynik uczciwy. M\'owi, ile
+sygna\l u klasy w og\'ole jest w embeddingu.
+\item \textbf{rand\_ens}: u\'srednia deskryptor strukturalny po $M$ losowych wariantach grafu
+(dropedge/ER). Sprawdza, czy losowa struktura zast\k{a}pi prawdziw\k{a}.
+\end{itemize}
+
+\section{Ustawienie eksperyment\'ow}
+Trzy zbiory: ENZYMES (600 graf\'ow), PROTEINS\_full (1113), CIFAR-10 3 klasy 0/1/8 (SLIC, 1500).
+Ka\.zdy graf kodujemy dwoma strumieniami: \emph{strukturalnym} (deskryptory topologii: topo, WL,
+graph2vec, spektralne, FGSD) i \emph{atrybutowym} (\texttt{attr}: u\'srednione cechy w\k{e}z\l\'ow,
+czyli kolor obrazu lub atrybuty bia\l ka, a wi\k{e}c \textbf{tre\'s\'c} obiektu bez struktury).
+Metryki: \texttt{km\_ARI}/\texttt{km\_NMI} mierz\k{a} zgodno\'s\'c klastr\'ow (KMeans, \emph{bez
+etykiet}) z prawdziwymi klasami; \texttt{probe\_acc} mierzy liniow\k{a} separowalno\'s\'c klas
+(regresja logistyczna, CV, \emph{z etykietami}). Wysokie \texttt{probe\_acc} przy niskim ARI
+oznacza, \.ze klasa jest separowalna, ale niewykrywalna bez nadzoru. $\rl\in[0,1]$ = prywatno\'s\'c
+($\downarrow$ = prywatniej). Wszystkie metody/hiperparametry wybieramy \textbf{bez u\.zycia
+etykiet} (label-free: silhouette albo CV sondy); ARI/NMI raportujemy tylko jako wynik ko\'ncowy.
+
+Zbiory pe\l ni\k{a} r\'o\.zne role i nie ka\.zdy eksperyment liczymy na ka\.zdym (Tab.~\ref{tab:exp}).
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+eksperyment & ENZYMES & PROTEINS & CIFAR \\
+\midrule
+benchmark reprezentacji & \checkmark & \checkmark & \checkmark (+ rgb/hog) \\
+bateria klastrowa\'n & \checkmark & \checkmark & \checkmark \\
+recon\_leak (odporny atak) & \checkmark & \checkmark & \checkmark \\
+edge-DP & --- & \checkmark & \checkmark \\
+feature-DP & --- & \checkmark & --- \\
+siatka 2D (struktura $\perp$ tre\'s\'c) & --- & \checkmark & --- \\
+ablacja struktura vs losowo\'s\'c & \checkmark & \checkmark & --- \\
+rand\_ens & \checkmark & \checkmark & --- \\
+oracle LDA & --- & \checkmark & \checkmark \\
+atak inwersyjny (obraz) & --- & --- & \checkmark \\
+stabilno\'s\'c po seedach & cz\k{e}\'sc. & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\caption{Co liczymy na kt\'orym zbiorze. PROTEINS = g\l\'owny, najczystszy wynik i pe\l na o\'s
+prywatno\'sci; CIFAR = \'scie\.zka obrazowa (wygl\k{a}d vs struktura, atak inwersyjny); ENZYMES =
+trudny sufit i kontrola.}
+\label{tab:exp}
+\end{table}
+
+\section{Wyniki}
+
+\subsection*{(A) Separowalno\'s\'c $\neq$ klastrowalno\'s\'c}
+\textbf{Teza:} klasa jest liniowo separowalna, ale nie pokrywa si\k{e} z kierunkami najwi\k{e}kszej
+wariancji danych, wi\k{e}c klastrowanie bez etykiet wydobywa ma\l o. Na wszystkich zbiorach
+\texttt{probe\_acc} jest wyra\'znie powy\.zej poziomu losowego przy niskim ARI. Bateria
+klastrowa\'n (GMM, UMAP, whitening, j\k{a}dro WL) daje co najwy\.zej niewielki zysk
+(CIFAR $0{,}082\!\to\!0{,}085$).
+Dowodzi tego \textbf{oracle LDA} (rzut na o\'s klasy, u\.zywa etykiet): na PROTEINS j\k{a}dro WL
+bez etykiet daje $0{,}040$, a oracle $\mathbf{0{,}315}$ ($\times 8$); na CIFAR wl $0{,}082$ wobec oracle
+$\mathbf{0{,}220}$ ($\times 2{,}6$). Sygna\l\ klasy jest w reprezentacji, lecz poza g\l\'ownymi
+kierunkami wariancji. \emph{Oracle to g\'orna granica z etykietami, nie wynik uczciwy.}
+
+\subsection*{(B) Czysta struktura jest prywatna, a \texttt{attr} wycieka}
+\textbf{Teza:} z deskryptora czysto strukturalnego prawie nie da si\k{e} odtworzy\'c tre\'sci,
+ze strumienia atrybutowego ju\.z tak. PROTEINS: fgsd $\rl=0{,}042$, topo $0{,}099$, wl $0{,}103$
+wobec attr $0{,}764$. ENZYMES: wl $0{,}077$ wobec attr $0{,}791$. CIFAR: fgsd $0{,}048$, topo
+$0{,}323$ wobec attr $0{,}885$. Dla fgsd atak nie odtwarza tre\'sci lepiej ni\.z losowo
+($\rl\!\approx\!0$), dla attr odtwarza j\k{a} w oko\l o $80\%$. Graf strukturalny ukrywa wi\k{e}c obiekt, a
+strumie\'n tre\'sci go ujawnia. Na PROTEINS \textbf{fgsd jest najlepszy na obu osiach
+jednocze\'snie}: najlepsze ARI ($0{,}135$) i najni\.zszy wyciek ($0{,}042$)
+(Rys.~\ref{fig:pareto}); oba stabilne po 5 seedach ($0{,}136\pm0{,}001$ i $0{,}046\pm0{,}002$).
+Wizualny atak inwersyjny (Rys.~\ref{fig:inv}) potwierdza to wprost: z attr odtwarza si\k{e}
+rozpoznawaln\k{a} palet\k{e} obiektu (SSIM $0{,}198$, MSE $0{,}037$), a z fgsd rekonstrukcja jest
+nieinformatywna (MSE $0{,}058$).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.62\textwidth]{results_FINAL_prot/fig_pareto.png}
+\caption{Ka\.zdy punkt to jedna reprezentacja: o\'s X = wyciek (atak), o\'s Y = jako\'s\'c
+klastrowania. Deskryptory strukturalne le\.z\k{a} w strefie prywatnej ($\rl<0{,}2$); \texttt{attr}
+(tre\'s\'c) wycieka ($\rl=0{,}764$). Wniosek: fgsd jest najlepszy na obu osiach jednocze\'snie.}
+\label{fig:pareto}
+\end{figure}
+
+\subsection*{(C) Dwie niezale\.zne osie prywatno\'sci: struktura $\perp$ tre\'s\'c}
+\textbf{Teza:} edge-DP chroni struktur\k{e}, feature-DP chroni tre\'s\'c; osie niezale\.zne.
+feature-DP (Rys.~\ref{fig:featdp}): \rl\ dla attr maleje monotonicznie $0{,}764\to0{,}485$
+($\sigma=0\to4$), a topo/wl s\k{a} p\l askie ($0{,}099$/$0{,}103$). edge-DP: \rl\ dla attr jest
+\emph{dok\l adnie sta\l y} ($0{,}764$ dla ka\.zdej si\l y), bo attr czyta tylko cechy w\k{e}z\l\'ow.
+Siatka 2D (Rys.~\ref{fig:featdp}, prawo): wyciek tre\'sci nie zmienia si\k{e} wzd\l u\.z osi
+edge-DP (odch.\ $0{,}000$) i maleje wzd\l u\.z feature-DP. Prywatno\'s\'c struktury i tre\'sci
+regulujemy wi\k{e}c \emph{osobno}: obfuskacja kraw\k{e}dzi nie tyka tre\'sci, a szum cech nie tyka
+struktury. Pod odpornym atakiem feature-DP obni\.za wyciek umiarkowanie ($0{,}764\to0{,}485$),
+nie do zera, bo silny atakuj\k{a}cy wyci\k{a}ga wi\k{e}cej.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.49\textwidth]{results_FINAL_priv_feat/fig_feature_dp.png}\hfill
+\includegraphics[width=0.49\textwidth]{results_FINAL_priv2d/fig_privacy_2d.png}
+\caption{Lewo: feature-DP obni\.za odwracalno\'s\'c tre\'sci (attr $0{,}76\to0{,}49$), struktura
+pozostaje p\l aska. Prawo: siatka 2D; \rl[attr] zale\.zy wy\l\k{a}cznie od feature-DP i nie zmienia
+si\k{e} wzgl\k{e}dem edge-DP (poziome pasy).}
+\label{fig:featdp}
+\end{figure}
+
+\subsection*{(D) Struktura $>$ wygl\k{a}d na CIFAR}
+\textbf{Teza:} struktura grafu niesie sygna\l\ klasy, kt\'orego sam wygl\k{a}d nie chwyta.
+W klastrowaniu bez etykiet wl ARI $0{,}082$ wyra\'znie bije hog ($0{,}008$) i jest nieco lepsze
+od rgb ($0{,}071$); ta druga r\'o\.znica mie\'sci si\k{e} jednak w rozrzucie mi\k{e}dzy losowymi seedami ($\pm0{,}008$)
+(rgb to \'sredni kolor, hog to histogram gradient\'ow, oba opisuj\k{a} wygl\k{a}d bez grafu).
+Mocniejszy dow\'od daje ablacja struktura wobec losowo\'sci (graf losowy jako reprezentacja):
+prawdziwa topologia (fgsd PROTEINS $0{,}135$) daje oko\l o $2\times$ wi\k{e}cej ni\.z losowa
+(ER $0{,}065$, dropedge $0{,}058$), czyli sygna\l\ niesie sama struktura, nie fakt istnienia
+kraw\k{e}dzi. Na ENZYMES r\'o\.znica jest ma\l a (wl $0{,}046$ wobec $\sim0{,}038$), bo seed WL
+to etykiety w\k{e}z\l\'ow (typ), zachowane przy obfuskacji kraw\k{e}dzi.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.86\textwidth]{results_inversion/fig_inversion.png}
+\caption{Wizualny atak inwersyjny (CIFAR). attr odtwarza palet\k{e} obiektu i degraduje pod
+feature-DP; rekonstrukcja z fgsd (czysta topologia) jest nieinformatywna; wl niesie kolor, bo
+jego etykiety w\k{e}z\l\'ow pochodz\k{a} z koloru. Bezwzgl\k{e}dne SSIM niskie, bo embeddingi s\k{a}
+permutacyjnie niezmiennicze (niezale\.zne od numeracji w\k{e}z\l\'ow, brak uk\l adu przestrzennego).}
+\label{fig:inv}
+\end{figure}
+
+\subsection*{Finalne leaderboardy}
+Tabela~\ref{tab:lb} zbiera wyniki. Na PROTEINS fgsd ma najwy\.zsze ARI i najni\.zszy wyciek
+zarazem. Na CIFAR najwy\.zsze ARI ma \texttt{attr} ($0{,}124 > $ wl $0{,}082$): gdyby liczy\l a
+si\k{e} tylko klastrowalno\'s\'c, wygra\l by \texttt{attr}, ale odrzucamy go jako lidera, bo
+wycieka (\rl\ $0{,}885$). Najlepsza struktura (wl/g2v, ARI $0{,}082$) te\.z \emph{wycieka}
+($\rl\!\approx\!0{,}7$), bo jej etykiety w\k{e}z\l\'ow opisuj\k{a} kolor, wi\k{e}c na CIFAR
+struktura nie jest prywatna. \texttt{attr} wsz\k{e}dzie ma najwy\.zszy wyciek ($0{,}76$--$0{,}89$).
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+\multicolumn{5}{l}{\textbf{PROTEINS\_full} (1113)} \\
+metoda & km\_ARI & km\_NMI & probe\_acc & $\rl\downarrow$ \\
+\midrule
+\textbf{fgsd} & \textbf{0,135} & 0,086 & 0,691 & \textbf{0,042} \\
+rand\_ens (topo, M=10) & 0,089 & 0,072 & 0,724 & 0,082 \\
+topo & 0,080 & 0,063 & 0,741 & 0,099 \\
+wltopo & 0,080 & 0,063 & 0,750 & 0,160 \\
+netlsd & 0,074 & 0,056 & 0,733 & 0,058 \\
+wl & 0,040 & 0,026 & 0,725 & 0,103 \\
+attr (tre\'s\'c) & 0,037 & 0,026 & 0,748 & 0,764 \\
+\textit{oracle LDA (etykiety)} & \textit{0,315} & \textit{0,227} & --- & --- \\
+\midrule
+\multicolumn{5}{l}{\textbf{CIFAR-10} 0/1/8 (1500, grafy z obrazu)} \\
+metoda & km\_ARI & km\_NMI & probe\_acc & $\rl\downarrow$ \\
+\midrule
+wl + GMM-full & \textbf{0,085} & 0,080 & 0,573 & 0,712 \\
+wl + KMeans & 0,082 & 0,086 & 0,573 & 0,712 \\
+g2v + KMeans & 0,082 & 0,081 & 0,587 & 0,651 \\
+attr (tre\'s\'c) & 0,124 & 0,116 & 0,633 & 0,885 \\
+rgb (wygl\k{a}d) & 0,071 & 0,073 & 0,520 & 0,441 \\
+hog (wygl\k{a}d) & 0,008 & 0,009 & 0,718 & 0,264 \\
+\textit{oracle LDA (etykiety)} & \textit{0,220} & \textit{0,194} & --- & --- \\
+\midrule
+\multicolumn{5}{l}{\textbf{ENZYMES} (600), sufit trudny} \\
+metoda & km\_ARI & km\_NMI & probe\_acc & $\rl\downarrow$ \\
+\midrule
+wl & \textbf{0,046} & 0,086 & 0,403 & 0,077 \\
+g2v & 0,034 & 0,060 & 0,332 & 0,099 \\
+topo & 0,030 & 0,059 & 0,302 & 0,002 \\
+attr (tre\'s\'c) & 0,032 & 0,056 & 0,490 & 0,791 \\
+\bottomrule
+\end{tabular}
+\caption{Leaderboardy uczciwe (selekcja label-free). $\downarrow$ przy \rl: ni\.zej = prywatniej.
+Poziom losowy \texttt{probe\_acc}: ENZYMES $\approx0{,}17$ (6 klas), PROTEINS $\approx0{,}59$
+(baseline wi\k{e}kszo\'sciowy), CIFAR $\approx0{,}33$ (3 klasy); \texttt{probe\_acc} czytamy
+wzgl\k{e}dem nich (np. ENZYMES wl $0{,}40$ to $\sim\!2{,}4\times$ poziomu losowego, nie „s\l abo").
+Oracle LDA u\.zywa etykiet, daje wi\k{e}c g\'orn\k{a} granic\k{e} separowalno\'sci, nie wynik uczciwy.
+Na CIFAR wl/g2v \textbf{nie s\k{a} prywatne} ($\rl\approx0{,}7$): ich etykiety w\k{e}z\l\'ow opisuj\k{a} kolor.}
+\label{tab:lb}
+\end{table}
+
+Tabela~\ref{tab:wd} podsumowuje, gdzie ka\.zdy wniosek jest widoczny: A i B na wszystkich
+zbiorach; C na PROTEINS; D1 (wygl\k{a}d) tylko na CIFAR, bo tylko tam jest o\'s wygl\k{a}du;
+D2 (ablacja struktura vs losowo\'s\'c) na grafach molekularnych.
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+wniosek & ENZYMES & PROTEINS\_full & CIFAR-10 \\
+\midrule
+A separowalno\'s\'c $\neq$ klastrowalno\'s\'c & \checkmark & \checkmark\checkmark ($\times8$) & \checkmark ($\times2{,}6$) \\
+B czysta struktura prywatna, attr wycieka & \checkmark & \checkmark\checkmark & \checkmark \\
+C dwie osie prywatno\'sci (struktura $\perp$ tre\'s\'c) & --- & \checkmark\checkmark & \checkmark (edge-DP) \\
+D1 struktura $>$ wygl\k{a}d & --- & --- & \checkmark\checkmark \\
+D2 struktura $>$ losowo\'s\'c (ablacja) & \checkmark & \checkmark\checkmark & --- \\
+\bottomrule
+\end{tabular}
+\caption{Gdzie ka\.zdy wniosek jest pokazany. Oznaczenia: \checkmark\checkmark = najmocniej,
+\checkmark = pokazany, ,,---'' = \'swiadomie nieobecny (ENZYMES i PROTEINS nie maj\k{a} osi
+wygl\k{a}du; obie osie prywatno\'sci pokazujemy na PROTEINS jako reprezentatywnym). Wnioski
+A i B trzymaj\k{a} na wszystkich trzech zbiorach.}
+\label{tab:wd}
+\end{table}
+
+\section{Mocne i s\l abe strony}
+\begin{itemize}
+\item \textbf{Mocne:} fgsd na PROTEINS osi\k{a}ga jednocze\'snie najlepsze ARI ($0{,}136\pm0{,}001$)
+i najni\.zszy wyciek ($0{,}046\pm0{,}002$), stabilnie po 5 seedach. Liczby prywatno\'sci (\rl) s\k{a}
+stabilne ($\pm0{,}002$--$0{,}007$). Siatka 2D czysto rozdziela struktur\k{e} od tre\'sci (odchylenie $0{,}000$).
+\item \textbf{Gdzie nie wysz\l o:} ENZYMES ma sufit ARI $0{,}046$ (zbi\'or wewn\k{e}trznie trudny).
+Na CIFAR wl/g2v \emph{nie s\k{a} prywatne} ($\rl\approx0{,}7$, bo ich etykiety w\k{e}z\l\'ow koduj\k{a}
+kolor), wi\k{e}c struktura niesie tu wygl\k{a}d. ARI wl na CIFAR jest wra\.zliwe na losowy seed
+($\pm0{,}008$, z podpr\'obki).
+\item \texttt{--label-rich} na CIFAR \textbf{nie skaluje}: zysk z ma\l ej pr\'obki znika przy 1500 grafach.
+\item Komplementarne optimum fuzji struktura$\oplus$tre\'s\'c (PROTEINS $0{,}155$, CIFAR $0{,}130$)
+jest \textbf{nieselektowalny label-free}, wi\k{e}c nie liczymy go jako wynik uczciwy.
+\item \texttt{rand\_ens} bije bazowe topo (PROTEINS $0{,}089$ wobec $0{,}080$), ale nie lidera fgsd,
+a silhouette go nie preferuje. Wariant z baz\k{a} wl szkodzi.
+\item Wizualny atak: bezwzgl\k{e}dne SSIM niskie ($\sim0{,}2$). Embedding ca\l ego grafu nie zale\.zy
+od numeracji w\k{e}z\l\'ow (jest permutacyjnie niezmienniczy), wi\k{e}c nie koduje po\l o\.zenia, a
+atak odtwarza kolor, nie kszta\l t.
+\item feature-DP pod odpornym atakiem obni\.za wyciek umiarkowanie ($0{,}764\to0{,}485$), nie do zera.
+\end{itemize}
+
+\section{Podsumowanie}
+Graf jako reprezentacja realnie ukrywa obiekt: z czystej struktury (fgsd) nie da si\k{e}
+odtworzy\'c tre\'sci ($\rl=0{,}042$ wobec attr $0{,}764$), a wizualny atak daje szum. Klasa nadal
+tam jest (oracle LDA podnosi ARI do $8\times$), ale le\.zy poza osi\k{a} wariancji, wi\k{e}c
+klastrowanie bez etykiet wydobywa ma\l o. Prywatno\'sci\k{a} steruje si\k{e} dwuosiowo: edge-DP
+(struktura) i feature-DP (tre\'s\'c) dzia\l aj\k{a} niezale\.znie. G\l\'owne zastrze\.zenie: na
+grafach z obrazu reprezentacja strukturalna oparta na kolorze (wl) nie jest prywatna.
+
+\end{document}
