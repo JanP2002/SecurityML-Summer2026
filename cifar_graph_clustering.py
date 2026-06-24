@@ -9,7 +9,7 @@ Porównujemy 3 sposoby budowy grafu (pixel / patch / slic) z baseline'ami
 (RGB-mean, HOG) na klasyfikacji (LogReg / RandomForest / SVM, 5-fold CV) oraz
 nienadzorowanej klasteryzacji (KMeans: silhouette, ARI).
 
-GŁÓWNA ZMIANA WZGLĘDEM NOTATNIKA (wskazówka Krzysztofa, 2026-06-18):
+GŁÓWNA ZMIANA WZGLĘDEM NOTATNIKA (kluczowa wskazówka, 2026-06-18):
   Krawędź powstaje TYLKO gdy spełnione są JEDNOCZEŚNIE dwa warunki:
     1) węzły są blisko siebie PRZESTRZENNIE (sąsiedztwo na obrazie / siatce), ORAZ
     2) węzły reprezentują ten sam obiekt / piksele o podobnym odcieniu
@@ -86,7 +86,7 @@ class Config:
     classes: list[int] | None = None          # None => wszystkie 10 klas
     per_class: int | None = None               # liczba obrazów na klasę
     num_samples: int | None = None             # alternatywnie: łączna liczba próbek
-    # twardy próg krawędzi (wskazówka Krzysztofa)
+    # twardy próg krawędzi (kluczowa zasada)
     tau: float | None = None                   # stały próg odległości; None => kwantyl
     edge_quantile: float = 0.6                 # zostaw krawędzie poniżej tego kwantyla
     # parametry grafów
@@ -532,7 +532,7 @@ def attr_pool_matrix(graphs, graph_type, cfg: Config) -> np.ndarray:
 def graph_topo_features(G: nx.Graph) -> np.ndarray:
     """Czysto STRUKTURALNE cechy grafu (graf-natywne, bez koloru). Najważniejsze:
     liczba i rozkład rozmiarów KOMPONENTÓW po przecięciu krawędzi — to bezpośredni
-    skutek warunku Krzysztofa (obraz rozpada się na regiony ~obiekty)."""
+    skutek twardego warunku na krawędź (obraz rozpada się na regiony ~obiekty)."""
     n, m = G.number_of_nodes(), G.number_of_edges()
     if n == 0:
         return np.zeros(13, float)

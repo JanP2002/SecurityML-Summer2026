@@ -9,7 +9,7 @@ wariantami, które przetestowaliśmy.
 
 ## 1. Konstrukcja grafu (`GRAPH_BUILDERS`)
 
-Wspólna zasada (wskazówka Krzysztofa): **krawędź powstaje tylko gdy spełnione są
+Wspólna zasada (kluczowa): **krawędź powstaje tylko gdy spełnione są
 JEDNOCZEŚNIE dwa warunki** — bliskość przestrzenna ORAZ podobieństwo koloru/cech
 poniżej progu. Odległości powyżej progu są *przecinane* (nie tylko osłabiane wagą),
 więc graf rozpada się na regiony ~obiekty.
@@ -61,7 +61,7 @@ pełnym deskryptorze (kolor **+ tekstura/kształt**). Wynik: **pomogło** — `g
 `wl` 0.58→0.63 (ARI ~podwojone). **Próba #2 (spektralna):** osobno albo doklejona do bloku
 struktury (`gspec`) — **nie pomogła**.
 
-`topo` bezpośrednio koduje skutek warunku Krzysztofa: po przecięciu krawędzi na granicach
+`topo` bezpośrednio koduje skutek twardego warunku na krawędź: po przecięciu krawędzi na granicach
 obiektów obraz rozpada się na komponenty, a ich **liczba i rozmiary** są graf-natywnym
 sygnałem o klasie (sama `topo`, bez koloru, bije już baseline RGB).
 
@@ -143,3 +143,22 @@ Stąd wyrósł skrypt; przeniesione i rozwinięte: trzy konstrukcje grafu (pixel
 przestrzeń LAB, nakładające się patche + kNN, pooling `spatial_quadrants` i `weighted_mean`,
 fuzja cech (kolor doklejany do embeddingu) oraz baseline'y RGB/HOG. Notatnika nie
 edytujemy — zmiany idą do `cifar_graph_clustering.py`.
+
+## 11. Planowane rozszerzenia (niesprawdzone, bez HOG)
+
+Kolejne dźwignie do dodania jako NOWE metody (nic nie usuwamy — szczegóły i motywacja
+w [`RESULTS.md`](RESULTS.md), sekcja „Co dalej"):
+
+- **Pooling świadomy położenia (`_pool`)** — nowy wariant: binowanie superpikseli po
+  środku ciężkości do siatki K×K i osobny pooling każdej komórki (graf-natywny odpowiednik
+  siatki HOG, używa pozycji węzłów). Nowe metody `comboG-<gt>` / `gnatG-<gt>`. Motywacja:
+  `weighted_mean` gubi układ przestrzenny, a na PIXEL pooling `spatial_quadrants`
+  (zachowuje położenie) daje czyste `combo` > HOG.
+- **Jądro na atrybutach ciągłych** — zamiast skwantowanego (KMeans) seeda koloru dla WL,
+  jądro przyjmujące ciągłe cechy węzła (propagation kernel / ciągły WL). Wzmacnia SAMĄ
+  reprezentację strukturalną (kierunek potwierdzony przez próbę #3 `--label-rich`).
+- **Drobniejszy graf / przemiatanie** — `--n-segments` 60→100, `--n-orient-bins`,
+  `--wl-iter 3 --g2v-dim 128`: tańsze pokrętła, umiarkowany zysk.
+
+Ślepe uliczki (pomijamy): dalsze zmiany topologii krawędzi, cechy spektralne, strojenie
+p/q Node2Veca — zmiana topologii nie rusza wyniku, wzmacnianie reprezentacji strukturalnej tak.

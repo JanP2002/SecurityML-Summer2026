@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Wykres-historia prób GRAF-NATYWNYCH (w duchu wskazówek Krzysztofa, BEZ globalnego HOG).
+Wykres-historia prób GRAF-NATYWNYCH (w duchu twardego warunku na krawędź, BEZ globalnego HOG).
 Porównuje kluczowe metody strukturalne pod trzema dźwigniami:
   - bazowa krawędź + seed WL po kolorze       (run: results_cifar/slic_spec)
   - mocniejsza krawędź: kolor ORAZ tekstura   (run: results_cifar/slic_edgetex, typy *tex)

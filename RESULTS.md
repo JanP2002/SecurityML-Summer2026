@@ -20,7 +20,7 @@ wyników, niezależna od jakości grafu.
 
 ## Co poprawiliśmy (i dlaczego)
 
-1. **Twardy warunek na krawędź (wskazówka Krzysztofa).** Krawędź powstaje tylko gdy
+1. **Twardy warunek na krawędź (kluczowa zasada).** Krawędź powstaje tylko gdy
    węzły są JEDNOCZEŚNIE blisko przestrzennie ORAZ podobne kolorystycznie (odległość
    poniżej adaptacyjnego progu per obraz). Granice obiektów są *przecinane*, więc graf
    rozpada się na regiony ~obiekty i jego topologia zaczyna zależeć od klasy.
@@ -35,7 +35,7 @@ wyników, niezależna od jakości grafu.
    pożyczonym HOG. Metody `combo+r` / `hyb+r`.
 5. **Cechy topologiczne + metoda graf-natywna** (`topo`, `gnat`): czysto strukturalne
    cechy grafu (liczba i rozkład rozmiarów KOMPONENTÓW po przecięciu krawędzi — wprost
-   skutek warunku Krzysztofa) oraz pełna fuzja graf-natywna `gnat` = graph2vec ⊕ topo ⊕
+   skutek twardego warunku na krawędź) oraz pełna fuzja graf-natywna `gnat` = graph2vec ⊕ topo ⊕
    atrybuty węzła. **Zero globalnego HOG** — sprawdzamy, jak daleko zajdzie sama struktura.
 
 ## Historia usprawnień (co dało każde ulepszenie)
@@ -65,7 +65,7 @@ wynikiem w granicach kilku punktów, ale nie zmieniają obrazu: hybryda > HOG, p
 
 ## Próby graf-natywne (BEZ HOG) — co jeszcze pchnęliśmy
 
-W duchu wskazówek Krzysztofa, bez wciągania globalnego HOG, sprawdziliśmy trzy dźwignie
+W duchu twardego warunku na krawędź, bez wciągania globalnego HOG, sprawdziliśmy trzy dźwignie
 (każdą zostawiamy w kodzie jako osobną metodę/typ — nic nie usuwamy). Wykres:
 [`fig_graf_natywne`](results_cifar/fig_graf_natywne.png).
 
@@ -79,6 +79,35 @@ Wniosek: sufit ścieżki czysto grafowej to ~**0.68**; najwięcej dało wzmocnie
 reprezentacji strukturalnej (lepszy seed WL), a nie zmiana topologii grafu. Przebicie HOG
 (0.73) wciąż wymaga hybrydy z HOG. Runy: [`slic_edgetex`](results_cifar/slic_edgetex/),
 [`slic_spec`](results_cifar/slic_spec/), [`slic_labelrich`](results_cifar/slic_labelrich/).
+
+## Co dalej — niesprawdzone dźwignie (bez HOG)
+
+Pomysły na dalsze pchnięcie ścieżki czysto grafowej, w kolejności od najbardziej
+obiecującej. Każdy dodamy jako NOWĄ metodę/wariant — nic nie usuwamy.
+
+1. **Pooling świadomy położenia dla SLIC/patch (priorytet).** Dziś SLIC poolinguje
+   superpiksele jako `weighted_mean` — uśrednia po całym obrazie i **gubi układ
+   przestrzenny**. HOG czerpie siłę właśnie z siatki przestrzennej. Dowód, że to boli:
+   na grafie PIXEL (pooling `spatial_quadrants`, który zachowuje układ) czyste `combo`
+   bije HOG (0.671 vs 0.667) — jedyne miejsce, gdzie zostawiamy położenie. Plan: binować
+   superpiksele po środku ciężkości do zgrubnej siatki K×K i poolingować każdą komórkę
+   osobno (graf-natywny odpowiednik siatki HOG — używa pozycji węzłów, NIE HOG). Nowe
+   metody `comboG` / `gnatG`. Spodziewany efekt: +0.03–0.06 na SLIC.
+2. **Jądro strukturalne na atrybutach ciągłych.** Dziś seed WL/graph2vec to skwantowany
+   (KMeans) kolor — stratny. Jądro przyjmujące ciągłe atrybuty węzła (propagation kernel /
+   ciągły WL) zachowałoby więcej informacji. Próba #3 (bogatszy seed) pokazała, że
+   wzmacnianie SAMEJ reprezentacji strukturalnej się opłaca — to następny krok w tym duchu.
+3. **Tanie przemiatanie pokręteł.** Drobniejszy SLIC (`--n-segments` 60→100; więcej węzłów
+   = bogatsze słownictwo wzorców WL), więcej kubełków orientacji (`--n-orient-bins`),
+   głębszy graph2vec (`--wl-iter 3 --g2v-dim 128`). Niski koszt, umiarkowany zysk.
+
+**Prawdopodobne ślepe uliczki** (spójne z dotychczasowymi wynikami — pomijamy): kolejne
+zmiany topologii krawędzi, cechy spektralne, strojenie p/q Node2Veca. Wzorzec z naszych
+prób: *zmiana topologii grafu nie rusza wyniku, wzmacnianie reprezentacji strukturalnej — tak.*
+
+Uczciwe oczekiwanie: pooling siatkowy może domknąć większość luki do HOG na SLIC, ale
+pobicie HOG nadzorowanie bez HOG pozostaje ambitne; przewaga *nienadzorowana* (ARI) i tak
+zostaje po stronie grafu.
 
 ## Wyniki
 
@@ -119,7 +148,7 @@ vs ~0.02 baseline'ów. Wykresy w [`results_cifar/final_3class/`](results_cifar/f
 | baseline-hog            | 0.667     | 0.015 |
 | n2v-pixel               | 0.646     | 0.134 |
 
-Na grafie pikselowym (ten, o którym mówił Krzysztof) zarówno `hyb`, jak i *czysto
+Na grafie pikselowym zarówno `hyb`, jak i *czysto
 grafowe* `combo` biją HOG. Wykresy w [`results_cifar/pixel_3class/`](results_cifar/pixel_3class/).
 
 ### Pełne 10 klas (SLIC, 1000 obrazów)
