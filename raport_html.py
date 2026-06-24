@@ -65,6 +65,8 @@ CIFAR = [
      "Ranking obrazów po liczbie komponentów (twardy próg q=0.5): od najbardziej rozdrobnionych (góra) do najbardziej zwartych (dół). Rozdrobnienie to wprost skutek twardego warunku na krawędź."),
     ("fig_17_pixel_obiekty.png",
      "Graf PIKSELOWY: twardy próg w przestrzeni LAB tnie krawędzie na granicach, więc obiekt oddziela się od tła w osobne komponenty (np. samolot vs niebo)."),
+    ("fig_18_superpiksel.png",
+     "Czym jest superpiksel: (1) obraz, (2) ostry podział na ~60 regionów (tessellacja ~Voronoi), (3) każdy region zamalowany swoim średnim kolorem (to 'widzi' węzeł), (4) graf — każdy żółty węzeł to JEDEN superpiksel w jego środku ciężkości."),
 ]
 
 METODY = ("fig_23_wszystkie_metody.png",

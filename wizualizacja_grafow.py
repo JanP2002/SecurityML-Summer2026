@@ -313,6 +313,23 @@ def paint_labels(labels, valmap, cmap="viridis", vmin=None, vmax=None):
     return out
 
 
+def _sharp_boundaries(image, labels, scale=16, color=(1, 1, 0)):
+    """Ostre granice superpikseli: powiększamy obraz i mapę etykiet (najbliższy sąsiad),
+    żeby linie granic były CIENKIE względem powiększonego obrazu (czytelny podział ~Voronoi)."""
+    big_img = np.kron(image, np.ones((scale, scale, 1)))
+    big_lab = np.kron(labels, np.ones((scale, scale))).astype(int)
+    return mark_boundaries(big_img, big_lab, color=color)
+
+
+def _slic_mean_image(image, labels):
+    """Każdy superpiksel zamalowany swoim średnim kolorem — pokazuje, co 'widzi' węzeł."""
+    out = np.zeros_like(image)
+    for lbl in np.unique(labels):
+        m = labels == lbl
+        out[m] = image[m].mean(axis=0)
+    return out
+
+
 def savefig(fig, out, name):
     path = os.path.join(out, name)
     fig.savefig(path, dpi=140, bbox_inches="tight"); plt.close(fig)
@@ -348,7 +365,7 @@ def fig01_pipeline(images, labels, cfg, out):
         labels_s = prep[0]
         ax[r, 0].imshow(img); ax[r, 0].set_ylabel(class_name(cid), fontsize=10)
         ax[r, 0].set_xticks([]); ax[r, 0].set_yticks([])
-        ax[r, 1].imshow(mark_boundaries(img, labels_s, color=(1, 1, 0)))
+        ax[r, 1].imshow(_sharp_boundaries(img, labels_s))
         ax[r, 1].set_xticks([]); ax[r, 1].set_yticks([])
         Grag, _, _ = build_from_prep(prep, cfg, mode="rag", small_world=False)
         draw_overlay(ax[r, 2], img, Grag, edge_color="#bbbbbb")
@@ -651,6 +668,31 @@ def fig14_adjacency(images, labels, cfg, out):
     fig.suptitle(f"Macierze sąsiedztwa grafu SLIC — rzednięcie krawędzi ({class_name(cid)})", fontsize=11)
     fig.tight_layout(rect=[0, 0, 1, 0.9])
     return savefig(fig, out, "fig_14_adjacency.png")
+
+
+def fig18_superpiksel(images, labels, cfg, out):
+    """Wyjaśnienie 'czym jest superpiksel': piksele -> podział na regiony (~Voronoi)
+    -> co zachowuje węzeł (średni kolor) -> graf z węzłami w centroidach."""
+    img, cid = pick_one_per_class(images, labels)[0]
+    prep = slic_prep(img, cfg)
+    labels_s = prep[0]
+    G, sc, _ = build_from_prep(prep, cfg, mode="prob", small_world=True, seed=cfg.seed)
+    nseg = len(np.unique(labels_s))
+    fig, ax = plt.subplots(1, 4, figsize=(14, 3.9))
+    ax[0].imshow(np.kron(img, np.ones((16, 16, 1))))
+    ax[0].set_title("1. obraz (1024 piksele)", fontsize=10)
+    ax[1].imshow(_sharp_boundaries(img, labels_s))
+    ax[1].set_title(f"2. {nseg} superpikseli (ostre granice ~Voronoi)", fontsize=10)
+    ax[2].imshow(_sharp_boundaries(_slic_mean_image(img, labels_s), labels_s, color=(0, 0, 0)))
+    ax[2].set_title("3. superpiksel = jego średni kolor", fontsize=10)
+    draw_overlay(ax[3], img, G, shortcuts=sc)
+    ax[3].set_title("4. graf: żółty węzeł = 1 superpiksel", fontsize=10)
+    for a in ax:
+        a.set_xticks([]); a.set_yticks([])
+    fig.suptitle(f"Czym jest superpiksel: piksele -> podział na regiony (~Voronoi) -> węzły grafu "
+                 f"w środkach ciężkości ({class_name(cid)})", fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.92])
+    return savefig(fig, out, "fig_18_superpiksel.png")
 
 
 def _paint_pixel_components(G, H, W):
@@ -1031,6 +1073,7 @@ def write_index(out, cifar_paths, protein_paths):
         "- **fig_15_galeria_10klas** — graf losowy SLIC dla wszystkich 10 klas (różnorodność kształtów).",
         "- **fig_16_ciekawe_ksztalty** — ranking obrazów po liczbie komponentów (rozdrobnione vs zwarte).",
         "- **fig_17_pixel_obiekty** — graf pikselowy: obiekt oddziela się od tła w osobne komponenty.",
+        "- **fig_18_superpiksel** — czym jest superpiksel: piksele -> podział ~Voronoi -> średni kolor -> węzły grafu.",
         "",
         "## Przegląd wszystkich metod budowy grafu",
         "- **fig_23_wszystkie_metody** — WSZYSTKIE metody obok siebie na różnych klasach: nasz `.py`",
@@ -1082,7 +1125,7 @@ def main():
         for fn in (fig01_pipeline, fig02_ensemble, fig03_det_vs_prob, fig04_small_world,
                    fig05_prawdopodobienstwo, fig06_komponenty, fig07_galeria_klasy,
                    fig08_n_segments, fig09_sigma, fig10_er_baseline, fig11_wagi, fig12_stopnie,
-                   fig13_random_walk, fig14_adjacency):
+                   fig13_random_walk, fig14_adjacency, fig18_superpiksel):
             try:
                 cifar_paths.append(fn(images, labels, cfg, args.out))
             except Exception as e:

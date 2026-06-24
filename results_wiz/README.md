@@ -22,6 +22,7 @@ probabilistyczne wstawianie krawędzi + skróty small-world + ensemble M grafów
 - **fig_15_galeria_10klas** — graf losowy SLIC dla wszystkich 10 klas (różnorodność kształtów).
 - **fig_16_ciekawe_ksztalty** — ranking obrazów po liczbie komponentów (rozdrobnione vs zwarte).
 - **fig_17_pixel_obiekty** — graf pikselowy: obiekt oddziela się od tła w osobne komponenty.
+- **fig_18_superpiksel** — czym jest superpiksel: piksele -> podział ~Voronoi -> średni kolor -> węzły grafu.
 
 ## Przegląd wszystkich metod budowy grafu
 - **fig_23_wszystkie_metody** — WSZYSTKIE metody obok siebie na różnych klasach: nasz `.py`
